@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NAS 服务导航</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary: #0f1117;
+      --bg-secondary: #1a1d27;
+      --bg-card: #222639;
+      --bg-card-hover: #2a2f45;
+      --text-primary: #e8eaf0;
+      --text-secondary: #9ca3b4;
+      --text-muted: #6b7280;
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --accent-green: #10b981;
+      --accent-purple: #8b5cf6;
+      --accent-orange: #f59e0b;
+      --accent-pink: #ec4899;
+      --accent-red: #ef4444;
+      --border: rgba(255, 255, 255, 0.06);
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+      --radius: 12px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    .bg-layer {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: -1; overflow: hidden;
+    }
+    .bg-layer img {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      object-fit: cover; opacity: 0; transition: opacity 1.5s ease-in-out;
+    }
+    .bg-layer img.active { opacity: 1; }
+    .bg-layer::after {
+      content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 17, 23, 0.75);
+    }
+    .bg-caption {
+      position: fixed; bottom: 12px; right: 16px; z-index: 0;
+      font-size: 12px; color: rgba(255,255,255,0.35);
+      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+      pointer-events: none; transition: opacity 0.5s;
+    }
+
+    .container { max-width: 1600px; margin: 0 auto; padding: 24px; }
+
+    .toolbar {
+      display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
+    }
+
+    .toolbar-btn {
+      padding: 7px 16px; background: var(--bg-secondary); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text-secondary); font-size: 13px; cursor: pointer; transition: all 0.2s;
+    }
+    .toolbar-btn:hover { border-color: rgba(255,255,255,0.15); color: var(--text-primary); }
+    .toolbar-btn.active { background: var(--accent-purple); border-color: var(--accent-purple); color: #fff; }
+
+    .live-banner {
+      background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 14px 20px; margin-bottom: 20px; display: none;
+    }
+    .live-banner.visible { display: block; }
+    .live-banner-header {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+    }
+    .live-dot { width: 6px; height: 6px; background: var(--accent-green); border-radius: 50%; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .live-banner-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+    .live-banner-grid { display: flex; gap: 24px; flex-wrap: wrap; }
+    .live-stat { display: flex; align-items: center; gap: 6px; }
+    .live-stat-icon { font-size: 14px; }
+    .live-stat-label { font-size: 12px; color: var(--text-muted); }
+    .live-stat-value { font-size: 14px; font-weight: 600; font-family: 'SF Mono', 'Fira Code', monospace; }
+    .live-stat-value.dl { color: var(--accent-cyan); }
+    .live-stat-value.up { color: var(--accent-green); }
+    .live-stat-value.count { color: var(--accent-orange); }
+    .live-stat-ip { font-size: 12px; font-family: 'SF Mono', 'Fira Code', monospace; color: var(--accent-blue); margin-left: 4px; }
+    .live-separator { width: 1px; background: var(--border); margin: 0 4px; }
+
+    .ikuai-stat { cursor: pointer; position: relative; }
+    .ikuai-stat:hover .live-stat-label { color: var(--accent-blue); }
+    .ikuai-popup-container {
+      position: fixed; z-index: 1000; padding: 12px 16px;
+      background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4); opacity: 0; pointer-events: none; transition: opacity 0.15s;
+    }
+    .ikuai-popup-container.visible { opacity: 1; pointer-events: auto; }
+    .ikuai-popup-row { display: flex; justify-content: space-between; gap: 24px; padding: 4px 0; font-size: 13px; }
+    .ikuai-popup-row span:first-child { color: var(--text-muted); }
+    .ikuai-popup-row span:last-child { color: var(--text-primary); font-family: 'SF Mono', 'Fira Code', monospace; font-weight: 500; }
+
+    .search-bar { max-width: 480px; margin: 0 auto 24px; position: relative; }
+    .search-bar input {
+      width: 100%; padding: 12px 16px 12px 42px;
+      background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px;
+      color: var(--text-primary); font-size: 14px; outline: none; transition: border-color 0.2s;
+    }
+    .search-bar input:focus { border-color: var(--accent-blue); }
+    .search-bar input::placeholder { color: var(--text-muted); }
+    .search-bar .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 16px; pointer-events: none; }
+
+    .services-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+
+    .service-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 12px 14px; transition: all 0.2s ease; text-decoration: none; color: inherit;
+      display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; overflow: hidden;
+    }
+    .service-card:hover { background: var(--bg-card-hover); border-color: rgba(255,255,255,0.12); transform: translateY(-2px); box-shadow: var(--shadow); }
+    .service-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--card-accent, var(--accent-blue)); opacity: 0; transition: opacity 0.2s; }
+    .service-card:hover::before { opacity: 1; }
+
+    .card-top { display: flex; align-items: center; justify-content: center; }
+    .card-icon { font-size: 34px; line-height: 1; }
+    .card-icon-img { width: 34px; height: 34px; border-radius: 6px; object-fit: contain; }
+    .card-name { font-size: 13px; font-weight: 600; color: var(--text-primary); text-align: center; line-height: 1.3; }
+    .card-footer { display: flex; align-items: center; justify-content: center; }
+    .card-arrow { display: none; }
+    .non-web { cursor: default; }
+    .non-web:hover { transform: none; box-shadow: none; }
+
+    .no-results { text-align: center; padding: 48px 0; color: var(--text-muted); font-size: 15px; display: none; }
+    .loading { text-align: center; padding: 64px 0; color: var(--text-muted); font-size: 15px; }
+
+    footer { text-align: center; padding: 24px 0 16px; color: var(--text-muted); font-size: 13px; border-top: 1px solid var(--border); margin-top: 20px; }
+
+    /* Admin panel */
+    .admin-panel { display: none; margin-bottom: 24px; }
+    .admin-panel.visible { display: block; }
+    .admin-section { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+    .admin-section h3 { font-size: 15px; font-weight: 600; margin-bottom: 14px; color: var(--text-primary); }
+    .admin-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+    .admin-btn {
+      padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; border: 1px solid var(--border);
+      transition: all 0.2s; font-weight: 500;
+    }
+    .admin-btn-primary { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
+    .admin-btn-primary:hover { background: #2563eb; }
+    .admin-btn-success { background: var(--accent-green); color: #fff; border-color: var(--accent-green); }
+    .admin-btn-success:hover { background: #059669; }
+    .admin-btn-danger { background: var(--accent-red); color: #fff; border-color: var(--accent-red); }
+    .admin-btn-danger:hover { background: #dc2626; }
+    .admin-btn-secondary { background: var(--bg-card); color: var(--text-secondary); }
+    .admin-btn-secondary:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.15); }
+
+    .admin-list { max-height: 600px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+    .admin-row {
+      display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+      border: 1px solid var(--border); border-radius: 8px; transition: all 0.15s;
+      cursor: grab;
+    }
+    .admin-row:active { cursor: grabbing; }
+    .admin-row:hover { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.12); }
+    .admin-row-icon { font-size: 18px; flex-shrink: 0; width: 24px; text-align: center; }
+    .admin-row-info { flex: 1; min-width: 0; }
+    .admin-row-name { font-size: 13px; font-weight: 500; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .admin-row-meta { font-size: 11px; color: var(--text-muted); }
+
+    .admin-row-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+    .toggle-switch { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+      background: #3a3f52; border-radius: 20px; transition: 0.2s;
+    }
+    .toggle-slider::before {
+      content: ''; position: absolute; height: 14px; width: 14px; left: 3px; bottom: 3px;
+      background: #fff; border-radius: 50%; transition: 0.2s;
+    }
+    .toggle-switch input:checked + .toggle-slider { background: var(--accent-green); }
+    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(16px); }
+
+    .admin-row-btn {
+      background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px;
+      padding: 4px 6px; border-radius: 4px; transition: all 0.2s;
+    }
+    .admin-row-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.05); }
+    .admin-row-btn.delete:hover { color: var(--accent-red); background: rgba(239,68,68,0.1); }
+
+    .import-area { width: 100%; min-height: 80px; padding: 10px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 12px; font-family: monospace; resize: vertical; outline: none; }
+    .import-area:focus { border-color: var(--accent-blue); }
+
+    /* Edit modal */
+    .modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center;
+    }
+    .modal-overlay.visible { display: flex; }
+    .modal {
+      background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 24px; width: 90%; max-width: 440px; max-height: 90vh; overflow-y: auto;
+    }
+    .modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+    .modal-field { margin-bottom: 12px; }
+    .modal-field label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+    .modal-field input, .modal-field textarea {
+      width: 100%; padding: 8px 12px; background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text-primary); font-size: 13px; outline: none;
+    }
+    .modal-field input:focus, .modal-field textarea:focus { border-color: var(--accent-blue); }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 10px;
+      font-size: 14px; color: #fff; z-index: 1100; transform: translateY(80px); opacity: 0;
+      transition: all 0.3s ease; pointer-events: none;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast-success { background: var(--accent-green); }
+    .toast-error { background: var(--accent-red); }
+    .toast-info { background: var(--accent-blue); }
+
+    .scan-list { max-height: 400px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+    .scan-item {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+      border: 1px solid var(--border); border-radius: 8px; cursor: pointer;
+      transition: all 0.15s; user-select: none;
+    }
+    .scan-item:hover { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.12); }
+    .scan-item.selected { border-color: var(--accent-blue); background: rgba(59,130,246,0.08); }
+    .scan-item input[type="checkbox"] { accent-color: var(--accent-blue); width: 16px; height: 16px; flex-shrink: 0; }
+    .scan-item-icon { font-size: 18px; flex-shrink: 0; }
+    .scan-item-icon img { width: 22px; height: 22px; border-radius: 4px; object-fit: contain; }
+    .scan-item-info { min-width: 0; flex: 1; }
+    .scan-item-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .scan-item-port { font-size: 11px; color: var(--text-muted); font-family: monospace; }
+    .scan-empty { text-align: center; padding: 30px; color: var(--text-muted); font-size: 14px; }
+
+    @media (max-width: 768px) {
+      .container { padding: 16px 12px; }
+
+      .toolbar { justify-content: center; }
+
+      .live-banner { padding: 12px 14px; }
+      .live-banner-grid { gap: 12px 16px; }
+      .live-stat-value { font-size: 13px; }
+
+      .search-bar { max-width: 100%; margin-bottom: 16px; }
+
+      .services-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+      .service-card { padding: 10px 8px; gap: 4px; }
+      .card-icon { font-size: 28px; }
+      .card-icon-img { width: 28px; height: 28px; }
+      .card-name { font-size: 12px; }
+
+      .admin-section { padding: 14px; }
+      .admin-list { grid-template-columns: 1fr; }
+      .admin-actions { gap: 8px; }
+      .admin-btn { padding: 8px 12px; font-size: 12px; flex: 1; min-width: 0; text-align: center; }
+
+      .modal { width: 95%; padding: 18px; }
+      .modal-actions { flex-direction: column; }
+      .modal-actions .admin-btn { width: 100%; }
+
+      .scan-list { grid-template-columns: 1fr; }
+
+      .toast { left: 12px; right: 12px; bottom: 12px; text-align: center; }
+
+      footer { padding: 16px 0 12px; font-size: 12px; }
+    }
+
+    @media (max-width: 480px) {
+      .container { padding: 12px 8px; }
+
+      .live-banner-grid { gap: 8px 12px; }
+      .live-stat { gap: 4px; }
+      .live-stat-label { font-size: 11px; }
+      .live-stat-value { font-size: 12px; }
+      .live-separator { display: none; }
+
+      .search-bar input { padding: 10px 14px 10px 38px; font-size: 13px; }
+
+      .services-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+      .service-card { padding: 10px 6px; border-radius: 10px; }
+      .card-icon { font-size: 26px; }
+      .card-icon-img { width: 26px; height: 26px; }
+      .card-name { font-size: 11px; }
+
+      .admin-section h3 { font-size: 14px; }
+      .admin-row { padding: 8px 10px; gap: 6px; }
+      .admin-row-name { font-size: 12px; }
+
+      .toolbar-btn { padding: 6px 12px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-layer" id="bgLayer"></div>
+  <div class="bg-caption" id="bgCaption"></div>
+  <div class="container">
+    <div class="toolbar">
+      <button class="toolbar-btn" id="adminToggle">管理</button>
+    </div>
+
+    <div class="live-banner" id="liveBanner">
+      <div class="live-banner-header"><span class="live-dot"></span><span class="live-banner-title">BT 实时流量</span></div>
+      <div class="live-banner-grid" id="liveBannerGrid"></div>
+    </div>
+
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="搜索服务名称、端口或描述...">
+    </div>
+
+    <div class="admin-panel" id="adminPanel">
+      <div class="admin-section">
+        <h3>操作</h3>
+        <div class="admin-actions">
+          <button class="admin-btn admin-btn-primary" id="btnSeed">初始化默认服务</button>
+          <button class="admin-btn admin-btn-success" id="btnScanNas">扫描 NAS 新服务</button>
+          <button class="admin-btn admin-btn-secondary" id="btnRefresh">刷新列表</button>
+          <button class="admin-btn admin-btn-secondary" id="btnExport">导出配置</button>
+        </div>
+      </div>
+      <div class="admin-section">
+        <h3>批量导入 (JSON)</h3>
+        <textarea class="import-area" id="importArea" placeholder='[{"port":8080,"name":"My Service","protocol":"http","icon":"🔧","desc":"描述","url":"http://YOUR_NAS_IP:8080"}]'></textarea>
+        <div style="margin-top:10px">
+          <button class="admin-btn admin-btn-success" id="btnImport">导入</button>
+        </div>
+      </div>
+      <div class="admin-section">
+        <h3>从 URL 导入</h3>
+        <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+          <input type="text" id="urlImportInput" placeholder="http://YOUR_NAS_IP:3000" style="flex:1;min-width:200px;padding:8px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:13px;outline:none">
+          <button class="admin-btn admin-btn-primary" id="btnFetchUrl">获取信息</button>
+          <button class="admin-btn admin-btn-success" id="btnAddUrl" disabled>添加服务</button>
+        </div>
+        <div id="urlPreview" style="display:none;padding:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <img id="urlPreviewIcon" src="" style="width:32px;height:32px;border-radius:6px;object-fit:contain;background:rgba(255,255,255,0.05)">
+            <div style="flex:1;min-width:0">
+              <div id="urlPreviewTitle" style="font-size:14px;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+              <div id="urlPreviewMeta" style="font-size:12px;color:var(--text-muted)"></div>
+            </div>
+          </div>
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+            <input type="text" id="urlEditName" placeholder="服务名称" style="flex:1;min-width:120px;padding:6px 10px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:5px;color:var(--text-primary);font-size:12px;outline:none">
+            <input type="text" id="urlEditIcon" placeholder="图标 emoji" style="width:60px;padding:6px 10px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:5px;color:var(--text-primary);font-size:12px;outline:none;text-align:center">
+          </div>
+        </div>
+        <div id="urlError" style="display:none;margin-top:8px;font-size:12px;color:var(--accent-red)"></div>
+      </div>
+      <div class="admin-section">
+        <h3>服务管理 (拖拽排序)</h3>
+        <div class="admin-list" id="adminList"></div>
+      </div>
+    </div>
+
+    <main id="services"></main>
+    <div class="no-results" id="noResults">没有找到匹配的服务</div>
+    <div class="loading" id="loading">正在加载服务列表...</div>
+
+    <footer>NAS 服务导航</footer>
+  </div>
+
+  <!-- Edit Modal -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal">
+      <h3>编辑服务</h3>
+      <div class="modal-field">
+        <label>名称</label>
+        <input type="text" id="editName">
+      </div>
+      <div class="modal-field">
+        <label>图标</label>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+          <input type="text" id="editIcon" placeholder="emoji" style="flex:1">
+          <img id="editFaviconPreview" src="" style="width:28px;height:28px;border-radius:4px;object-fit:contain;background:rgba(255,255,255,0.05);display:none">
+          <button type="button" class="admin-btn admin-btn-primary" id="editFetchIcon" style="padding:6px 12px;font-size:12px;white-space:nowrap">获取图标</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <label class="admin-btn admin-btn-secondary" style="padding:6px 12px;font-size:12px;cursor:pointer;margin:0">
+            上传图片
+            <input type="file" id="editIconUpload" accept="image/*" style="display:none">
+          </label>
+          <input type="text" id="editIconUrl" placeholder="或粘贴图标 URL" style="flex:1;min-width:150px;padding:6px 12px;font-size:12px">
+          <button type="button" class="admin-btn admin-btn-primary" id="editLoadIconUrl" style="padding:6px 12px;font-size:12px;white-space:nowrap">加载</button>
+        </div>
+      </div>
+      <div class="modal-field">
+        <label>描述</label>
+        <input type="text" id="editDesc">
+      </div>
+      <div class="modal-field">
+        <label>URL</label>
+        <input type="text" id="editUrl">
+      </div>
+      <div class="modal-field">
+        <label>端口</label>
+        <input type="number" id="editPort" min="1" max="65535">
+      </div>
+      <div class="modal-field">
+        <label>协议</label>
+        <select id="editProtocol" style="width:100%;padding:8px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:13px;">
+          <option value="http">HTTP</option>
+          <option value="https">HTTPS</option>
+          <option value="tcp">TCP</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="admin-btn admin-btn-secondary" id="editCancel">取消</button>
+        <button class="admin-btn admin-btn-primary" id="editSave">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="scanModal">
+    <div class="modal-content" style="max-width:640px">
+      <h2 style="font-size:17px;font-weight:600;margin-bottom:4px">扫描 NAS 新服务</h2>
+      <p id="scanStatus" style="font-size:13px;color:var(--text-secondary);margin-bottom:14px">正在扫描...</p>
+      <div id="scanResults"></div>
+      <div class="modal-actions" style="margin-top:14px">
+        <button class="admin-btn admin-btn-secondary" id="scanSelectAll">全选</button>
+        <button class="admin-btn admin-btn-secondary" id="scanCancel">关闭</button>
+        <button class="admin-btn admin-btn-primary" id="scanAddSelected">添加选中</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const API_BASE = '/api/services';
+    let allItems = [];
+    let editingId = null;
+    let editFaviconData = '';
+
+    function toast(msg, type = 'info') {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.className = 'toast toast-' + type + ' show';
+      setTimeout(() => el.classList.remove('show'), 3000);
+    }
+
+    async function api(action, data) {
+      const opts = { method: data ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json' } };
+      if (data) opts.body = JSON.stringify(data);
+      const res = await fetch(API_BASE + '?action=' + action, opts);
+      return res.json();
+    }
+
+    async function loadServices() {
+      document.getElementById('loading').style.display = 'block';
+      try {
+        const res = await api('list');
+        if (res.error) { toast('加载失败: ' + res.error, 'error'); return; }
+        allItems = res.items || [];
+        render();
+        renderAdminList();
+      } catch (e) {
+        toast('网络错误', 'error');
+      } finally {
+        document.getElementById('loading').style.display = 'none';
+      }
+    }
+
+    function render(filter = '') {
+      const main = document.getElementById('services');
+      const visible = allItems.filter(i => i.visible);
+      const q = filter.toLowerCase();
+
+      const items = visible.filter(item => {
+        if (!q) return true;
+        return item.name.toLowerCase().includes(q) ||
+               (item.description || '').toLowerCase().includes(q) ||
+               String(item.port).includes(q);
+      });
+
+      let html = '<div class="services-grid">';
+
+      for (const item of items) {
+        const proto = item.protocol || 'http';
+        const isTcp = proto === 'tcp';
+        const nonWebClass = isTcp ? ' non-web' : '';
+        const tag = isTcp ? 'div' : 'a';
+        const href = isTcp ? '' : ' href="' + (item.url || '#') + '" target="_blank" rel="noopener"';
+
+        const iconHtml = item.favicon
+          ? '<img class="card-icon-img" src="' + item.favicon + '" alt="">'
+          : '<span class="card-icon">' + (item.icon || '🔧') + '</span>';
+
+        const tooltip = item.name + ' | ' + proto + ' :' + item.port + (item.description ? ' | ' + item.description : '');
+
+        html += '<' + tag + ' class="service-card' + nonWebClass + '"' + href + ' title="' + tooltip + '">' + iconHtml + '<div class="card-name">' + item.name + '</div></' + tag + '>';
+      }
+
+      html += '</div>';
+      main.innerHTML = html;
+      document.getElementById('noResults').style.display = items.length === 0 ? 'block' : 'none';
+    }
+
+    function renderAdminList() {
+      const list = document.getElementById('adminList');
+      if (allItems.length === 0) {
+        list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted)">暂无服务，点击"初始化默认服务"开始</div>';
+        return;
+      }
+
+      list.innerHTML = allItems.map((item, idx) => {
+        const checked = item.visible ? 'checked' : '';
+        const iconHtml = item.favicon
+          ? '<img class="admin-row-icon" src="' + item.favicon + '" style="width:20px;height:20px;border-radius:3px;object-fit:contain">'
+          : '<span class="admin-row-icon">' + (item.icon || '🔧') + '</span>';
+        return '<div class="admin-row" data-id="' + item.id + '" draggable="true">' +
+          iconHtml +
+          '<div class="admin-row-info"><div class="admin-row-name">' + item.name + '</div><div class="admin-row-meta">:' + item.port + '</div></div>' +
+          '<div class="admin-row-actions">' +
+          '<button class="admin-row-btn" data-action="edit" data-id="' + item.id + '" title="编辑">✏️</button>' +
+          '<label class="toggle-switch"><input type="checkbox" ' + checked + ' data-action="toggle" data-id="' + item.id + '"><span class="toggle-slider"></span></label>' +
+          '<button class="admin-row-btn delete" data-action="delete" data-id="' + item.id + '" title="删除">✕</button>' +
+          '</div></div>';
+      }).join('');
+
+      initDragDrop();
+    }
+
+    function initDragDrop() {
+      const list = document.getElementById('adminList');
+      let dragEl = null;
+
+      list.querySelectorAll('.admin-row').forEach(row => {
+        row.addEventListener('dragstart', (e) => {
+          dragEl = row;
+          row.style.opacity = '0.4';
+          row.style.borderColor = 'var(--accent-blue)';
+        });
+        row.addEventListener('dragend', (e) => {
+          row.style.opacity = '1';
+          row.style.borderColor = '';
+          list.querySelectorAll('.admin-row').forEach(r => r.style.borderColor = '');
+          dragEl = null;
+        });
+        row.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          if (dragEl && dragEl !== row) {
+            const rect = row.getBoundingClientRect();
+            const midX = rect.left + rect.width / 2;
+            const midY = rect.top + rect.height / 2;
+            let before;
+            if (rect.top > dragEl.getBoundingClientRect().bottom - 5 || rect.bottom < dragEl.getBoundingClientRect().top + 5) {
+              before = e.clientY < midY;
+            } else {
+              before = e.clientX < midX;
+            }
+            row.style.borderColor = before ? 'var(--accent-blue)' : '';
+            if (before) {
+              list.insertBefore(dragEl, row);
+            } else {
+              list.insertBefore(dragEl, row.nextSibling);
+            }
+          }
+        });
+        row.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          const rows = [...list.querySelectorAll('.admin-row')];
+          const order = rows.map((r, i) => ({ id: r.dataset.id, sort_order: i }));
+          await api('reorder', { order });
+          allItems.sort((a, b) => {
+            const ai = order.findIndex(o => o.id === a.id);
+            const bi = order.findIndex(o => o.id === b.id);
+            return ai - bi;
+          });
+          render(document.getElementById('searchInput').value);
+        });
+      });
+    }
+
+    // Admin event handlers
+    document.getElementById('adminList').addEventListener('change', async (e) => {
+      const input = e.target.closest('[data-action="toggle"]');
+      if (!input) return;
+      const id = input.dataset.id;
+      const visible = input.checked;
+      const res = await api('toggle', { id, visible });
+      if (res.ok) {
+        const item = allItems.find(i => i.id === id);
+        if (item) item.visible = visible;
+        render(document.getElementById('searchInput').value);
+      } else {
+        toast('更新失败', 'error');
+        input.checked = !input.checked;
+      }
+    });
+
+    document.getElementById('adminList').addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      const id = btn.dataset.id;
+
+      if (action === 'delete') {
+        if (!confirm('确认删除此服务？')) return;
+        const res = await api('delete', { id });
+        if (res.ok) {
+          allItems = allItems.filter(i => i.id !== id);
+          renderAdminList();
+          render(document.getElementById('searchInput').value);
+          toast('已删除', 'success');
+        } else {
+          toast('删除失败', 'error');
+        }
+      }
+
+      if (action === 'edit') {
+        const item = allItems.find(i => i.id === id);
+        if (!item) return;
+        editingId = id;
+        document.getElementById('editName').value = item.name || '';
+        document.getElementById('editIcon').value = item.icon || '';
+        document.getElementById('editDesc').value = item.description || '';
+        document.getElementById('editUrl').value = item.url || '';
+        document.getElementById('editPort').value = item.port || '';
+        document.getElementById('editProtocol').value = item.protocol || 'http';
+        const fp = document.getElementById('editFaviconPreview');
+        if (item.favicon) { fp.src = item.favicon; fp.style.display = 'block'; editFaviconData = item.favicon; } else { fp.style.display = 'none'; editFaviconData = ''; }
+        document.getElementById('editModal').classList.add('visible');
+      }
+    });
+
+    document.getElementById('editCancel').addEventListener('click', () => {
+      document.getElementById('editModal').classList.remove('visible');
+      editingId = null;
+    });
+
+    document.getElementById('editFetchIcon').addEventListener('click', async () => {
+      const url = document.getElementById('editUrl').value.trim();
+      if (!url) { toast('请先填写 URL', 'error'); return; }
+      const btn = document.getElementById('editFetchIcon');
+      btn.disabled = true; btn.textContent = '获取中...';
+      try {
+        const res = await fetch('/api/fetch-meta', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ url })
+        });
+        const data = await res.json();
+        if (data.ok && data.icon) {
+          editFaviconData = data.icon;
+          const fp = document.getElementById('editFaviconPreview');
+          fp.src = data.icon; fp.style.display = 'block';
+          if (data.title && !document.getElementById('editName').value) {
+            document.getElementById('editName').value = data.title;
+          }
+          toast('图标已获取', 'success');
+        } else {
+          toast('未能获取图标', 'error');
+        }
+      } catch (e) {
+        toast('网络错误: ' + e.message, 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = '获取图标';
+      }
+    });
+
+    document.getElementById('editIconUpload').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) { toast('请选择图片文件', 'error'); e.target.value = ''; return; }
+      if (file.size > 2 * 1024 * 1024) { toast('图片不能超过 2MB', 'error'); e.target.value = ''; return; }
+      const reader = new FileReader();
+      reader.onload = () => {
+        editFaviconData = reader.result;
+        const fp = document.getElementById('editFaviconPreview');
+        fp.src = reader.result; fp.style.display = 'block';
+        document.getElementById('editIcon').value = '';
+        toast('图标已加载', 'success');
+      };
+      reader.readAsDataURL(file);
+      e.target.value = '';
+    });
+
+    document.getElementById('editLoadIconUrl').addEventListener('click', async () => {
+      const url = document.getElementById('editIconUrl').value.trim();
+      if (!url) { toast('请输入图标 URL', 'error'); return; }
+      const btn = document.getElementById('editLoadIconUrl');
+      btn.disabled = true; btn.textContent = '加载中...';
+      try {
+        const res = await fetch('/api/load-icon-url', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ url })
+        });
+        const data = await res.json();
+        if (data.ok && data.icon) {
+          editFaviconData = data.icon;
+          const fp = document.getElementById('editFaviconPreview');
+          fp.src = data.icon; fp.style.display = 'block';
+          document.getElementById('editIcon').value = '';
+          document.getElementById('editIconUrl').value = '';
+          toast('图标已加载', 'success');
+        } else {
+          toast(data.error || '加载失败', 'error');
+        }
+      } catch (e) {
+        toast('加载错误: ' + e.message, 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = '加载';
+      }
+    });
+
+    document.getElementById('editSave').addEventListener('click', async () => {
+      if (!editingId) return;
+      const portVal = parseInt(document.getElementById('editPort').value);
+      if (isNaN(portVal) || portVal < 1 || portVal > 65535) {
+        toast('端口号无效 (1-65535)', 'error');
+        return;
+      }
+      const data = {
+        id: editingId,
+        name: document.getElementById('editName').value,
+        icon: document.getElementById('editIcon').value,
+        desc: document.getElementById('editDesc').value,
+        url: document.getElementById('editUrl').value,
+        port: portVal,
+        protocol: document.getElementById('editProtocol').value,
+        favicon: editFaviconData || '',
+      };
+      try {
+        const res = await api('update', data);
+        if (res.ok) {
+          const item = allItems.find(i => i.id === editingId);
+          if (item) Object.assign(item, { name: data.name, icon: data.icon, description: data.desc, url: data.url, port: data.port, protocol: data.protocol, favicon: data.favicon });
+          renderAdminList();
+          render(document.getElementById('searchInput').value);
+          document.getElementById('editModal').classList.remove('visible');
+          editingId = null;
+          toast('已保存', 'success');
+        } else {
+          toast('保存失败: ' + (res.error || '未知错误'), 'error');
+        }
+      } catch (e) {
+        toast('网络错误: ' + e.message, 'error');
+      }
+    });
+
+    document.getElementById('editModal').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('editModal')) {
+        document.getElementById('editModal').classList.remove('visible');
+        editingId = null;
+      }
+    });
+
+    document.getElementById('adminToggle').addEventListener('click', () => {
+      const panel = document.getElementById('adminPanel');
+      const btn = document.getElementById('adminToggle');
+      panel.classList.toggle('visible');
+      btn.classList.toggle('active');
+    });
+
+    document.getElementById('btnSeed').addEventListener('click', async () => {
+      if (!confirm('将导入所有默认服务（已存在的端口会跳过）')) return;
+      const res = await api('seed', {});
+      if (res.ok) {
+        toast('已初始化 ' + (res.count || 0) + ' 个服务', 'success');
+        await loadServices();
+      } else {
+        toast('初始化失败', 'error');
+      }
+    });
+
+    let scanDiscovered = [];
+
+    document.getElementById('btnScanNas').addEventListener('click', async () => {
+      const modal = document.getElementById('scanModal');
+      const status = document.getElementById('scanStatus');
+      const results = document.getElementById('scanResults');
+      modal.classList.add('visible');
+      status.textContent = '正在扫描 NAS 端口，请稍候...';
+      results.innerHTML = '';
+      scanDiscovered = [];
+      try {
+        const res = await fetch('/api/scan-nas');
+        const data = await res.json();
+        if (!data.ok) { status.textContent = '扫描失败: ' + (data.error || '未知错误'); return; }
+        scanDiscovered = data.new_services || [];
+        if (!scanDiscovered.length) {
+          status.textContent = '扫描完成 — 发现 ' + (data.open_ports || []).length + ' 个开放端口，无新增服务';
+          results.innerHTML = '<div class="scan-empty">没有发现新的服务</div>';
+          return;
+        }
+        status.textContent = '扫描完成 — 发现 ' + scanDiscovered.length + ' 个新服务（共 ' + (data.open_ports || []).length + ' 个开放端口）';
+        results.innerHTML = '<div class="scan-list">' + scanDiscovered.map((s, i) => {
+          const iconHtml = s.favicon
+            ? '<span class="scan-item-icon"><img src="' + s.favicon + '" alt=""></span>'
+            : '<span class="scan-item-icon">' + (s.icon || '🔧') + '</span>';
+          return '<label class="scan-item selected" data-idx="' + i + '">' +
+            '<input type="checkbox" checked data-idx="' + i + '">' +
+            iconHtml +
+            '<div class="scan-item-info"><div class="scan-item-name">' + (s.name || '') + '</div>' +
+            '<div class="scan-item-port">' + s.protocol + ' :' + s.port + '</div></div></label>';
+        }).join('') + '</div>';
+        results.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+          cb.addEventListener('change', () => {
+            cb.closest('.scan-item').classList.toggle('selected', cb.checked);
+          });
+        });
+      } catch (e) {
+        status.textContent = '扫描失败: ' + e.message;
+      }
+    });
+
+    document.getElementById('scanSelectAll').addEventListener('click', () => {
+      const cbs = document.getElementById('scanResults').querySelectorAll('input[type="checkbox"]');
+      const allChecked = Array.from(cbs).every(cb => cb.checked);
+      cbs.forEach(cb => { cb.checked = !allChecked; cb.closest('.scan-item').classList.toggle('selected', !allChecked); });
+    });
+
+    document.getElementById('scanCancel').addEventListener('click', () => {
+      document.getElementById('scanModal').classList.remove('visible');
+    });
+
+    document.getElementById('scanAddSelected').addEventListener('click', async () => {
+      const selected = scanDiscovered.filter((_, i) => {
+        const cb = document.querySelector('#scanResults input[data-idx="' + i + '"]');
+        return cb && cb.checked;
+      });
+      if (!selected.length) { toast('请先选择要添加的服务', 'error'); return; }
+      let added = 0;
+      for (const s of selected) {
+        const res = await api('add', {
+          name: s.name, port: s.port, protocol: s.protocol,
+          icon: s.icon, favicon: s.favicon || '', desc: '',
+          url: s.url, category: '扫描发现',
+        });
+        if (res.ok) added++;
+      }
+      document.getElementById('scanModal').classList.remove('visible');
+      toast('已添加 ' + added + ' 个服务', 'success');
+      await loadServices();
+    });
+
+    document.getElementById('scanModal').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('scanModal')) {
+        document.getElementById('scanModal').classList.remove('visible');
+      }
+    });
+
+    document.getElementById('btnRefresh').addEventListener('click', () => {
+      loadServices();
+      toast('已刷新', 'info');
+    });
+
+    document.getElementById('btnExport').addEventListener('click', () => {
+      const data = allItems.map(i => ({
+        port: i.port, name: i.name, protocol: i.protocol,
+        icon: i.icon, desc: i.description, url: i.url,
+        category: i.category, visible: i.visible,
+      }));
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'nas-services-' + new Date().toISOString().slice(0, 10) + '.json';
+      a.click();
+      toast('已导出', 'success');
+    });
+
+    document.getElementById('btnImport').addEventListener('click', async () => {
+      const text = document.getElementById('importArea').value.trim();
+      if (!text) { toast('请输入 JSON 数据', 'error'); return; }
+      try {
+        const data = JSON.parse(text);
+        const res = await api('import', { services: data });
+        if (res.ok) {
+          toast('导入成功: 新增 ' + res.added + ', 跳过 ' + res.skipped, 'success');
+          document.getElementById('importArea').value = '';
+          await loadServices();
+        } else {
+          toast('导入失败: ' + (res.error || ''), 'error');
+        }
+      } catch {
+        toast('JSON 格式错误', 'error');
+      }
+    });
+
+    // URL import
+    let urlFetchResult = null;
+
+    document.getElementById('btnFetchUrl').addEventListener('click', async () => {
+      const url = document.getElementById('urlImportInput').value.trim();
+      if (!url) { toast('请输入 URL', 'error'); return; }
+
+      const btn = document.getElementById('btnFetchUrl');
+      const preview = document.getElementById('urlPreview');
+      const errorEl = document.getElementById('urlError');
+      const addBtn = document.getElementById('btnAddUrl');
+
+      btn.disabled = true;
+      btn.textContent = '获取中...';
+      preview.style.display = 'none';
+      errorEl.style.display = 'none';
+      addBtn.disabled = true;
+      urlFetchResult = null;
+
+      try {
+        const res = await fetch('/api/fetch-meta', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+        });
+        const data = await res.json();
+        if (data.error) {
+          errorEl.textContent = '获取失败: ' + data.error;
+          errorEl.style.display = 'block';
+          return;
+        }
+
+        urlFetchResult = { url, title: data.title, icon: data.icon, port: data.port, protocol: data.protocol };
+
+        document.getElementById('urlPreviewIcon').src = data.icon || '';
+        document.getElementById('urlPreviewIcon').style.display = data.icon ? 'block' : 'none';
+        document.getElementById('urlPreviewTitle').textContent = data.title || '(无标题)';
+        document.getElementById('urlPreviewMeta').textContent = (data.protocol || 'http') + ' | 端口 ' + (data.port || '?');
+        document.getElementById('urlEditName').value = data.title || '';
+        document.getElementById('urlEditIcon').value = '';
+        preview.style.display = 'block';
+        addBtn.disabled = false;
+      } catch (e) {
+        errorEl.textContent = '网络错误: ' + e.message;
+        errorEl.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '获取信息';
+      }
+    });
+
+    document.getElementById('urlImportInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('btnFetchUrl').click();
+    });
+
+    document.getElementById('btnAddUrl').addEventListener('click', async () => {
+      if (!urlFetchResult) return;
+      const name = document.getElementById('urlEditName').value.trim() || urlFetchResult.title || '未命名服务';
+      const icon = document.getElementById('urlEditIcon').value.trim() || '🔗';
+
+      const res = await api('add', {
+        name,
+        icon,
+        desc: urlFetchResult.title || '',
+        url: urlFetchResult.url,
+        port: urlFetchResult.port || 0,
+        protocol: urlFetchResult.protocol || 'http',
+        favicon: urlFetchResult.icon || '',
+      });
+
+      if (res.ok) {
+        toast('已添加: ' + name, 'success');
+        document.getElementById('urlImportInput').value = '';
+        document.getElementById('urlPreview').style.display = 'none';
+        document.getElementById('btnAddUrl').disabled = true;
+        urlFetchResult = null;
+        await loadServices();
+      } else {
+        toast('添加失败', 'error');
+      }
+    });
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      render(e.target.value);
+    });
+
+    // Live stats
+    const STATS_API = '/api/stats';
+    const LIVE_SERVICES = { 'qBittorrent': 'qbittorrent', 'Transmission': 'transmission', '爱快路由': 'ikuai' };
+    let statsTimer = null;
+
+    function formatSpeed(bytesPerSec) {
+      if (!bytesPerSec || bytesPerSec === 0) return '0 B/s';
+      const units = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+      const i = Math.floor(Math.log(bytesPerSec) / Math.log(1024));
+      return (bytesPerSec / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
+    }
+
+    async function fetchLiveStats() {
+      try {
+        const res = await fetch(STATS_API, { signal: AbortSignal.timeout(5000) });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        updateLiveUI(data);
+      } catch {
+        document.getElementById('liveBanner').classList.remove('visible');
+      }
+    }
+
+    function updateLiveUI(data) {
+      const banner = document.getElementById('liveBanner');
+      const grid = document.getElementById('liveBannerGrid');
+      const parts = [];
+      let hasAny = false;
+
+      for (const [cardName, key] of Object.entries(LIVE_SERVICES)) {
+        const svc = data[key];
+        if (!svc || svc.status !== 'ok') continue;
+        hasAny = true;
+
+        if (key === 'ikuai') {
+          let popupRows = '';
+          if (svc.wans && svc.wans.length > 0) {
+            svc.wans.forEach(w => {
+              popupRows += '<div class="ikuai-popup-row"><span>' + (w.name || 'WAN') + '</span><span>' + (w.ip || '-') + '</span></div>';
+            });
+          }
+          if (svc.cpu) popupRows += '<div class="ikuai-popup-row"><span>CPU</span><span>' + svc.cpu + '%</span></div>';
+          if (svc.mem) popupRows += '<div class="ikuai-popup-row"><span>内存</span><span>' + svc.mem + '%</span></div>';
+          if (svc.connect_num) popupRows += '<div class="ikuai-popup-row"><span>连接数</span><span>' + svc.connect_num + '</span></div>';
+          const popupHtml = popupRows ? '<div class="ikuai-popup">' + popupRows + '</div>' : '';
+          const wanLabel = (svc.wans && svc.wans.length > 0) ? svc.wans.map(w => w.name).join('+') : '爱快路由';
+          parts.push(
+            '<span class="live-stat ikuai-stat" data-popup="' + encodeURIComponent(popupHtml) + '"><span class="live-stat-icon">🌐</span>' +
+            '<span class="live-stat-label">' + wanLabel + '</span></span>',
+            '<span class="live-stat"><span class="live-stat-label">↓</span><span class="live-stat-value dl">' + formatSpeed(svc.dl_speed) + '</span></span>',
+            '<span class="live-stat"><span class="live-stat-label">↑</span><span class="live-stat-value up">' + formatSpeed(svc.up_speed) + '</span></span>'
+          );
+        } else {
+          parts.push(
+            '<span class="live-stat"><span class="live-stat-icon">' + (cardName === 'qBittorrent' ? '⬇️' : '🔽') + '</span>' +
+            '<span class="live-stat-label">' + cardName + '</span></span>',
+            '<span class="live-stat"><span class="live-stat-label">↓</span><span class="live-stat-value dl">' + formatSpeed(svc.dl_speed) + '</span></span>',
+            '<span class="live-stat"><span class="live-stat-label">↑</span><span class="live-stat-value up">' + formatSpeed(svc.up_speed) + '</span></span>',
+            '<span class="live-stat"><span class="live-stat-label">错误</span><span class="live-stat-value count">' + (svc.errored || 0) + '</span></span>'
+          );
+        }
+        parts.push('<span class="live-separator"></span>');
+      }
+
+      if (hasAny) {
+        parts.pop();
+        grid.innerHTML = parts.join('');
+        banner.classList.add('visible');
+        initIkuaiPopup();
+      } else {
+        banner.classList.remove('visible');
+      }
+    }
+
+    function initIkuaiPopup() {
+      document.querySelectorAll('.ikuai-stat').forEach(el => {
+        el.addEventListener('mouseenter', showIkuaiPopup);
+        el.addEventListener('mouseleave', hideIkuaiPopup);
+        el.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const popup = document.getElementById('ikuaiPopup');
+          if (popup && popup.classList.contains('visible') && popup._anchor === el) {
+            hideIkuaiPopup();
+          } else {
+            showIkuaiPopup(e);
+            const p = document.getElementById('ikuaiPopup');
+            if (p) p._anchor = el;
+          }
+        });
+      });
+      document.addEventListener('click', function() { hideIkuaiPopup(); });
+    }
+
+    function showIkuaiPopup(e) {
+      const popupData = e.currentTarget.dataset.popup;
+      if (!popupData) return;
+      let popup = document.getElementById('ikuaiPopup');
+      if (!popup) {
+        popup = document.createElement('div');
+        popup.id = 'ikuaiPopup';
+        popup.className = 'ikuai-popup-container';
+        document.body.appendChild(popup);
+      }
+      popup.innerHTML = decodeURIComponent(popupData);
+      const rect = e.currentTarget.getBoundingClientRect();
+      let left = rect.left;
+      let top = rect.bottom + 8;
+      popup.style.left = left + 'px';
+      popup.style.top = top + 'px';
+      popup.classList.add('visible');
+      const pr = popup.getBoundingClientRect();
+      if (pr.right > window.innerWidth - 8) {
+        popup.style.left = Math.max(8, window.innerWidth - pr.width - 8) + 'px';
+      }
+      if (pr.bottom > window.innerHeight - 8) {
+        popup.style.top = (rect.top - pr.height - 8) + 'px';
+      }
+    }
+
+    function hideIkuaiPopup() {
+      const popup = document.getElementById('ikuaiPopup');
+      if (popup) popup.classList.remove('visible');
+    }
+
+    function startLiveStats() {
+      fetchLiveStats();
+      if (statsTimer) clearInterval(statsTimer);
+      statsTimer = setInterval(fetchLiveStats, 5000);
+    }
+
+    async function loadBingBackground() {
+      try {
+        const res = await fetch('/api/bing-bg');
+        const data = await res.json();
+        if (!data.ok || !data.images || !data.images.length) {
+          console.warn('[bg] no images returned', data.error || '');
+          return;
+        }
+        console.log('[bg] loaded from ' + (data.source || 'unknown') + ', ' + data.images.length + ' images');
+        const layer = document.getElementById('bgLayer');
+        const caption = document.getElementById('bgCaption');
+        layer.innerHTML = '';
+        const imgs = data.images;
+        let loaded = 0;
+        imgs.forEach((img, i) => {
+          const el = document.createElement('img');
+          el.alt = img.title || '';
+          el.loading = i < 2 ? 'eager' : 'lazy';
+          el.onload = () => {
+            loaded++;
+            if (loaded === 1) el.classList.add('active');
+          };
+          el.onerror = () => { el.remove(); };
+          el.src = img.url;
+          layer.appendChild(el);
+        });
+        if (imgs[0] && imgs[0].title) caption.textContent = imgs[0].title;
+        let current = 0;
+        setInterval(() => {
+          const all = layer.querySelectorAll('img');
+          if (!all.length) return;
+          all[current % all.length].classList.remove('active');
+          current = (current + 1) % all.length;
+          all[current].classList.add('active');
+          const t = imgs[current].title;
+          caption.textContent = t || '';
+        }, 30000);
+      } catch (e) {
+        console.warn('[bg] fetch failed:', e);
+      }
+    }
+
+    loadServices();
+    loadBingBackground();
+    startLiveStats();
+  </script>
+</body>
+</html>

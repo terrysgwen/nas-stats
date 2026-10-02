@@ -1,0 +1,9 @@
+services:
+  nas-stats:
+    build: .
+    container_name: nas-stats
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./config.json:/app/config.json:ro
+      - ./data:/app/data

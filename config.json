@@ -1,0 +1,25 @@
+{
+  "port": 8980,
+  "nas_ip": "YOUR_NAS_IP",
+  "cors_origins": ["*"],
+  "services": {
+    "qbittorrent": {
+      "enabled": false,
+      "url": "http://YOUR_NAS_IP:8080",
+      "username": "admin",
+      "password": "your_password"
+    },
+    "transmission": {
+      "enabled": false,
+      "url": "http://YOUR_NAS_IP:9091",
+      "username": "admin",
+      "password": "your_password"
+    },
+    "ikuai": {
+      "enabled": false,
+      "url": "http://YOUR_ROUTER_IP",
+      "username": "admin",
+      "password": "your_password"
+    }
+  }
+}
