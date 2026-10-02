@@ -20,8 +20,8 @@ jobs:
       - name: 3. 构建并推送镜像
         run: |
           # 假设你的 Dockerfile 就在 nas-stats1 根目录下
-          # 镜像名称会自动命名为你的 Docker Hub 用户名/nas-stats1:latest
-          IMAGE_NAME="${{ secrets.DOCKER_USERNAME }}/nas-stats1:latest"
+          # 镜像名称会自动命名为你的 Docker Hub 用户名/nas-stats:latest
+          IMAGE_NAME="${{ secrets.DOCKER_USERNAME }}/nas-stats:latest"
           
           echo "开始构建镜像: $IMAGE_NAME"
           docker build -t "$IMAGE_NAME" .
