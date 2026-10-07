@@ -1,0 +1,12 @@
+services:
+  nas-stats:
+    build: .
+    image: ${DOCKER_IMAGE:-nas-stats:latest}
+    container_name: nas-stats
+    restart: unless-stopped
+    ports:
+      - "8980:8980"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - TZ=Asia/Shanghai

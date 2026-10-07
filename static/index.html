@@ -1,0 +1,3419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NAS 服务导航 2.0</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ─── 基础主题变量系统 ─── */
+    :root {
+      --bg-primary: #0f1117;
+      --bg-secondary: #1a1d27;
+      --bg-card: #222639;
+      --bg-card-hover: #2a2f45;
+      --text-primary: #e8eaf0;
+      --text-secondary: #9ca3b4;
+      --text-muted: #6b7280;
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --accent-green: #10b981;
+      --accent-purple: #8b5cf6;
+      --accent-orange: #f59e0b;
+      --accent-red: #ef4444;
+      --border: rgba(255, 255, 255, 0.08);
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+      --radius: 12px;
+    }
+
+    /* 浅色主题 */
+    body.theme-light {
+      --bg-primary: #f4f6f9;
+      --bg-secondary: #ffffff;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f8fafc;
+      --text-primary: #1e293b;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --border: rgba(0, 0, 0, 0.08);
+      --shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    }
+    body.theme-light .bg-layer::after { background: rgba(244, 246, 249, 0.88); }
+
+    /* 海洋蓝主题 */
+    body.theme-ocean {
+      --bg-primary: #07172c;
+      --bg-secondary: #0d2342;
+      --bg-card: #14315c;
+      --bg-card-hover: #1b3e75;
+      --text-primary: #e0f2fe;
+      --text-secondary: #7dd3fc;
+      --text-muted: #38bdf8;
+      --accent-blue: #0284c7;
+      --border: rgba(56, 189, 248, 0.15);
+      --shadow: 0 4px 24px rgba(2, 132, 199, 0.25);
+    }
+    body.theme-ocean .bg-layer::after { background: rgba(7, 23, 44, 0.85); }
+
+    /* 森林绿主题 */
+    body.theme-forest {
+      --bg-primary: #0a1f18;
+      --bg-secondary: #123328;
+      --bg-card: #184537;
+      --bg-card-hover: #225947;
+      --text-primary: #ecfdf5;
+      --text-secondary: #6ee7b7;
+      --text-muted: #34d399;
+      --accent-blue: #10b981;
+      --border: rgba(52, 211, 153, 0.15);
+      --shadow: 0 4px 24px rgba(16, 185, 129, 0.2);
+    }
+    body.theme-forest .bg-layer::after { background: rgba(10, 31, 24, 0.85); }
+
+    /* 玫瑰金主题 */
+    body.theme-rose {
+      --bg-primary: #1c1017;
+      --bg-secondary: #2b1824;
+      --bg-card: #3b2032;
+      --bg-card-hover: #4e2942;
+      --text-primary: #fff1f2;
+      --text-secondary: #fda4af;
+      --text-muted: #fb7185;
+      --accent-blue: #f43f5e;
+      --border: rgba(251, 113, 133, 0.15);
+      --shadow: 0 4px 24px rgba(244, 63, 94, 0.25);
+    }
+    body.theme-rose .bg-layer::after { background: rgba(28, 16, 23, 0.85); }
+
+    /* ─── 卡片样式形态变体 (Card Styles) ─── */
+    .services-grid.style-default .service-card {
+      border-radius: var(--radius);
+      padding: 14px;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .services-grid.style-compact .service-card {
+      border-radius: 24px;
+      padding: 8px 16px;
+      flex-direction: row;
+      align-items: center;
+      gap: 12px;
+      text-align: left;
+    }
+    .services-grid.style-compact .card-icon { font-size: 24px; }
+    .services-grid.style-compact .card-icon-img { width: 24px; height: 24px; }
+
+    .services-grid.style-horizontal {
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)) !important;
+    }
+    .services-grid.style-horizontal .service-card {
+      border-radius: 10px;
+      padding: 12px 16px;
+      flex-direction: row;
+      align-items: center;
+      gap: 14px;
+      text-align: left;
+    }
+    .services-grid.style-horizontal .card-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .services-grid.style-horizontal .card-desc {
+      display: block !important;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .services-grid.style-glass .service-card {
+      background: rgba(255, 255, 255, 0.04) !important;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* 悬浮弹窗样式 */
+    .popup-container {
+      position: fixed; z-index: 1000; padding: 12px 16px;
+      background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5); opacity: 0; pointer-events: none; transition: opacity 0.15s;
+      max-width: 380px; font-size: 13px;
+    }
+    .popup-container.visible { opacity: 1; pointer-events: auto; }
+    .popup-inner { display: flex; flex-direction: column; gap: 4px; }
+    .popup-title { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .popup-row { display: flex; justify-content: space-between; gap: 24px; padding: 4px 0; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .popup-row span:first-child { color: var(--text-muted); }
+    .popup-row span:last-child { color: var(--text-primary); font-family: monospace; font-weight: 500; }
+    .popup-vm { padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .popup-vm:last-child { border-bottom: none; }
+    .popup-vm-name { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+    .popup-vm-row { display: flex; gap: 12px; font-size: 12px; color: var(--text-muted); }
+    .popup-vm-row span { font-family: monospace; }
+    .popup-torrent { padding: 5px 0; border-bottom: 1px solid var(--border); }
+    .popup-torrent:last-child { border-bottom: none; }
+    .popup-torrent-name { font-size: 12px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px; }
+    .popup-torrent-meta { font-size: 11px; color: var(--text-muted); font-family: monospace; display: flex; gap: 10px; margin-top: 2px; }
+
+    /* ─── 底部飞牛音乐播放器 ─── */
+    .music-player-bar {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 999;
+      background: var(--bg-secondary); border-top: 1px solid var(--border);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      padding: 10px 24px; display: none; align-items: center; justify-content: space-between;
+      gap: 16px; box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+    }
+    .music-player-bar.active { display: flex; }
+    .music-track-info { display: flex; align-items: center; gap: 12px; min-width: 220px; }
+    .music-cover { width: 42px; height: 42px; border-radius: 8px; object-fit: cover; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+    .music-details { min-width: 0; }
+    .music-title { font-size: 13px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+    .music-artist { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+    .music-controls { display: flex; align-items: center; gap: 12px; flex: 1; max-width: 520px; justify-content: center; }
+    .music-btn { background: none; border: none; color: var(--text-primary); font-size: 16px; cursor: pointer; padding: 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .music-btn:hover { background: rgba(255,255,255,0.08); color: var(--accent-blue); }
+    .music-btn.play-toggle { font-size: 22px; width: 38px; height: 38px; background: var(--accent-blue); color: #fff; border-radius: 50%; }
+    .music-btn.play-toggle:hover { transform: scale(1.05); }
+    .music-btn.active-mode, .card-btn.active-mode {
+      color: var(--accent-blue) !important;
+      background: rgba(59, 130, 246, 0.2) !important;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.35);
+    }
+    .music-progress-wrapper { flex: 1; display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-muted); font-family: monospace; }
+    .music-progress { flex: 1; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; position: relative; cursor: pointer; }
+    .music-progress-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent-blue); border-radius: 2px; width: 0%; pointer-events: none; }
+    .music-extra { display: flex; align-items: center; gap: 10px; }
+    .music-link-btn { font-size: 12px; color: var(--text-muted); text-decoration: none; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); display: flex; align-items: center; gap: 4px; }
+    .music-link-btn:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.2); }
+
+    /* ─── 弹窗卡片式音乐播放器 Modal ─── */
+    .music-card-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      z-index: 2000; display: none; align-items: center; justify-content: center;
+      padding: 16px; opacity: 0; transition: opacity 0.25s ease;
+    }
+    .music-card-overlay.visible { display: flex; opacity: 1; }
+    .music-card-dialog {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+      width: 100%; max-width: 920px; max-height: 90vh;
+      display: flex; flex-direction: column; overflow: hidden;
+      animation: popIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes popIn {
+      from { transform: scale(0.92) translateY(20px); opacity: 0; }
+      to { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    .music-card-header {
+      padding: 16px 22px; display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--border); background: var(--bg-secondary);
+    }
+    .music-card-title-group { display: flex; align-items: center; gap: 10px; }
+    .music-card-title { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+    .music-badge { font-size: 11px; padding: 2px 8px; border-radius: 12px; background: rgba(255,255,255,0.06); color: var(--text-muted); font-family: monospace; }
+    .music-badge.playing { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+    .music-card-actions { display: flex; align-items: center; gap: 10px; }
+    .music-card-web-btn {
+      font-size: 12px; color: var(--text-secondary); text-decoration: none; padding: 5px 10px;
+      border-radius: 6px; border: 1px solid var(--border); background: rgba(255,255,255,0.03);
+      display: flex; align-items: center; gap: 5px; transition: all 0.2s;
+    }
+    .music-card-web-btn:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.2); }
+    .music-card-close {
+      background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer;
+      width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+    .music-card-close:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
+
+    .music-card-body {
+      display: flex; gap: 24px; padding: 22px; overflow-y: auto; flex: 1;
+    }
+    @media (max-width: 768px) {
+      .music-card-body { flex-direction: column; }
+    }
+
+    /* 左侧黑胶转盘与主控区 */
+    .music-card-player-panel {
+      flex: 1; min-width: 280px; display: flex; flex-direction: column; align-items: center;
+      background: rgba(255,255,255,0.02); border-radius: 16px; padding: 18px; border: 1px solid var(--border);
+    }
+    .vinyl-wrapper { position: relative; margin: 10px auto 16px; width: 170px; height: 170px; }
+    .vinyl-disc {
+      width: 170px; height: 170px; border-radius: 50%;
+      background: radial-gradient(circle, #252528 0%, #101012 50%, #202025 85%, #050505 100%);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6), inset 0 0 10px rgba(255,255,255,0.1);
+      position: relative; display: flex; align-items: center; justify-content: center;
+      border: 3px solid #2a2a2e; transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .vinyl-disc.playing {
+      animation: rotateVinyl 20s linear infinite;
+    }
+    .vinyl-disc.paused {
+      animation-play-state: paused;
+    }
+    @keyframes rotateVinyl {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .vinyl-center {
+      width: 72px; height: 72px; border-radius: 50%; overflow: hidden;
+      box-shadow: 0 0 12px rgba(0,0,0,0.7); border: 2px solid rgba(255,255,255,0.2);
+      display: flex; align-items: center; justify-content: center; background: #333; font-size: 28px;
+    }
+    .vinyl-center img { width: 100%; height: 100%; object-fit: cover; }
+
+    .card-track-info { text-align: center; margin-bottom: 14px; width: 100%; }
+    .card-track-title { font-size: 16px; font-weight: 700; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-track-artist { font-size: 13px; color: var(--text-muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .card-progress-box { width: 100%; margin-bottom: 14px; }
+    .card-progress-bar {
+      width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px;
+      position: relative; cursor: pointer;
+    }
+    .card-progress-fill {
+      position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent-blue);
+      border-radius: 3px; width: 0%; pointer-events: none; transition: width 0.1s linear;
+    }
+    .card-progress-time { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 5px; font-family: monospace; }
+
+    .card-control-buttons { display: flex; align-items: center; justify-content: center; gap: 14px; width: 100%; margin-bottom: 12px; }
+    .card-btn {
+      background: none; border: none; color: var(--text-primary); font-size: 18px; cursor: pointer;
+      width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+    .card-btn:hover { background: rgba(255,255,255,0.08); color: var(--accent-blue); transform: scale(1.08); }
+    .card-btn.play-main {
+      font-size: 24px; width: 48px; height: 48px; background: var(--accent-blue); color: #fff;
+      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+    }
+    .card-btn.play-main:hover { transform: scale(1.1); }
+
+    .card-volume-box { display: flex; align-items: center; gap: 8px; width: 90%; }
+    .card-vol-slider { flex: 1; accent-color: var(--accent-blue); cursor: pointer; height: 4px; }
+
+    /* 右侧歌单与管理区 */
+    .music-card-playlist-panel {
+      flex: 1.2; min-width: 300px; display: flex; flex-direction: column;
+      background: rgba(255,255,255,0.02); border-radius: 16px; padding: 18px; border: 1px solid var(--border);
+    }
+    .music-card-tabs { display: flex; gap: 6px; margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    .music-tab-btn {
+      padding: 6px 12px; background: none; border: none; color: var(--text-muted);
+      font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 6px; transition: all 0.2s;
+    }
+    .music-tab-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.05); }
+    .music-tab-btn.active { color: var(--accent-blue); background: rgba(59, 130, 246, 0.1); }
+
+    .music-tab-content { display: none; flex-direction: column; flex: 1; min-height: 280px; }
+    .music-tab-content.active { display: flex; }
+
+    .card-playlist-list { flex: 1; overflow-y: auto; max-height: 290px; display: flex; flex-direction: column; gap: 6px; padding-right: 4px; }
+
+    /* 运行日志控制台样式 */
+    .music-log-toolbar {
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px;
+    }
+    .music-log-console {
+      flex: 1; min-height: 230px; max-height: 285px; background: #0c1017;
+      border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 10px 12px;
+      overflow-y: auto; font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+      font-size: 11.5px; line-height: 1.6; color: #c9d1d9; user-select: text;
+    }
+    .log-line {
+      display: flex; gap: 8px; padding: 3px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      align-items: flex-start;
+    }
+    .log-line:hover { background: rgba(255, 255, 255, 0.04); }
+    .log-time { color: #6e7681; font-size: 11px; flex-shrink: 0; font-family: monospace; }
+    .log-badge {
+      padding: 0 5px; border-radius: 4px; font-size: 10px; font-weight: 700; flex-shrink: 0;
+      line-height: 16px; height: 16px; display: inline-block; text-align: center;
+    }
+    .log-badge.INFO { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+    .log-badge.WARN, .log-badge.WARNING { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .log-badge.ERROR { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+    .log-msg { flex: 1; word-break: break-all; }
+    
+    /* 歌单卡片列表 */
+    .playlist-card-item {
+      display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06);
+      cursor: pointer; transition: all 0.2s; user-select: none;
+    }
+    .playlist-card-item:hover {
+      background: rgba(255, 255, 255, 0.07); border-color: rgba(59, 130, 246, 0.4);
+      transform: translateY(-1px);
+    }
+    .playlist-card-cover {
+      width: 44px; height: 44px; border-radius: 8px; object-fit: cover;
+      background: rgba(255, 255, 255, 0.06); display: flex; align-items: center;
+      justify-content: center; font-size: 20px; flex-shrink: 0; overflow: hidden;
+    }
+    .playlist-card-info { flex: 1; min-width: 0; overflow: hidden; }
+    .playlist-card-name {
+      font-size: 13px; font-weight: 600; color: var(--text-primary);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .playlist-card-meta {
+      font-size: 11px; color: var(--text-muted); margin-top: 3px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .playlist-card-tag {
+      font-size: 10px; padding: 1px 6px; border-radius: 4px;
+      background: rgba(59, 130, 246, 0.15); color: var(--accent-blue);
+      font-weight: normal; flex-shrink: 0;
+    }
+    .playlist-card-btn {
+      padding: 5px 12px; font-size: 12px; border-radius: 6px;
+      background: rgba(59, 130, 246, 0.15); color: var(--accent-blue);
+      border: 1px solid rgba(59, 130, 246, 0.3); cursor: pointer;
+      transition: all 0.2s; white-space: nowrap; flex-shrink: 0; font-weight: 500;
+    }
+    .playlist-card-btn:hover {
+      background: var(--accent-blue); color: #fff;
+    }
+
+    /* 单曲列表 */
+    .playlist-item {
+      display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px;
+      cursor: pointer; transition: all 0.2s; border: 1px solid transparent;
+    }
+    .playlist-item:hover { background: rgba(255,255,255,0.04); border-color: var(--border); }
+    .playlist-item.active { background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.3); }
+    .playlist-item-idx { font-size: 12px; color: var(--text-muted); width: 22px; text-align: center; font-family: monospace; flex-shrink: 0; }
+    .playlist-item-cover {
+      width: 36px; height: 36px; border-radius: 6px; object-fit: cover;
+      background: rgba(255,255,255,0.05); display: flex; align-items: center;
+      justify-content: center; font-size: 16px; flex-shrink: 0; overflow: hidden;
+    }
+    .playlist-item-info { flex: 1; min-width: 0; overflow: hidden; }
+    .playlist-item-title { font-size: 13px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .playlist-item-artist { font-size: 11px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .playlist-item-duration { font-size: 11px; color: var(--text-muted); font-family: monospace; flex-shrink: 0; margin-left: auto; padding-left: 8px; }
+
+    .eq-bars { display: flex; align-items: flex-end; gap: 2px; height: 14px; width: 14px; margin-right: 4px; flex-shrink: 0; }
+    .eq-bar { width: 3px; background: var(--accent-green); border-radius: 1px; animation: eqBounce 0.8s infinite ease-in-out; }
+    .eq-bar:nth-child(1) { height: 60%; animation-delay: 0.1s; }
+    .eq-bar:nth-child(2) { height: 100%; animation-delay: 0.3s; }
+    .eq-bar:nth-child(3) { height: 40%; animation-delay: 0.2s; }
+    @keyframes eqBounce {
+      0%, 100% { height: 30%; }
+      50% { height: 100%; }
+    }
+
+    .card-playlist-footer { padding-top: 10px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; }
+
+    .music-add-form { display: flex; flex-direction: column; gap: 10px; }
+    .music-form-group { display: flex; flex-direction: column; gap: 4px; }
+    .music-form-group label { font-size: 12px; color: var(--text-secondary); }
+    .music-input {
+      padding: 8px 12px; background: var(--bg-secondary); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text-primary); font-size: 13px; outline: none;
+    }
+    .music-input:focus { border-color: var(--accent-blue); }
+
+    .music-guide-card {
+      background: rgba(255,255,255,0.02); border-radius: 8px; padding: 12px; border: 1px solid var(--border);
+    }
+
+    .card-external-badge {
+      position: absolute; top: 8px; right: 8px; width: 22px; height: 22px; border-radius: 4px;
+      background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center; font-size: 11px; text-decoration: none;
+      transition: all 0.2s; z-index: 2;
+    }
+    .card-external-badge:hover { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
+
+    .bg-layer {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: -1; overflow: hidden;
+    }
+    .bg-layer img {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      object-fit: cover; opacity: 0; transition: opacity 1.5s ease-in-out;
+    }
+    .bg-layer img.active { opacity: 1; }
+    .bg-layer::after {
+      content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 17, 23, 0.8);
+    }
+    .bg-caption {
+      position: fixed; bottom: 70px; right: 16px; z-index: 0;
+      font-size: 12px; color: rgba(255,255,255,0.4);
+      pointer-events: none;
+    }
+
+    .container { max-width: 1600px; margin: 0 auto; padding: 24px 24px 90px; }
+
+    .toolbar {
+      display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .toolbar-btn {
+      padding: 7px 16px; background: var(--bg-secondary); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text-secondary); font-size: 13px; cursor: pointer; transition: all 0.2s;
+      text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .toolbar-btn:hover { border-color: rgba(255,255,255,0.2); color: var(--text-primary); }
+    .toolbar-btn.active { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
+
+    /* 顶部 Live Banner 监控状态栏 */
+    .live-banner {
+      background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 14px 20px; margin-bottom: 20px; display: none;
+    }
+    .live-banner.visible { display: block; }
+    .live-banner-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .live-dot { width: 8px; height: 8px; background: var(--accent-green); border-radius: 50%; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .live-banner-grid { display: flex; gap: 24px; flex-wrap: wrap; }
+    .live-stat { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+    .live-stat-icon { font-size: 14px; }
+    .live-stat-label { font-size: 12px; color: var(--text-muted); }
+    .live-stat-value { font-size: 13px; font-weight: 600; font-family: monospace; }
+
+    /* 搜索框 */
+    .search-bar { max-width: 480px; margin: 0 auto 24px; position: relative; }
+    .search-bar input {
+      width: 100%; padding: 12px 16px 12px 42px;
+      background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px;
+      color: var(--text-primary); font-size: 14px; outline: none;
+    }
+    .search-bar input:focus { border-color: var(--accent-blue); }
+    .search-bar .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+
+    /* 服务卡片网格 */
+    .services-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+    .service-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      transition: all 0.2s ease; text-decoration: none; color: inherit;
+      display: flex; position: relative; overflow: hidden;
+    }
+    .service-card:hover {
+      background: var(--bg-card-hover); border-color: rgba(255,255,255,0.18);
+      transform: translateY(-2px); box-shadow: var(--shadow);
+    }
+    .card-icon { font-size: 32px; line-height: 1; }
+    .card-icon-img { width: 32px; height: 32px; border-radius: 6px; object-fit: contain; }
+    .card-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .card-desc { display: none; }
+
+    /* 分页式管理控制面板 */
+    .admin-panel {
+      display: none; background: var(--bg-secondary); border: 1px solid var(--border);
+      border-radius: var(--radius); margin-bottom: 24px; overflow: hidden;
+    }
+    .admin-panel.visible { display: block; }
+    
+    .admin-tabs {
+      display: flex; background: rgba(0,0,0,0.15); border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+    }
+    .admin-tab {
+      padding: 12px 20px; font-size: 14px; font-weight: 500; color: var(--text-secondary);
+      border: none; background: none; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+      border-bottom: 2px solid transparent;
+    }
+    .admin-tab:hover { color: var(--text-primary); }
+    .admin-tab.active {
+      color: var(--accent-blue); border-bottom-color: var(--accent-blue); background: rgba(255,255,255,0.02);
+    }
+
+    .admin-tab-content { padding: 20px; display: none; }
+    .admin-tab-content.active { display: block; }
+
+    /* 按钮与表单控件 */
+    .admin-btn {
+      padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer;
+      border: 1px solid var(--border); transition: all 0.2s; font-weight: 500;
+    }
+    .admin-btn-primary { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
+    .admin-btn-success { background: var(--accent-green); color: #fff; border-color: var(--accent-green); }
+    .admin-btn-danger { background: var(--accent-red); color: #fff; border-color: var(--accent-red); }
+    .admin-btn-secondary { background: var(--bg-card); color: var(--text-secondary); }
+    .admin-btn-secondary:hover { color: var(--text-primary); }
+
+    .settings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+    .setting-item {
+      display: flex; align-items: center; justify-content: space-between; padding: 12px 14px;
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+    }
+    .setting-label { font-size: 13px; font-weight: 500; }
+    .setting-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .setting-control select, .setting-control input {
+      padding: 6px 10px; background: var(--bg-secondary); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text-primary); font-size: 13px; outline: none;
+    }
+
+    /* 监控模块配置卡片 */
+    .monitors-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+    .monitor-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 14px;
+    }
+    .monitor-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .monitor-title { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+    .monitor-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .monitor-field { display: flex; flex-direction: column; gap: 4px; }
+    .monitor-field.full { grid-column: 1 / -1; }
+    .monitor-field label { font-size: 11px; color: var(--text-muted); }
+    .monitor-field input {
+      padding: 6px 10px; background: var(--bg-secondary); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text-primary); font-size: 12px; outline: none;
+    }
+    .monitor-actions { margin-top: 12px; display: flex; justify-content: space-between; align-items: center; }
+
+    /* 开关 Toggle */
+    .toggle-switch { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+      background: #3a3f52; border-radius: 20px; transition: 0.2s;
+    }
+    .toggle-slider::before {
+      content: ''; position: absolute; height: 14px; width: 14px; left: 3px; bottom: 3px;
+      background: #fff; border-radius: 50%; transition: 0.2s;
+    }
+    .toggle-switch input:checked + .toggle-slider { background: var(--accent-green); }
+    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(16px); }
+
+    /* 服务管理列表 (拖拽排序) */
+    .admin-list { max-height: 520px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+    .admin-row {
+      display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+      border: 1px solid var(--border); border-radius: 8px; background: var(--bg-card);
+      cursor: grab; transition: border-color 0.15s; user-select: none;
+    }
+    .admin-row:active { cursor: grabbing; }
+    .admin-row-name { font-size: 13px; font-weight: 500; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* 扫描列表 */
+    .scan-list { max-height: 380px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; margin: 12px 0; }
+    .scan-item {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+      border: 1px solid var(--border); border-radius: 8px; cursor: pointer; user-select: none;
+    }
+    .scan-item.selected { border-color: var(--accent-blue); background: rgba(59,130,246,0.08); }
+    .scan-item-info { min-width: 0; flex: 1; }
+    .scan-item-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* 弹窗与 Toast */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 10px;
+      font-size: 14px; color: #fff; z-index: 1100; transform: translateY(80px); opacity: 0;
+      transition: all 0.3s ease; pointer-events: none;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast-success { background: var(--accent-green); }
+    .toast-error { background: var(--accent-red); }
+    .toast-info { background: var(--accent-blue); }
+
+    .modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center;
+    }
+    .modal-overlay.visible { display: flex; }
+    .modal {
+      background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 24px; width: 90%; max-width: 480px; max-height: 90vh; overflow-y: auto;
+    }
+    .modal-field { margin-bottom: 12px; }
+    .modal-field label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+    .modal-field input, .modal-field select, .modal-field textarea {
+      width: 100%; padding: 8px 12px; background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text-primary); font-size: 13px; outline: none;
+    }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+
+    footer { text-align: center; padding: 24px 0 16px; color: var(--text-muted); font-size: 13px; border-top: 1px solid var(--border); margin-top: 20px; }
+
+    /* 身份验证遮罩与卡片样式 */
+    .auth-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(10, 14, 23, 0.88);
+      backdrop-filter: blur(28px) saturate(180%);
+      -webkit-backdrop-filter: blur(28px) saturate(180%);
+      z-index: 99999;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 1; visibility: visible;
+      transition: opacity 0.35s ease, visibility 0.35s ease;
+    }
+    .auth-overlay.hidden {
+      opacity: 0; visibility: hidden; pointer-events: none;
+    }
+    .auth-card {
+      width: 90%; max-width: 410px;
+      background: rgba(22, 27, 34, 0.94);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.65), 0 0 35px rgba(59, 130, 246, 0.18);
+      padding: 32px 28px;
+      color: #fff;
+      text-align: center;
+      animation: authCardIn 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes authCardIn {
+      from { transform: translateY(20px) scale(0.96); opacity: 0; }
+      to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+    .auth-logo-badge {
+      width: 60px; height: 60px; border-radius: 16px;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(139, 92, 246, 0.25));
+      border: 1px solid rgba(59, 130, 246, 0.45);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 30px; margin: 0 auto 16px;
+      box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25);
+    }
+    .auth-title {
+      font-size: 20px; font-weight: 700; margin-bottom: 6px;
+      background: linear-gradient(135deg, #ffffff, #93c5fd);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .auth-desc {
+      font-size: 13px; color: #8b949e; margin-bottom: 22px;
+    }
+    .auth-form-group {
+      text-align: left; margin-bottom: 15px;
+    }
+    .auth-form-group label {
+      display: block; font-size: 12px; font-weight: 500; color: #c9d1d9; margin-bottom: 6px;
+    }
+    .auth-input-wrapper {
+      position: relative; display: flex; align-items: center;
+    }
+    .auth-input {
+      width: 100%; padding: 10px 14px;
+      background: rgba(13, 17, 23, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px; color: #f0f6fc; font-size: 14px;
+      outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .auth-input:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+    }
+    .auth-pwd-toggle {
+      position: absolute; right: 10px; background: none; border: none;
+      color: #8b949e; cursor: pointer; font-size: 16px; padding: 4px;
+    }
+    .auth-remember-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin: 16px 0 20px; font-size: 13px; color: #c9d1d9; user-select: none;
+    }
+    .auth-remember-row label {
+      display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+    }
+    .auth-btn-submit {
+      width: 100%; padding: 12px; border: none; border-radius: 8px;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #fff; font-size: 14px; font-weight: 600; cursor: pointer;
+      transition: transform 0.15s, opacity 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
+    }
+    .auth-btn-submit:hover {
+      opacity: 0.95; transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45);
+    }
+    .auth-btn-submit:active { transform: translateY(0); }
+    .auth-tip {
+      margin-top: 16px; font-size: 12px; color: #8b949e; line-height: 1.6;
+      background: rgba(255, 255, 255, 0.03); border: 1px dashed rgba(255, 255, 255, 0.1);
+      border-radius: 8px; padding: 10px;
+    }
+    .auth-error-msg {
+      margin-top: 12px; font-size: 12px; color: #f85149;
+      background: rgba(248, 81, 73, 0.12); border: 1px solid rgba(248, 81, 73, 0.25);
+      border-radius: 6px; padding: 8px 12px; display: none; text-align: left;
+    }
+  </style>
+</head>
+<body class="theme-dark">
+  <div class="bg-layer" id="bgLayer"></div>
+  <div class="bg-caption" id="bgCaption"></div>
+
+  <!-- 网页打开首次身份验证遮罩卡片 -->
+  <div class="auth-overlay" id="authOverlay">
+    <div class="auth-card">
+      <div class="auth-logo-badge">🛡️</div>
+      <div class="auth-title">NAS Stats 聚合监控</div>
+      <div class="auth-desc">系统已开启安全访问保护，请输入凭据进入</div>
+      <form id="authLoginForm" onsubmit="return false;">
+        <div class="auth-form-group">
+          <label>管理员账号</label>
+          <input type="text" id="authUsername" class="auth-input" value="admin" autocomplete="username" placeholder="请输入管理员账号" required>
+        </div>
+        <div class="auth-form-group">
+          <label>访问密码</label>
+          <div class="auth-input-wrapper">
+            <input type="password" id="authPassword" class="auth-input" placeholder="请输入访问密码" autocomplete="current-password" required>
+            <button type="button" class="auth-pwd-toggle" id="authPwdToggle" title="显示/隐藏密码">👁️</button>
+          </div>
+        </div>
+        <div class="auth-remember-row">
+          <label>
+            <input type="checkbox" id="authRememberMe" checked>
+            <span>默认保持登录状态</span>
+          </label>
+          <span style="font-size:11px;color:#8b949e">本机记住</span>
+        </div>
+        <button type="submit" class="auth-btn-submit" id="authBtnSubmit">🚀 验 证 进 入</button>
+        <div class="auth-error-msg" id="authErrorMsg"></div>
+        <div class="auth-tip">
+          💡 初始账号: <strong style="color:#58a6ff">admin</strong> ，初始密码: <strong style="color:#58a6ff">admin123</strong><br>
+          登录后可随时在「⚙️ 系统管理」中修改访问密码
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="toolbar">
+      <button class="toolbar-btn" id="musicCardToggle" title="打开弹窗音乐播放器">🎵 飞牛音乐</button>
+      <a href="/nvr" class="toolbar-btn" title="查看 EasyNVR 实时摄像头">📹 NVR 监控</a>
+      <button class="toolbar-btn" id="toolbarLogsBtn" title="查看运行与排查日志">📋 运行日志</button>
+      <button class="toolbar-btn" id="adminToggle">⚙️ 系统管理</button>
+      <button class="toolbar-btn" id="toolbarLogoutBtn" title="退出登录并锁定面板">🔒 退出登录</button>
+    </div>
+
+    <!-- 顶部状态栏 -->
+    <div class="live-banner" id="liveBanner">
+      <div class="live-banner-header">
+        <span class="live-dot"></span>
+        <span style="font-size:12px;font-weight:600;color:var(--text-muted)">实时服务状态</span>
+      </div>
+      <div class="live-banner-grid" id="liveBannerGrid"></div>
+    </div>
+
+    <!-- 搜索栏 -->
+    <div class="search-bar" id="searchBarWrapper">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="搜索服务名称、端口或分类...">
+    </div>
+
+    <!-- 分页式管理控制面板 -->
+    <div class="admin-panel" id="adminPanel">
+      <div class="admin-tabs">
+        <button class="admin-tab active" data-tab="tab-ui">🎨 界面与样式</button>
+        <button class="admin-tab" data-tab="tab-monitors">📡 监控服务设置</button>
+        <button class="admin-tab" data-tab="tab-services">📋 服务快捷方式</button>
+        <button class="admin-tab" data-tab="tab-import">📥 导入与发现</button>
+        <button class="admin-tab" data-tab="tab-about">ℹ️ 关于系统</button>
+        <button class="admin-tab" data-tab="tab-logs">📋 运行日志</button>
+      </div>
+
+      <!-- Tab 1: 界面与样式 -->
+      <div class="admin-tab-content active" id="tab-ui">
+        <div class="settings-grid">
+          <div class="setting-item">
+            <div>
+              <div class="setting-label">主题配色风格</div>
+              <div class="setting-desc">深色、浅色、海洋蓝、森林绿、玫瑰金</div>
+            </div>
+            <div class="setting-control">
+              <select id="settingTheme">
+                <option value="dark">🌙 暗夜深色 (默认)</option>
+                <option value="light">☀️ 纯净浅色</option>
+                <option value="ocean">🌊 深邃海洋蓝</option>
+                <option value="forest">🌲 苍翠森林绿</option>
+                <option value="rose">🌸 优雅玫瑰金</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="setting-item">
+            <div>
+              <div class="setting-label">卡片外观形态</div>
+              <div class="setting-desc">网格、紧凑药丸、横向列表、毛玻璃</div>
+            </div>
+            <div class="setting-control">
+              <select id="settingCardStyle">
+                <option value="default">标准网格卡片</option>
+                <option value="compact">紧凑药丸圆角</option>
+                <option value="horizontal">水平横向列表</option>
+                <option value="glass">毛玻璃高级质感</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="setting-item">
+            <div>
+              <div class="setting-label">显示主页搜索框</div>
+              <div class="setting-desc">在快捷卡片上方呈现即时搜索过滤</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="settingShowSearch" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item">
+            <div>
+              <div class="setting-label">🎵 飞牛音乐播放器</div>
+              <div class="setting-desc">在页面底部接入飞牛系统音乐播放器与控制条</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="settingEnableMusic" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item">
+            <div>
+              <div class="setting-label">🔐 飞牛音乐账户与日志</div>
+              <div class="setting-desc">对接 5888 端口飞牛音乐平台账号密码，或查看排查日志</div>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button class="admin-btn admin-btn-secondary" style="font-size:12px;padding:4px 10px" onclick="openMusicCardModal(false); switchMusicTab('fnos_config');">
+                ⚙️ 账号配置
+              </button>
+              <button class="admin-btn admin-btn-secondary" style="font-size:12px;padding:4px 10px" onclick="openMusicCardModal(false); switchMusicTab('logs');">
+                📋 音乐日志
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 独立安全的访问密码修改卡片 -->
+        <div style="margin-top:18px;padding:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px">
+          <div style="font-size:14px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:6px">
+            <span>🛡️ 访问安全与修改密码</span>
+            <span style="font-size:12px;font-weight:normal;color:var(--text-muted)">（当前管理员: <strong id="adminCurrentUsername" style="color:var(--accent-blue)">admin</strong>）</span>
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+            修改首次打开网页时的系统身份验证密码，保护家庭 NAS 仪表盘隐私安全。
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <input type="password" id="inputOldPwd" placeholder="输入原密码 (初始为 admin123)" style="flex:1;min-width:180px;padding:8px 12px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:13px;outline:none">
+            <input type="password" id="inputNewPwd" placeholder="输入新密码 (至少 3 位)" style="flex:1;min-width:180px;padding:8px 12px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:13px;outline:none">
+            <button type="button" class="admin-btn admin-btn-primary" id="btnChangeWebPwd" style="font-size:13px;padding:8px 16px;white-space:nowrap">🔒 确认修改访问密码</button>
+          </div>
+        </div>
+
+        <div style="margin-top:16px">
+          <button class="admin-btn admin-btn-primary" id="btnSaveUISettings">保存界面设置</button>
+        </div>
+      </div>
+
+      <!-- Tab 2: 监控设置 -->
+      <div class="admin-tab-content" id="tab-monitors">
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">
+          可独立开启/关闭各监控模块。每个模块均可在保存后点击"测试连接"进行验证。
+        </p>
+        <div class="monitors-grid" id="monitorsContainer"></div>
+      </div>
+
+      <!-- Tab 3: 服务管理 (含拖拽排序与批量操作) -->
+      <div class="admin-tab-content" id="tab-services">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <label style="font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none">
+              <input type="checkbox" id="svcSelectAll"> 全选
+            </label>
+            <button class="admin-btn admin-btn-secondary" id="btnBatchFetchIcons" style="font-size:12px;padding:6px 12px">
+              🖼️ 批量获取图标
+            </button>
+            <button class="admin-btn admin-btn-danger" id="btnBatchDelete" style="font-size:12px;padding:6px 12px">
+              🗑️ 批量删除选中 (<span id="selectedCount">0</span>)
+            </button>
+          </div>
+          <button class="admin-btn admin-btn-success" id="btnOpenAddModal">➕ 新建自定义服务</button>
+        </div>
+        <div class="admin-list" id="adminServicesList"></div>
+      </div>
+
+      <!-- Tab 4: 导入与智能发现 -->
+      <div class="admin-tab-content" id="tab-import">
+        <h4 style="font-size:14px;margin-bottom:8px">1. 从 URL 智能获取并添加服务（自动提取图标与标题）</h4>
+        <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+          <input type="text" id="urlImportInput" placeholder="http://127.0.0.1:3000" style="flex:1;min-width:200px;padding:8px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:13px;outline:none">
+          <button class="admin-btn admin-btn-primary" id="btnFetchUrl">获取网站信息</button>
+          <button class="admin-btn admin-btn-success" id="btnAddUrl" disabled>快速添加到服务</button>
+        </div>
+        <div id="urlPreview" style="display:none;padding:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <img id="urlPreviewIcon" src="" style="width:32px;height:32px;border-radius:6px;object-fit:contain;background:rgba(255,255,255,0.05)">
+            <div style="flex:1;min-width:0">
+              <div id="urlPreviewTitle" style="font-size:14px;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+              <div id="urlPreviewMeta" style="font-size:12px;color:var(--text-muted)"></div>
+            </div>
+          </div>
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+            <input type="text" id="urlEditName" placeholder="自定义名称" style="flex:1;min-width:120px;padding:6px 10px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:5px;color:var(--text-primary);font-size:12px;outline:none">
+            <input type="text" id="urlEditIcon" placeholder="备选 Emoji" style="width:70px;padding:6px 10px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:5px;color:var(--text-primary);font-size:12px;outline:none;text-align:center">
+          </div>
+        </div>
+
+        <h4 style="font-size:14px;margin-bottom:8px">2. 局域网 NAS 端口全盘扫描</h4>
+        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+          <input type="text" id="nasIpInput" placeholder="127.0.0.1" style="padding:8px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:13px;width:180px">
+          <button class="admin-btn admin-btn-primary" id="btnScanNas">扫描开放端口与网页图标</button>
+        </div>
+
+        <h4 style="font-size:14px;margin-bottom:8px">3. 批量 JSON 导入与导出</h4>
+        <textarea id="importJsonArea" style="width:100%;height:75px;padding:8px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:12px;font-family:monospace" placeholder='[{"port":8080,"name":"自定义服务","url":"http://127.0.0.1:8080"}]'></textarea>
+        <div style="margin-top:8px;margin-bottom:16px;display:flex;gap:8px">
+          <button class="admin-btn admin-btn-success" id="btnImportJson">执行导入</button>
+          <button class="admin-btn admin-btn-secondary" id="btnExportJson">导出当前备份</button>
+        </div>
+
+        <h4 style="font-size:14px;margin-bottom:8px">4. 初始化预置服务</h4>
+        <button class="admin-btn admin-btn-secondary" id="btnSeed">重置恢复预设 55 个服务</button>
+      </div>
+
+      <!-- Tab 5: 关于 -->
+      <div class="admin-tab-content" id="tab-about">
+        <div style="font-size:13px;color:var(--text-secondary);line-height:1.8">
+          <p><strong>NAS Stats 2.0</strong> — 飞牛 fnOS 与家庭数据中心聚合仪表盘</p>
+          <p>• 数据驱动: 全面集成 SQLite 数据库持久化，去中心化管理</p>
+          <p>• 扩展监控: 支持 qBittorrent, Transmission, iKuai, PVE, MoviePilot, iStoreOS, Emby, Plex, Jellyfin, Home Assistant, EasyNVR</p>
+          <p>• 图标支持: 支持一键联网探测网页 Favicon、本地上传图片转 Base64、外链图标加载以及标准 Emoji 表情。</p>
+        </div>
+      </div>
+
+      <!-- Tab 6: 运行日志 (独立音乐日志面板) -->
+      <div class="admin-tab-content" id="tab-logs">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px">
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--text-primary)">📋 飞牛音乐与系统运行日志</div>
+            <div style="font-size:12px;color:var(--text-muted)">实时排查音乐鉴权、歌单拉取与音频流代理状态（存储于 data/music.log）</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="admin-btn admin-btn-secondary" style="font-size:12px;padding:5px 12px" onclick="openMusicCardModal(false); switchMusicTab('logs');">
+              🎵 在音乐播放器中打开
+            </button>
+          </div>
+        </div>
+        <div class="music-log-toolbar">
+          <input type="text" id="adminLogSearch" placeholder="🔍 搜索日志关键字..." style="flex:1;min-width:140px;padding:6px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:12px;outline:none">
+          <select id="adminLogLevel" style="width:110px;padding:6px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:12px;outline:none">
+            <option value="ALL">全部级别</option>
+            <option value="INFO">仅 INFO</option>
+            <option value="WARN">仅 WARN</option>
+            <option value="ERROR">仅 ERROR</option>
+          </select>
+          <button class="admin-btn admin-btn-secondary" style="font-size:12px;padding:5px 10px" id="btnAdminRefreshLogs" title="刷新日志">🔄 刷新</button>
+          <button class="admin-btn admin-btn-secondary" style="font-size:12px;padding:5px 10px" id="btnAdminCopyLogs" title="一键复制全部日志">📋 复制</button>
+          <a href="/api/music/logs/download" class="admin-btn admin-btn-secondary" style="font-size:12px;padding:5px 10px;text-decoration:none" download title="下载原始日志文件">⬇️ 导出</a>
+          <button class="admin-btn admin-btn-danger" style="font-size:12px;padding:5px 10px" id="btnAdminClearLogs" title="清空全部日志">🗑️ 清空</button>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:11px;color:var(--text-muted)">
+          <div>
+            <label style="cursor:pointer;display:inline-flex;align-items:center;gap:4px">
+              <input type="checkbox" id="chkAdminAutoRefreshLogs" checked> 自动更新 (3s)
+            </label>
+            <span style="margin:0 6px">|</span>
+            <span id="adminLogStatusText">已就绪</span>
+          </div>
+          <div>
+            <button class="admin-btn admin-btn-secondary" style="font-size:11px;padding:2px 8px" id="btnAdminScrollLogBottom">⬇️ 到底部</button>
+          </div>
+        </div>
+        <div class="music-log-console" id="adminLogConsole" style="max-height:360px;min-height:260px">
+          <div style="color:#8b949e;text-align:center;padding:40px">正在获取运行日志...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 核心卡片网格 -->
+    <main id="servicesGrid" class="services-grid style-default"></main>
+    <div id="noResults" style="text-align:center;padding:40px 0;color:var(--text-muted);display:none">没有找到匹配的服务</div>
+
+    <footer>NAS Stats 2.0 • 飞牛 fnOS 监控</footer>
+  </div>
+
+  <!-- 飞牛系统音乐播放控制条 -->
+  <div class="music-player-bar" id="musicPlayerBar">
+    <div class="music-track-info" id="musicTrackInfoBar" style="cursor:pointer" title="点击展开音乐播放卡片">
+      <div class="music-cover" id="musicCover">🎵</div>
+      <div class="music-details">
+        <div class="music-title" id="musicTitle">飞牛音乐</div>
+        <div class="music-artist" id="musicArtist">fnOS 媒体中心</div>
+      </div>
+    </div>
+
+    <div class="music-controls">
+      <button class="music-btn" id="musicShuffleBtn" title="一键切换随机播放">🔀</button>
+      <button class="music-btn" id="musicPrev" title="上一曲">⏮️</button>
+      <button class="music-btn play-toggle" id="musicPlayToggle" title="播放/暂停">▶️</button>
+      <button class="music-btn" id="musicNext" title="下一曲">⏭️</button>
+      <button class="music-btn" id="musicModeBtn" title="播放模式: 列表循环">🔁</button>
+      <div class="music-progress-wrapper">
+        <span id="musicCurrentTime">00:00</span>
+        <div class="music-progress" id="musicProgress">
+          <div class="music-progress-fill" id="musicProgressFill"></div>
+        </div>
+        <span id="musicDuration">--:--</span>
+      </div>
+    </div>
+
+    <div class="music-extra">
+      <button class="music-link-btn" id="musicExpandModalBtn" title="展开弹窗卡片播放器" style="cursor:pointer">
+        <span>💽 展开播放器</span>
+      </button>
+      <a href="javascript:void(0)" onclick="window.open(`http://${location.hostname}:5888/music/`, '_blank')" class="music-link-btn" id="musicAppBtn">
+        <span>🎧 飞牛音乐完整版</span>
+      </a>
+    </div>
+    <audio id="audioElement" preload="metadata"></audio>
+  </div>
+
+  <!-- 弹窗卡片式音乐播放器 Modal -->
+  <div class="music-card-overlay" id="musicCardModal">
+    <div class="music-card-dialog">
+      <!-- Header -->
+      <div class="music-card-header">
+        <div class="music-card-title-group">
+          <span class="music-card-title">🎵 飞牛音乐播放器</span>
+          <span class="music-badge" id="cardPlayingBadge">已暂停</span>
+        </div>
+        <div class="music-card-actions">
+          <a href="javascript:void(0)" onclick="window.open(`http://${location.hostname}:5888/music/`, '_blank')" class="music-card-web-btn" title="在新窗口打开飞牛音乐 Web 版">
+            <span>🌐 飞牛音乐 Web 版</span>
+          </a>
+          <button class="music-card-close" id="musicCardCloseBtn" title="关闭弹窗">✕</button>
+        </div>
+      </div>
+
+      <div class="music-card-body">
+        <!-- 左侧：播放转盘与主控制 -->
+        <div class="music-card-player-panel">
+          <div class="vinyl-wrapper">
+            <div class="vinyl-disc" id="vinylDisc">
+              <div class="vinyl-center" id="vinylCenterCover">🎵</div>
+            </div>
+          </div>
+
+          <div class="card-track-info">
+            <div class="card-track-title" id="cardSongTitle">载入歌曲中...</div>
+            <div class="card-track-artist" id="cardSongArtist">飞牛音乐</div>
+          </div>
+
+          <!-- 进度控制 -->
+          <div class="card-progress-box">
+            <div class="card-progress-bar" id="cardProgressBar">
+              <div class="card-progress-fill" id="cardProgressFill"></div>
+            </div>
+            <div class="card-progress-time">
+              <span id="cardCurTime">00:00</span>
+              <span id="cardTotalTime">00:00</span>
+            </div>
+          </div>
+
+          <!-- 播放控制按钮 -->
+          <div class="card-control-buttons">
+            <button class="card-btn" id="cardBtnShuffle" title="一键切换随机播放">🔀</button>
+            <button class="card-btn" id="cardBtnPrev" title="上一曲">⏮️</button>
+            <button class="card-btn play-main" id="cardBtnPlay" title="播放/暂停">▶️</button>
+            <button class="card-btn" id="cardBtnNext" title="下一曲">⏭️</button>
+            <button class="card-btn" id="cardBtnMode" title="播放模式 (列表循环/单曲循环/随机播放)">🔁</button>
+            <button class="card-btn" id="cardBtnMute" title="静音切换">🔊</button>
+          </div>
+
+          <!-- 音量滑块 -->
+          <div class="card-volume-box">
+            <span style="font-size:12px;color:var(--text-muted)">音量</span>
+            <input type="range" id="cardVolumeSlider" min="0" max="100" value="80" class="card-vol-slider">
+            <span id="cardVolumeText" style="font-size:11px;color:var(--text-muted);width:32px;text-align:right">80%</span>
+          </div>
+        </div>
+
+        <!-- 右侧：歌单列表与当前曲目 -->
+        <div class="music-card-playlist-panel">
+          <div class="music-card-tabs">
+            <button class="music-tab-btn active" id="tabBtnPlaylists">📁 飞牛歌单 (<span id="playlistsCount">0</span>)</button>
+            <button class="music-tab-btn" id="tabBtnCurrentTracks">📜 当前曲目 (<span id="playlistCount">0</span>)</button>
+            <button class="music-tab-btn" id="tabBtnFnosConfig">⚙️ 飞牛设置</button>
+            <button class="music-tab-btn" id="tabBtnMusicLogs">📋 运行日志</button>
+          </div>
+
+          <!-- Tab 1: 飞牛现存歌单列表 -->
+          <div class="music-tab-content active" id="musicViewPlaylists">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <span style="font-size:12px;color:var(--text-muted)">点击任意歌单即可立即播放</span>
+              <div style="display:flex;gap:6px">
+                <button class="admin-btn admin-btn-secondary" style="font-size:12px;padding:3px 9px" id="btnShuffleAllLibrary" title="加载全部本地曲库并随机播放">🔀 随机播放曲库</button>
+                <button class="admin-btn admin-btn-secondary" style="font-size:12px;padding:3px 10px" id="btnRefreshPlaylists">🔄 刷新歌单</button>
+              </div>
+            </div>
+            <div class="card-playlist-list" id="cardPlaylistsContainer">
+              <div style="text-align:center;padding:30px;color:var(--text-muted);font-size:13px">正在获取飞牛音乐歌单...</div>
+            </div>
+          </div>
+
+          <!-- Tab 2: 当前歌单曲目列表 -->
+          <div class="music-tab-content" id="musicViewCurrentTracks">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <span id="currentPlaylistTitle" style="font-size:12px;font-weight:600;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">当前播放曲目</span>
+              <div style="display:flex;gap:6px">
+                <button class="admin-btn admin-btn-secondary" style="font-size:12px;padding:3px 9px" id="btnShuffleCurrentPlaylist" title="打乱当前歌单并开启随机播放">🔀 随机播放</button>
+                <button class="admin-btn admin-btn-secondary" style="font-size:12px;padding:3px 10px" id="btnBackToPlaylists">📁 切换歌单</button>
+              </div>
+            </div>
+            <div class="card-playlist-list" id="cardPlaylistContainer">
+              <div style="text-align:center;padding:30px;color:var(--text-muted);font-size:13px">暂无正在播放的歌曲，请在「飞牛歌单」中选择</div>
+            </div>
+          </div>
+
+          <!-- Tab 3: 飞牛账户与连接配置 -->
+          <div class="music-tab-content" id="musicViewFnosConfig">
+            <div class="music-add-form">
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;line-height:1.6">
+                设置用于对接飞牛音乐平台（5888 端口）的账号密码。配置安全保存在独立数据库中，不会改动系统核心配置。
+              </div>
+              <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px">
+                <div class="music-form-group">
+                  <label>飞牛服务器 IP / 域名</label>
+                  <input type="text" id="fnCfgHost" placeholder="127.0.0.1" class="music-input">
+                </div>
+                <div class="music-form-group">
+                  <label>音乐服务端口</label>
+                  <input type="number" id="fnCfgPort" placeholder="5888" class="music-input">
+                </div>
+              </div>
+              <div class="music-form-group">
+                <label>飞牛音乐登录用户名 <span style="color:var(--accent-red)">*</span></label>
+                <input type="text" id="fnCfgUser" placeholder="例如: admin" class="music-input">
+              </div>
+              <div class="music-form-group">
+                <label>飞牛音乐登录密码 <span style="color:var(--accent-red)">*</span></label>
+                <input type="password" id="fnCfgPass" placeholder="留空或输入新密码" class="music-input">
+              </div>
+              <div style="display:flex;gap:10px;margin-top:14px">
+                <button class="admin-btn admin-btn-primary" style="flex:1;padding:9px" id="btnSaveFnosMusicConfig">💾 保存并测试登录</button>
+              </div>
+              <div id="fnCfgStatus" style="margin-top:10px;font-size:12px;text-align:center;color:var(--text-muted)"></div>
+            </div>
+          </div>
+
+          <!-- Tab 4: 飞牛音乐独立运行日志 -->
+          <div class="music-tab-content" id="musicViewMusicLogs">
+            <div class="music-log-toolbar">
+              <input type="text" id="musicLogSearch" placeholder="🔍 搜索日志关键字..." class="music-input" style="flex:1;min-width:110px;padding:5px 8px;font-size:12px">
+              <select id="musicLogLevel" class="music-input" style="width:96px;padding:5px 8px;font-size:12px">
+                <option value="ALL">全部级别</option>
+                <option value="INFO">仅 INFO</option>
+                <option value="WARN">仅 WARN</option>
+                <option value="ERROR">仅 ERROR</option>
+              </select>
+              <button class="admin-btn admin-btn-secondary" style="font-size:12px;padding:4px 8px" id="btnRefreshMusicLogs" title="立即刷新">🔄</button>
+              <button class="admin-btn admin-btn-secondary" style="font-size:12px;padding:4px 8px" id="btnCopyMusicLogs" title="复制日志">📋</button>
+              <a href="/api/music/logs/download" class="admin-btn admin-btn-secondary" style="font-size:12px;padding:4px 8px;text-decoration:none" download title="导出/下载日志文件">⬇️</a>
+              <button class="admin-btn admin-btn-danger" style="font-size:12px;padding:4px 8px" id="btnClearMusicLogs" title="清空日志">🗑️</button>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:11px;color:var(--text-muted)">
+              <div>
+                <label style="cursor:pointer;display:inline-flex;align-items:center;gap:4px">
+                  <input type="checkbox" id="chkAutoRefreshMusicLogs" checked> 自动更新 (3s)
+                </label>
+                <span style="margin:0 6px">|</span>
+                <span id="musicLogStatusText">已就绪</span>
+              </div>
+              <div>
+                <button class="admin-btn admin-btn-secondary" style="font-size:11px;padding:2px 8px" id="btnScrollLogBottom">⬇️ 到底部</button>
+              </div>
+            </div>
+            <div class="music-log-console" id="musicLogConsole">
+              <div style="color:#8b949e;text-align:center;padding:30px">正在获取运行日志...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 编辑/新建服务弹窗（包含全部图标获取、上传与预览能力） -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal">
+      <h3 id="modalTitle" style="font-size:16px;margin-bottom:14px">编辑服务</h3>
+      <div class="modal-field">
+        <label>名称</label>
+        <input type="text" id="editName">
+      </div>
+      <div class="modal-field">
+        <label>图标设置与获取</label>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+          <input type="text" id="editIcon" placeholder="输入 Emoji" style="flex:1">
+          <img id="editFaviconPreview" src="" style="width:28px;height:28px;border-radius:4px;object-fit:contain;background:rgba(255,255,255,0.05);display:none">
+          <button type="button" class="admin-btn admin-btn-primary" id="editFetchIcon" style="padding:6px 12px;font-size:12px;white-space:nowrap">探测 Favicon</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <label class="admin-btn admin-btn-secondary" style="padding:6px 12px;font-size:12px;cursor:pointer;margin:0">
+            上传本地图片
+            <input type="file" id="editIconUpload" accept="image/*" style="display:none">
+          </label>
+          <input type="text" id="editIconUrl" placeholder="或输入外链图片 URL" style="flex:1;min-width:140px;padding:6px 10px;font-size:12px">
+          <button type="button" class="admin-btn admin-btn-primary" id="editLoadIconUrl" style="padding:6px 12px;font-size:12px;white-space:nowrap">加载</button>
+        </div>
+      </div>
+      <div class="modal-field">
+        <label>URL 地址</label>
+        <input type="text" id="editUrl">
+      </div>
+      <div class="modal-field">
+        <label>端口</label>
+        <input type="number" id="editPort">
+      </div>
+      <div class="modal-field">
+        <label>协议</label>
+        <select id="editProtocol">
+          <option value="http">HTTP</option>
+          <option value="https">HTTPS</option>
+          <option value="tcp">TCP</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>描述</label>
+        <input type="text" id="editDesc">
+      </div>
+      <div class="modal-actions">
+        <button class="admin-btn admin-btn-secondary" id="editCancel">取消</button>
+        <button class="admin-btn admin-btn-primary" id="editSave">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAS 端口扫描弹窗 -->
+  <div class="modal-overlay" id="scanModal">
+    <div class="modal" style="max-width:640px">
+      <h3 style="font-size:16px;margin-bottom:6px">局域网 NAS 服务扫描</h3>
+      <p id="scanStatus" style="font-size:12px;color:var(--text-muted);margin-bottom:12px">正在扫描端口...</p>
+      <div id="scanResults"></div>
+      <div class="modal-actions" style="margin-top:14px">
+        <button class="admin-btn admin-btn-secondary" id="scanSelectAll">全选</button>
+        <button class="admin-btn admin-btn-secondary" id="scanCancel">关闭</button>
+        <button class="admin-btn admin-btn-primary" id="scanAddSelected">添加选中服务</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ─── 网页打开首次身份验证与登录状态记忆管理器 ───
+    const AUTH_TOKEN_KEY = 'nas_auth_token';
+    let currentAuthUser = 'admin';
+
+    function getStoredAuthToken() {
+      return localStorage.getItem(AUTH_TOKEN_KEY) || sessionStorage.getItem(AUTH_TOKEN_KEY) || '';
+    }
+
+    function setStoredAuthToken(token, remember = true) {
+      if (remember) {
+        localStorage.setItem(AUTH_TOKEN_KEY, token);
+        sessionStorage.removeItem(AUTH_TOKEN_KEY);
+      } else {
+        sessionStorage.setItem(AUTH_TOKEN_KEY, token);
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+      }
+    }
+
+    function removeStoredAuthToken() {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+      sessionStorage.removeItem(AUTH_TOKEN_KEY);
+    }
+
+    function showAuthOverlay() {
+      const overlay = document.getElementById('authOverlay');
+      if (overlay) {
+        overlay.classList.remove('hidden');
+        const pwdInput = document.getElementById('authPassword');
+        if (pwdInput) {
+          setTimeout(() => pwdInput.focus(), 250);
+        }
+      }
+    }
+
+    function hideAuthOverlay() {
+      const overlay = document.getElementById('authOverlay');
+      if (overlay) overlay.classList.add('hidden');
+    }
+
+    async function checkAuthStartup() {
+      const token = getStoredAuthToken();
+      if (!token) {
+        showAuthOverlay();
+        return false;
+      }
+      try {
+        const res = await fetch('/api/auth/verify', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (data.ok && data.authenticated) {
+          currentAuthUser = data.username || 'admin';
+          const userBadge = document.getElementById('adminCurrentUsername');
+          if (userBadge) userBadge.textContent = currentAuthUser;
+          hideAuthOverlay();
+          return true;
+        } else {
+          removeStoredAuthToken();
+          showAuthOverlay();
+          return false;
+        }
+      } catch (e) {
+        // 网络请求故障但本地存在保存的登录凭据时，保持放行
+        hideAuthOverlay();
+        return true;
+      }
+    }
+
+    // 网页加载时立即执行鉴权验证
+    checkAuthStartup();
+
+    let allServices = [];
+    let editingServiceId = null;
+    let editFaviconData = '';
+
+    function toast(msg, type = 'info') {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.className = `toast toast-${type} show`;
+      setTimeout(() => el.classList.remove('show'), 3000);
+    }
+
+    function formatSize(bytes) {
+      if (!bytes || isNaN(bytes)) return '0 B';
+      const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(1024));
+      return (bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
+    }
+
+    function formatSpeed(bytesPerSec) {
+      if (!bytesPerSec || bytesPerSec === 0) return '0 B/s';
+      const units = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+      const i = Math.floor(Math.log(bytesPerSec) / Math.log(1024));
+      return (bytesPerSec / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
+    }
+
+    // ─── 主题与外观 ───
+    function applyUI(ui) {
+      document.body.className = `theme-${ui.theme || 'dark'}`;
+      const grid = document.getElementById('servicesGrid');
+      grid.className = `services-grid style-${ui.card_style || 'default'}`;
+      document.getElementById('searchBarWrapper').style.display = ui.show_search !== false ? 'block' : 'none';
+      
+      const enableMusic = ui.enable_music !== false;
+      const playerBar = document.getElementById('musicPlayerBar');
+      if (playerBar) {
+        if (enableMusic) playerBar.classList.add('active');
+        else playerBar.classList.remove('active');
+      }
+
+      document.getElementById('settingTheme').value = ui.theme || 'dark';
+      document.getElementById('settingCardStyle').value = ui.card_style || 'default';
+      document.getElementById('settingShowSearch').checked = ui.show_search !== false;
+      document.getElementById('settingEnableMusic').checked = enableMusic;
+    }
+
+    // ─── 飞牛系统音乐播放器核心控制器 ───
+    let fnosPlaylists = [];
+    let musicPlaylist = [];
+    let currentMusicIndex = 0;
+    let playMode = localStorage.getItem('fnmusic_play_mode') || 'repeat-all'; // 'repeat-all' | 'repeat-one' | 'shuffle'
+    let shuffleHistory = [];
+    let isMuted = false;
+    let previousVolume = 0.8;
+    let activePlaylistName = '';
+    let isSwitchingTrack = false;
+    let isManualPause = false;
+    let trackEndTimeout = null;
+    const audio = document.getElementById('audioElement');
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function formatTime(sec) {
+      if (!sec || isNaN(sec) || sec < 0) return '00:00';
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function isImageLink(url) {
+      if (!url || typeof url !== 'string') return false;
+      return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/');
+    }
+
+    function renderCoverThumb(coverUrl, className = 'playlist-item-cover', fallback = '🎵') {
+      if (isImageLink(coverUrl)) {
+        return `<img src="${escapeHtml(coverUrl)}" class="${className}" onerror="this.outerHTML='<span class=\\'${className}\\'>${fallback}</span>'">`;
+      }
+      return `<span class="${className}">${fallback}</span>`;
+    }
+
+    async function initMusicPlayer() {
+      try {
+        // 1. 获取当前曲目列表
+        const res = await fetch('/api/music/songs');
+        const data = await res.json();
+        musicPlaylist = data.songs || [];
+        if (data.fnos_music_url) {
+          const appBtn = document.getElementById('musicAppBtn');
+          if (appBtn) appBtn.href = data.fnos_music_url;
+        }
+
+        // 2. 加载飞牛现存歌单列表
+        await loadFnosPlaylists();
+
+        // 3. 渲染曲目并装载首曲
+        renderCardPlaylist();
+        if (musicPlaylist.length > 0) {
+          loadMusicTrack(0, false);
+        } else if (fnosPlaylists.length > 0) {
+          // 若当前歌曲列表为空，自动装载第一个歌单
+          await playFnosPlaylist(fnosPlaylists[0].id, fnosPlaylists[0].name, false);
+        }
+      } catch (e) {
+        console.error('Init music player error:', e);
+      }
+    }
+
+    async function loadFnosPlaylists() {
+      const container = document.getElementById('cardPlaylistsContainer');
+      const countEl = document.getElementById('playlistsCount');
+      try {
+        const res = await fetch('/api/music/playlists');
+        const data = await res.json();
+        if (data.ok && data.playlists) {
+          fnosPlaylists = data.playlists;
+          if (countEl) countEl.textContent = fnosPlaylists.length;
+          renderPlaylistsView();
+        } else {
+          if (container) container.innerHTML = `<div style="text-align:center;padding:30px;color:var(--text-muted);font-size:13px">未能获取到飞牛歌单：${data.error || '未知错误'}</div>`;
+        }
+      } catch (e) {
+        if (container) container.innerHTML = `<div style="text-align:center;padding:30px;color:var(--accent-red);font-size:13px">获取歌单网络异常: ${escapeHtml(e.message)}</div>`;
+      }
+    }
+
+    function renderPlaylistsView() {
+      const container = document.getElementById('cardPlaylistsContainer');
+      if (!container) return;
+
+      if (fnosPlaylists.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted);font-size:13px">飞牛音乐库中暂无歌单</div>';
+        return;
+      }
+
+      container.innerHTML = fnosPlaylists.map(p => {
+        const coverHtml = renderCoverThumb(p.cover, 'playlist-card-cover', '📁');
+        const tagHtml = p.is_daily ? '<span class="playlist-card-tag">推荐</span>' : '';
+        const nameEsc = escapeHtml(p.name);
+        return `
+          <div class="playlist-card-item" data-pl-id="${p.id}" data-pl-name="${nameEsc}">
+            ${coverHtml}
+            <div class="playlist-card-info">
+              <div class="playlist-card-name">
+                <span>${nameEsc}</span>
+                ${tagHtml}
+              </div>
+              <div class="playlist-card-meta">
+                <span>🎵 ${p.track_count || 0} 首歌曲</span>
+              </div>
+            </div>
+            <button class="playlist-card-btn" data-action="play">▶ 播放</button>
+          </div>
+        `;
+      }).join('');
+
+      container.onclick = (e) => {
+        const item = e.target.closest('.playlist-card-item');
+        if (!item) return;
+        const plId = item.dataset.plId;
+        const plName = item.dataset.plName;
+        playFnosPlaylist(plId, plName, true);
+      };
+    }
+
+    async function playFnosPlaylist(playlistId, playlistName, autoPlay = true) {
+      activePlaylistName = playlistName;
+      const titleEl = document.getElementById('currentPlaylistTitle');
+      if (titleEl) titleEl.textContent = `歌单：${playlistName} (加载中...)`;
+
+      if (autoPlay) toast(`正在加载歌单「${playlistName}」...`, 'info');
+
+      try {
+        const res = await fetch(`/api/music/playlists/${encodeURIComponent(playlistId)}/play`, { method: 'POST' });
+        const data = await res.json();
+        if (data.ok && data.songs && data.songs.length > 0) {
+          musicPlaylist = data.songs;
+          currentMusicIndex = 0;
+          if (titleEl) titleEl.textContent = `歌单：${playlistName} (共 ${musicPlaylist.length} 首)`;
+          renderCardPlaylist();
+          if (autoPlay) {
+            switchMusicTab('current_tracks');
+            loadMusicTrack(0, true);
+            toast(`已开始播放歌单「${playlistName}」`, 'success');
+          }
+        } else {
+          toast(data.error || '歌单加载失败或没有可播放曲目', 'error');
+          if (titleEl) titleEl.textContent = `歌单：${playlistName} (无可用歌曲)`;
+        }
+      } catch (e) {
+        toast('加载歌单异常: ' + e.message, 'error');
+      }
+    }
+
+    function renderCardPlaylist() {
+      const container = document.getElementById('cardPlaylistContainer');
+      const countEl = document.getElementById('playlistCount');
+      if (countEl) countEl.textContent = musicPlaylist.length;
+      if (!container) return;
+
+      if (musicPlaylist.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted);font-size:13px">播放列表暂无歌曲，请在「📁 飞牛歌单」中点击任意歌单进行播放</div>';
+        return;
+      }
+
+      container.innerHTML = musicPlaylist.map((s, idx) => {
+        const isActive = idx === currentMusicIndex;
+        const isPlaying = isActive && !audio.paused;
+        const coverHtml = renderCoverThumb(s.cover, 'playlist-item-cover', '🎵');
+        const durationText = s.duration ? formatTime(s.duration) : '';
+
+        const eqHtml = isPlaying ? `
+          <div class="eq-bars">
+            <div class="eq-bar"></div>
+            <div class="eq-bar"></div>
+            <div class="eq-bar"></div>
+          </div>
+        ` : '';
+
+        return `
+          <div class="playlist-item ${isActive ? 'active' : ''}" onclick="selectSongByIndex(${idx})">
+            <span class="playlist-item-idx">${idx + 1}</span>
+            ${coverHtml}
+            <div class="playlist-item-info">
+              <div class="playlist-item-title">${escapeHtml(s.title || '未知歌曲')}</div>
+              <div class="playlist-item-artist">${escapeHtml(s.artist || '未知艺术家')}</div>
+            </div>
+            ${eqHtml}
+            ${durationText ? `<span class="playlist-item-duration">${durationText}</span>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function selectSongByIndex(index) {
+      loadMusicTrack(index, true);
+    }
+
+    function openMusicCardModal(startPlay = false) {
+      const modal = document.getElementById('musicCardModal');
+      if (modal) modal.classList.add('visible');
+      renderCardPlaylist();
+      if (startPlay && audio.paused) {
+        togglePlay(true);
+      }
+    }
+
+    function closeMusicCardModal() {
+      const modal = document.getElementById('musicCardModal');
+      if (modal) modal.classList.remove('visible');
+    }
+
+    document.getElementById('musicCardToggle')?.addEventListener('click', () => openMusicCardModal(false));
+    document.getElementById('musicExpandModalBtn')?.addEventListener('click', () => openMusicCardModal(false));
+    document.getElementById('musicTrackInfoBar')?.addEventListener('click', () => openMusicCardModal(false));
+    document.getElementById('musicCardCloseBtn')?.addEventListener('click', closeMusicCardModal);
+
+    // Tab 切换逻辑
+    document.getElementById('tabBtnPlaylists')?.addEventListener('click', () => switchMusicTab('playlists'));
+    document.getElementById('tabBtnCurrentTracks')?.addEventListener('click', () => switchMusicTab('current_tracks'));
+    document.getElementById('tabBtnFnosConfig')?.addEventListener('click', () => switchMusicTab('fnos_config'));
+    document.getElementById('tabBtnMusicLogs')?.addEventListener('click', () => switchMusicTab('logs'));
+    document.getElementById('btnBackToPlaylists')?.addEventListener('click', () => switchMusicTab('playlists'));
+    document.getElementById('btnRefreshPlaylists')?.addEventListener('click', () => {
+      toast('正在刷新飞牛歌单...', 'info');
+      loadFnosPlaylists();
+    });
+
+    function switchMusicTab(tab) {
+      document.querySelectorAll('.music-tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.music-tab-content').forEach(c => c.classList.remove('active'));
+      if (tab === 'playlists') {
+        document.getElementById('tabBtnPlaylists')?.classList.add('active');
+        document.getElementById('musicViewPlaylists')?.classList.add('active');
+      } else if (tab === 'current_tracks') {
+        document.getElementById('tabBtnCurrentTracks')?.classList.add('active');
+        document.getElementById('musicViewCurrentTracks')?.classList.add('active');
+        renderCardPlaylist();
+      } else if (tab === 'fnos_config') {
+        document.getElementById('tabBtnFnosConfig')?.classList.add('active');
+        document.getElementById('musicViewFnosConfig')?.classList.add('active');
+        loadFnosMusicConfig();
+      } else if (tab === 'logs') {
+        document.getElementById('tabBtnMusicLogs')?.classList.add('active');
+        document.getElementById('musicViewMusicLogs')?.classList.add('active');
+        refreshMusicLogs('modal');
+      }
+    }
+
+    // ── 运行日志管理与自动轮询 ──────────────────────────────────────────
+    let musicLogAutoTimer = null;
+    let isLogLoading = false;
+
+    async function fetchMusicLogs(level = 'ALL', keyword = '') {
+      try {
+        const params = new URLSearchParams({ limit: '250' });
+        if (level && level !== 'ALL') params.append('level', level);
+        if (keyword) params.append('keyword', keyword);
+        const res = await fetch(`/api/music/logs?${params.toString()}`);
+        return await res.json();
+      } catch (e) {
+        console.error('Fetch logs error:', e);
+        return { ok: false, error: e.message, logs: [] };
+      }
+    }
+
+    function renderLogEntries(logs, containerEl, autoScroll = true) {
+      if (!containerEl) return;
+      if (!logs || logs.length === 0) {
+        containerEl.innerHTML = '<div style="color:#8b949e;text-align:center;padding:30px">暂无匹配的运行日志</div>';
+        return;
+      }
+
+      const html = logs.map(l => {
+        const lvl = (l.level || 'INFO').toUpperCase();
+        const badgeClass = (lvl.includes('ERR') || lvl.includes('CRIT')) ? 'ERROR' : ((lvl.includes('WARN')) ? 'WARN' : 'INFO');
+        const ts = escapeHtml(l.timestamp || '');
+        let msg = escapeHtml(l.message || '');
+        // Highlight status codes or keywords
+        msg = msg.replace(/\b(200|206)\b/g, '<span style="color:#4ade80;font-weight:bold">$1</span>')
+                 .replace(/\b(401|403|404|500|502|504)\b/g, '<span style="color:#f87171;font-weight:bold">$1</span>')
+                 .replace(/(UserToken|Token):\s*([a-zA-Z0-9_\.]+)/g, '$1: <span style="color:#38bdf8">$2</span>');
+
+        return `
+          <div class="log-line">
+            <span class="log-time">${ts}</span>
+            <span class="log-badge ${badgeClass}">${badgeClass}</span>
+            <span class="log-msg">${msg}</span>
+          </div>
+        `;
+      }).join('');
+
+      containerEl.innerHTML = html;
+      if (autoScroll) {
+        containerEl.scrollTop = containerEl.scrollHeight;
+      }
+    }
+
+    async function refreshMusicLogs(target = 'modal') {
+      if (isLogLoading) return;
+      isLogLoading = true;
+
+      const isModal = target === 'modal';
+      const consoleEl = document.getElementById(isModal ? 'musicLogConsole' : 'adminLogConsole');
+      const statusEl = document.getElementById(isModal ? 'musicLogStatusText' : 'adminLogStatusText');
+      const levelEl = document.getElementById(isModal ? 'musicLogLevel' : 'adminLogLevel');
+      const searchEl = document.getElementById(isModal ? 'musicLogSearch' : 'adminLogSearch');
+
+      const level = levelEl ? levelEl.value : 'ALL';
+      const keyword = searchEl ? searchEl.value.trim() : '';
+
+      if (statusEl && (!consoleEl || consoleEl.children.length === 0)) {
+        statusEl.textContent = '正在获取最新日志...';
+      }
+
+      const data = await fetchMusicLogs(level, keyword);
+      if (data.ok) {
+        renderLogEntries(data.logs, consoleEl, true);
+        const count = data.logs ? data.logs.length : 0;
+        const now = new Date().toLocaleTimeString();
+        if (statusEl) statusEl.textContent = `共 ${count} 条日志 | ${now}`;
+      } else {
+        if (statusEl) statusEl.textContent = `❌ 获取失败: ${data.error || '网络错误'}`;
+      }
+      isLogLoading = false;
+    }
+
+    async function clearMusicLogsAction(target = 'modal') {
+      if (!confirm('确定要清空飞牛音乐运行日志吗？该操作不可撤销。')) return;
+      try {
+        const res = await fetch('/api/music/logs/clear', { method: 'POST' });
+        const data = await res.json();
+        if (data.ok) {
+          toast('飞牛音乐日志已成功清空', 'success');
+          refreshMusicLogs('modal');
+          refreshMusicLogs('admin');
+        } else {
+          toast('清空失败: ' + (data.message || '未知错误'), 'error');
+        }
+      } catch (e) {
+        toast('清空日志异常: ' + e.message, 'error');
+      }
+    }
+
+    function copyLogsToClipboard(target = 'modal') {
+      const isModal = target === 'modal';
+      const consoleEl = document.getElementById(isModal ? 'musicLogConsole' : 'adminLogConsole');
+      if (!consoleEl) return;
+      const text = consoleEl.innerText;
+      if (!text || text.includes('暂无匹配的运行日志') || text.includes('正在获取运行日志')) {
+        toast('当前没有可复制的日志', 'info');
+        return;
+      }
+      navigator.clipboard.writeText(text).then(() => {
+        toast('日志已成功复制到剪贴板', 'success');
+      }).catch(err => {
+        toast('复制失败: ' + err, 'error');
+      });
+    }
+
+    // Auto refresh timer
+    if (!musicLogAutoTimer) {
+      musicLogAutoTimer = setInterval(() => {
+        // Check if modal log tab is active and checkbox is checked
+        const modalLogView = document.getElementById('musicViewMusicLogs');
+        const chkModal = document.getElementById('chkAutoRefreshMusicLogs');
+        if (modalLogView && modalLogView.classList.contains('active') && chkModal && chkModal.checked) {
+          refreshMusicLogs('modal');
+        }
+
+        // Check if admin log tab is active and checkbox is checked
+        const adminLogView = document.getElementById('tab-logs');
+        const chkAdmin = document.getElementById('chkAdminAutoRefreshLogs');
+        if (adminLogView && adminLogView.classList.contains('active') && chkAdmin && chkAdmin.checked) {
+          refreshMusicLogs('admin');
+        }
+      }, 3000);
+    }
+
+    // Modal Log Controls
+    let searchTimerModal = null;
+    document.getElementById('musicLogSearch')?.addEventListener('input', () => {
+      clearTimeout(searchTimerModal);
+      searchTimerModal = setTimeout(() => refreshMusicLogs('modal'), 300);
+    });
+    document.getElementById('musicLogLevel')?.addEventListener('change', () => refreshMusicLogs('modal'));
+    document.getElementById('btnRefreshMusicLogs')?.addEventListener('click', () => refreshMusicLogs('modal'));
+    document.getElementById('btnCopyMusicLogs')?.addEventListener('click', () => copyLogsToClipboard('modal'));
+    document.getElementById('btnClearMusicLogs')?.addEventListener('click', () => clearMusicLogsAction('modal'));
+    document.getElementById('btnScrollLogBottom')?.addEventListener('click', () => {
+      const el = document.getElementById('musicLogConsole');
+      if (el) el.scrollTop = el.scrollHeight;
+    });
+
+    // Admin Log Controls
+    let searchTimerAdmin = null;
+    document.getElementById('adminLogSearch')?.addEventListener('input', () => {
+      clearTimeout(searchTimerAdmin);
+      searchTimerAdmin = setTimeout(() => refreshMusicLogs('admin'), 300);
+    });
+    document.getElementById('adminLogLevel')?.addEventListener('change', () => refreshMusicLogs('admin'));
+    document.getElementById('btnAdminRefreshLogs')?.addEventListener('click', () => refreshMusicLogs('admin'));
+    document.getElementById('btnAdminCopyLogs')?.addEventListener('click', () => copyLogsToClipboard('admin'));
+    document.getElementById('btnAdminClearLogs')?.addEventListener('click', () => clearMusicLogsAction('admin'));
+    document.getElementById('btnAdminScrollLogBottom')?.addEventListener('click', () => {
+      const el = document.getElementById('adminLogConsole');
+      if (el) el.scrollTop = el.scrollHeight;
+    });
+
+    // Toolbar logs button
+    document.getElementById('toolbarLogsBtn')?.addEventListener('click', () => {
+      openMusicCardModal(false);
+      switchMusicTab('logs');
+    });
+
+    async function loadFnosMusicConfig() {
+      try {
+        const res = await fetch('/api/music/config');
+        const data = await res.json();
+        if (data.ok) {
+          document.getElementById('fnCfgHost').value = data.host || '';
+          document.getElementById('fnCfgPort').value = data.port || 5888;
+          document.getElementById('fnCfgUser').value = data.username || '';
+          document.getElementById('fnCfgPass').value = data.password || '';
+          document.getElementById('fnCfgStatus').textContent = '已就绪（密码已安全保存）';
+          document.getElementById('fnCfgStatus').style.color = 'var(--text-muted)';
+        }
+      } catch (e) {
+        console.error('Load fnmusic config error:', e);
+      }
+    }
+
+    document.getElementById('btnSaveFnosMusicConfig')?.addEventListener('click', async () => {
+      const host = document.getElementById('fnCfgHost').value.trim();
+      const port = parseInt(document.getElementById('fnCfgPort').value) || 5888;
+      const username = document.getElementById('fnCfgUser').value.trim();
+      const password = document.getElementById('fnCfgPass').value.trim();
+      const statusEl = document.getElementById('fnCfgStatus');
+      const btn = document.getElementById('btnSaveFnosMusicConfig');
+
+      if (!username) {
+        toast('请输入飞牛音乐登录用户名', 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = '⏳ 保存并验证中...';
+      statusEl.textContent = '正在连接飞牛 5888 服务并验证凭据...';
+      statusEl.style.color = 'var(--accent-blue)';
+
+      try {
+        const res = await fetch('/api/music/config', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ host, port, username, password })
+        });
+        const d = await res.json();
+        if (d.ok) {
+          if (d.login_success) {
+            toast('飞牛账户密码已更新，验证登录成功！', 'success');
+            statusEl.textContent = '✅ ' + d.message;
+            statusEl.style.color = 'var(--accent-green)';
+            // 重新刷新歌单
+            await loadFnosPlaylists();
+          } else {
+            toast('配置已保存，但登录验证失败', 'error');
+            statusEl.textContent = '⚠️ ' + d.message;
+            statusEl.style.color = 'var(--accent-orange)';
+          }
+        } else {
+          toast('保存失败: ' + (d.error || '未知错误'), 'error');
+          statusEl.textContent = '❌ 保存失败: ' + (d.error || '未知错误');
+          statusEl.style.color = 'var(--accent-red)';
+        }
+      } catch (e) {
+        toast('网络错误: ' + e.message, 'error');
+        statusEl.textContent = '❌ 网络错误: ' + e.message;
+        statusEl.style.color = 'var(--accent-red)';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '💾 保存并测试登录';
+      }
+    });
+
+    function loadMusicTrack(index, autoplay = false) {
+      clearTimeout(trackEndTimeout);
+      isSwitchingTrack = false;
+      isManualPause = false;
+
+      if (!musicPlaylist || musicPlaylist.length === 0) return;
+      if (index < 0) index = musicPlaylist.length - 1;
+      if (index >= musicPlaylist.length) index = 0;
+      currentMusicIndex = index;
+      if (playMode === 'shuffle') {
+        shuffleHistory.push(index);
+        if (shuffleHistory.length > 100) shuffleHistory.shift();
+      }
+
+      const track = musicPlaylist[index];
+      const title = track.title || '未知曲目';
+      const artist = track.artist || '飞牛音乐';
+
+      // 同步底部条和弹窗卡片显示
+      document.getElementById('musicTitle').textContent = title;
+      document.getElementById('musicArtist').textContent = artist;
+      document.getElementById('cardSongTitle').textContent = title;
+      document.getElementById('cardSongArtist').textContent = artist;
+
+      const coverEl = document.getElementById('musicCover');
+      const vinylCenter = document.getElementById('vinylCenterCover');
+      if (isImageLink(track.cover)) {
+        coverEl.innerHTML = `<img src="${escapeHtml(track.cover)}" style="width:100%;height:100%;border-radius:8px;object-fit:cover" onerror="this.outerHTML='🎵'">`;
+        vinylCenter.innerHTML = `<img src="${escapeHtml(track.cover)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" onerror="this.outerHTML='🎵'">`;
+      } else {
+        coverEl.innerHTML = `<span>🎵</span>`;
+        vinylCenter.innerHTML = `<span>🎵</span>`;
+      }
+
+      // 切换新曲目前即刻重置进度条与显示
+      const bFill = document.getElementById('musicProgressFill');
+      if (bFill) bFill.style.width = '0%';
+      const bCur = document.getElementById('musicCurrentTime');
+      if (bCur) bCur.textContent = '00:00';
+      const cFill = document.getElementById('cardProgressFill');
+      if (cFill) cFill.style.width = '0%';
+      const cCur = document.getElementById('cardCurTime');
+      if (cCur) cCur.textContent = '00:00';
+
+      if (track.duration) {
+        const durStr = formatTime(track.duration);
+        const bDur = document.getElementById('musicDuration');
+        if (bDur) bDur.textContent = durStr;
+        const cDur = document.getElementById('cardTotalTime');
+        if (cDur) cDur.textContent = durStr;
+      }
+
+      const streamUrl = track.src || track.url;
+      if (streamUrl) {
+        try { audio.pause(); } catch(e) {}
+        audio.currentTime = 0;
+
+        const fullUrl = streamUrl.startsWith('http') ? streamUrl : (location.origin + streamUrl);
+        if (audio.src !== fullUrl) {
+          audio.src = streamUrl;
+        }
+
+        if (autoplay) {
+          setTimeout(() => {
+            const p = audio.play();
+            if (p !== undefined) {
+              p.then(() => {
+                setPlayingState(true);
+              }).catch(err => {
+                console.warn('Autoplay error:', err);
+                setPlayingState(false);
+              });
+            }
+          }, 60);
+        } else {
+          setPlayingState(false);
+        }
+      }
+      renderCardPlaylist();
+    }
+
+    function togglePlay(forcePlay = null) {
+      const track = musicPlaylist[currentMusicIndex];
+      if (!track) {
+        toast('歌单为空，请选择歌曲播放', 'info');
+        return;
+      }
+
+      const streamUrl = track.src || track.url;
+      const fullUrl = streamUrl ? (streamUrl.startsWith('http') ? streamUrl : (location.origin + streamUrl)) : '';
+      if (!audio.src || (audio.src !== fullUrl && audio.src !== streamUrl)) {
+        loadMusicTrack(currentMusicIndex, true);
+        return;
+      }
+
+      if (forcePlay === true || (forcePlay === null && audio.paused)) {
+        isManualPause = false;
+        const curDur = (audio.duration && isFinite(audio.duration) && audio.duration > 0) ? audio.duration : (track.duration || 0);
+        if (curDur > 2 && audio.currentTime >= curDur - 0.5) {
+          audio.currentTime = 0;
+        }
+        const p = audio.play();
+        if (p !== undefined) {
+          p.then(() => {
+            setPlayingState(true);
+          }).catch(err => {
+            console.error('Play failed:', err);
+            toast(`无法播放《${track.title || '当前歌曲'}》: 检查音频连接`, 'error');
+            setPlayingState(false);
+          });
+        }
+      } else {
+        isManualPause = true;
+        audio.pause();
+        setPlayingState(false);
+      }
+    }
+
+    function setPlayingState(isPlaying) {
+      const playIcons = ['musicPlayToggle', 'cardBtnPlay'];
+      playIcons.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = isPlaying ? '⏸️' : '▶️';
+      });
+
+      const badge = document.getElementById('cardPlayingBadge');
+      if (badge) {
+        badge.textContent = isPlaying ? '正在播放' : '已暂停';
+        if (isPlaying) badge.classList.add('playing');
+        else badge.classList.remove('playing');
+      }
+
+      const disc = document.getElementById('vinylDisc');
+      if (disc) {
+        if (isPlaying) {
+          disc.classList.add('playing');
+          disc.classList.remove('paused');
+        } else {
+          disc.classList.remove('playing');
+        }
+      }
+
+      const toggleBtn = document.getElementById('musicCardToggle');
+      if (toggleBtn) {
+        if (isPlaying) toggleBtn.classList.add('active');
+        else toggleBtn.classList.remove('active');
+      }
+
+      renderCardPlaylist();
+    }
+
+    document.getElementById('musicPlayToggle')?.addEventListener('click', () => togglePlay());
+    document.getElementById('cardBtnPlay')?.addEventListener('click', () => togglePlay());
+
+    function playPrevTrack() {
+      if (!musicPlaylist || musicPlaylist.length === 0) return;
+      if (playMode === 'shuffle' && shuffleHistory.length > 1) {
+        // Pop current
+        shuffleHistory.pop();
+        const prevIdx = shuffleHistory.pop();
+        if (prevIdx !== undefined && prevIdx >= 0 && prevIdx < musicPlaylist.length) {
+          loadMusicTrack(prevIdx, true);
+          return;
+        }
+      }
+      loadMusicTrack(currentMusicIndex - 1, true);
+    }
+
+    function playNextTrack() {
+      if (!musicPlaylist || musicPlaylist.length === 0) return;
+      if (playMode === 'shuffle' && musicPlaylist.length > 1) {
+        let randIdx = Math.floor(Math.random() * musicPlaylist.length);
+        let attempts = 0;
+        while (randIdx === currentMusicIndex && attempts < 20) {
+          randIdx = Math.floor(Math.random() * musicPlaylist.length);
+          attempts++;
+        }
+        loadMusicTrack(randIdx, true);
+      } else {
+        loadMusicTrack(currentMusicIndex + 1, true);
+      }
+    }
+
+    document.getElementById('musicPrev')?.addEventListener('click', playPrevTrack);
+    document.getElementById('cardBtnPrev')?.addEventListener('click', playPrevTrack);
+    document.getElementById('musicNext')?.addEventListener('click', playNextTrack);
+    document.getElementById('cardBtnNext')?.addEventListener('click', playNextTrack);
+
+    function setPlayMode(mode) {
+      playMode = mode;
+      localStorage.setItem('fnmusic_play_mode', mode);
+      syncPlayModeUI();
+    }
+
+    function toggleShuffleMode() {
+      if (playMode === 'shuffle') {
+        setPlayMode('repeat-all');
+        toast('已切换为：🔁 列表循环', 'info');
+      } else {
+        setPlayMode('shuffle');
+        toast('已开启：🔀 随机播放', 'success');
+      }
+    }
+
+    function cyclePlayMode() {
+      if (playMode === 'repeat-all') {
+        setPlayMode('repeat-one');
+        toast('模式已切换：🔂 单曲循环', 'info');
+      } else if (playMode === 'repeat-one') {
+        setPlayMode('shuffle');
+        toast('模式已切换：🔀 随机播放', 'success');
+      } else {
+        setPlayMode('repeat-all');
+        toast('模式已切换：🔁 列表循环', 'info');
+      }
+    }
+
+    function syncPlayModeUI() {
+      const isShuffle = playMode === 'shuffle';
+      const isRepeatOne = playMode === 'repeat-one';
+
+      // 底部常驻播放条
+      const musicShuffleBtn = document.getElementById('musicShuffleBtn');
+      const musicModeBtn = document.getElementById('musicModeBtn');
+      if (musicShuffleBtn) {
+        musicShuffleBtn.classList.toggle('active-mode', isShuffle);
+        musicShuffleBtn.title = isShuffle ? '随机播放: 开启中 (点击切回列表循环)' : '一键开启随机播放';
+      }
+      if (musicModeBtn) {
+        musicModeBtn.textContent = isRepeatOne ? '🔂' : (isShuffle ? '🔀' : '🔁');
+        musicModeBtn.title = isRepeatOne ? '模式: 单曲循环' : (isShuffle ? '模式: 随机播放' : '模式: 列表循环');
+        musicModeBtn.classList.toggle('active-mode', isRepeatOne);
+      }
+
+      // 弹窗控制栏
+      const cardBtnShuffle = document.getElementById('cardBtnShuffle');
+      const cardBtnMode = document.getElementById('cardBtnMode');
+      if (cardBtnShuffle) {
+        cardBtnShuffle.classList.toggle('active-mode', isShuffle);
+        cardBtnShuffle.title = isShuffle ? '随机播放: 开启中 (点击切回列表循环)' : '一键开启随机播放';
+      }
+      if (cardBtnMode) {
+        cardBtnMode.textContent = isRepeatOne ? '🔂' : (isShuffle ? '🔀' : '🔁');
+        cardBtnMode.title = isRepeatOne ? '单曲循环' : (isShuffle ? '随机播放' : '列表循环');
+        cardBtnMode.classList.toggle('active-mode', isRepeatOne || isShuffle);
+      }
+    }
+
+    // 绑定随机与播放模式事件
+    document.getElementById('cardBtnShuffle')?.addEventListener('click', toggleShuffleMode);
+    document.getElementById('musicShuffleBtn')?.addEventListener('click', toggleShuffleMode);
+    document.getElementById('cardBtnMode')?.addEventListener('click', cyclePlayMode);
+    document.getElementById('musicModeBtn')?.addEventListener('click', cyclePlayMode);
+
+    // 歌单面板中的随机播放按钮
+    document.getElementById('btnShuffleCurrentPlaylist')?.addEventListener('click', () => {
+      if (!musicPlaylist || musicPlaylist.length === 0) {
+        toast('当前没有正在播放的歌曲列表', 'error');
+        return;
+      }
+      setPlayMode('shuffle');
+      const randIdx = Math.floor(Math.random() * musicPlaylist.length);
+      loadMusicTrack(randIdx, true);
+      toast('🔀 已开启当前歌单随机播放！', 'success');
+    });
+
+    document.getElementById('btnShuffleAllLibrary')?.addEventListener('click', async () => {
+      toast('正在加载全部本地曲库并开启随机播放...', 'info');
+      setPlayMode('shuffle');
+      await playFnosPlaylist('local:all', '全部本地音乐', false);
+      if (musicPlaylist && musicPlaylist.length > 0) {
+        const randIdx = Math.floor(Math.random() * musicPlaylist.length);
+        loadMusicTrack(randIdx, true);
+        toast(`🔀 已从本地曲库 (${musicPlaylist.length} 首) 随机开始播放！`, 'success');
+      }
+    });
+
+    // 初始化界面状态
+    syncPlayModeUI();
+
+    // 音量调节与静音
+    const volSlider = document.getElementById('cardVolumeSlider');
+    const volText = document.getElementById('cardVolumeText');
+    const muteBtn = document.getElementById('cardBtnMute');
+
+    volSlider?.addEventListener('input', e => {
+      const val = parseFloat(e.target.value) / 100;
+      audio.volume = val;
+      previousVolume = val;
+      isMuted = val === 0;
+      if (volText) volText.textContent = `${Math.round(val * 100)}%`;
+      if (muteBtn) muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    muteBtn?.addEventListener('click', () => {
+      if (isMuted) {
+        audio.volume = previousVolume || 0.8;
+        isMuted = false;
+        muteBtn.textContent = '🔊';
+        if (volSlider) volSlider.value = Math.round(audio.volume * 100);
+        if (volText) volText.textContent = `${Math.round(audio.volume * 100)}%`;
+      } else {
+        previousVolume = audio.volume;
+        audio.volume = 0;
+        isMuted = true;
+        muteBtn.textContent = '🔇';
+        if (volSlider) volSlider.value = 0;
+        if (volText) volText.textContent = '0%';
+      }
+    });
+
+    function handleTrackEnded(triggerReason = 'ended') {
+      if (isSwitchingTrack) return;
+      if (!musicPlaylist || musicPlaylist.length === 0) return;
+
+      isSwitchingTrack = true;
+      console.log(`[Music] 自动切歌触发: ${triggerReason}, 当前曲目索引: ${currentMusicIndex}`);
+
+      clearTimeout(trackEndTimeout);
+      trackEndTimeout = setTimeout(() => {
+        if (playMode === 'repeat-one') {
+          audio.currentTime = 0;
+          const p = audio.play();
+          if (p !== undefined) {
+            p.then(() => {
+              setPlayingState(true);
+              isSwitchingTrack = false;
+            }).catch(e => {
+              console.warn('Replay failed:', e);
+              isSwitchingTrack = false;
+            });
+          } else {
+            isSwitchingTrack = false;
+          }
+        } else {
+          playNextTrack();
+        }
+      }, 250);
+    }
+
+    audio?.addEventListener('timeupdate', () => {
+      const curDur = (audio.duration && isFinite(audio.duration) && audio.duration > 0) ? audio.duration : (musicPlaylist[currentMusicIndex]?.duration || 0);
+      if (!curDur) return;
+
+      const pct = Math.min(100, Math.max(0, (audio.currentTime / curDur) * 100));
+      const curM = Math.floor(audio.currentTime / 60);
+      const curS = Math.floor(audio.currentTime % 60);
+      const timeStr = `${curM.toString().padStart(2, '0')}:${curS.toString().padStart(2, '0')}`;
+
+      // 同步底栏
+      const bFill = document.getElementById('musicProgressFill');
+      if (bFill) bFill.style.width = pct + '%';
+      const bCur = document.getElementById('musicCurrentTime');
+      if (bCur) bCur.textContent = timeStr;
+
+      // 同步弹窗卡片
+      const cFill = document.getElementById('cardProgressFill');
+      if (cFill) cFill.style.width = pct + '%';
+      const cCur = document.getElementById('cardCurTime');
+      if (cCur) cCur.textContent = timeStr;
+
+      // 自动切歌保障 1：当播放进度距离歌曲结束小于 0.4 秒时主动触发切歌
+      if (!isSwitchingTrack && !audio.paused && curDur > 2 && audio.currentTime >= curDur - 0.4) {
+        handleTrackEnded('timeupdate-eof');
+      }
+    });
+
+    audio?.addEventListener('loadedmetadata', () => {
+      const dur = (audio.duration && isFinite(audio.duration) && audio.duration > 0) ? audio.duration : (musicPlaylist[currentMusicIndex]?.duration || 0);
+      if (!dur) return;
+      const durM = Math.floor(dur / 60);
+      const durS = Math.floor(dur % 60);
+      const durStr = `${durM.toString().padStart(2, '0')}:${durS.toString().padStart(2, '0')}`;
+
+      const bDur = document.getElementById('musicDuration');
+      if (bDur) bDur.textContent = durStr;
+      const cDur = document.getElementById('cardTotalTime');
+      if (cDur) cDur.textContent = durStr;
+    });
+
+    audio?.addEventListener('ended', () => {
+      handleTrackEnded('ended-event');
+    });
+
+    audio?.addEventListener('play', () => setPlayingState(true));
+    audio?.addEventListener('pause', () => {
+      setPlayingState(false);
+      // 自动切歌保障 2：若非用户手动点击暂停，且停在尾部（剩余<=1.2s），判定为流结束自然停播，触发换歌
+      const curDur = (audio.duration && isFinite(audio.duration) && audio.duration > 0) ? audio.duration : (musicPlaylist[currentMusicIndex]?.duration || 0);
+      if (!isManualPause && !isSwitchingTrack && curDur > 2 && audio.currentTime >= curDur - 1.2) {
+        handleTrackEnded('pause-at-eof');
+      }
+    });
+
+    audio?.addEventListener('error', (e) => {
+      console.warn('Audio tag error event:', e, audio.error);
+      if (isSwitchingTrack) return;
+      const track = musicPlaylist[currentMusicIndex];
+      const title = track ? track.title : '当前歌曲';
+      setPlayingState(false);
+      toast(`曲目《${title}》加载遇到问题，正在尝试切换下一首...`, 'warning');
+      isSwitchingTrack = true;
+      setTimeout(() => {
+        if (musicPlaylist && musicPlaylist.length > 1) {
+          playNextTrack();
+        } else {
+          isSwitchingTrack = false;
+        }
+      }, 1500);
+    });
+
+    function seekAudio(e) {
+      const curDur = (audio.duration && isFinite(audio.duration) && audio.duration > 0) ? audio.duration : (musicPlaylist[currentMusicIndex]?.duration || 0);
+      if (!curDur) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const targetTime = Math.max(0, Math.min(curDur, (clickX / rect.width) * curDur));
+      audio.currentTime = targetTime;
+      isManualPause = false;
+      isSwitchingTrack = false;
+    }
+
+    document.getElementById('musicProgress')?.addEventListener('click', seekAudio);
+    document.getElementById('cardProgressBar')?.addEventListener('click', seekAudio);
+
+    // ─── 壁纸加载 ───
+    async function loadBg() {
+      try {
+        const res = await fetch('/api/bing-bg');
+        const data = await res.json();
+        if (data.ok && data.images && data.images.length > 0) {
+          const img = data.images[0];
+          const bgLayer = document.getElementById('bgLayer');
+          bgLayer.innerHTML = `<img src="${img.url}" class="active">`;
+          document.getElementById('bgCaption').textContent = img.title || '';
+        }
+      } catch (e) {}
+    }
+
+    // ─── 监控渲染与顶部条 ───
+    async function refreshStats() {
+      try {
+        const res = await fetch('/api/stats');
+        const data = await res.json();
+        const bannerGrid = document.getElementById('liveBannerGrid');
+        const banner = document.getElementById('liveBanner');
+        let html = '';
+        let hasAny = false;
+
+        for (const [mid, stat] of Object.entries(data)) {
+          if (mid === 'timestamp' || !stat.enabled || stat.show_in_banner === false) continue;
+          hasAny = true;
+
+          if (mid === 'ikuai') {
+            let popupRows = '';
+            if (stat.wans && stat.wans.length > 0) {
+              stat.wans.forEach(w => {
+                popupRows += `<div class="popup-row"><span>${w.name || 'WAN'}</span><span>${w.ip || '-'}</span></div>`;
+              });
+            }
+            if (stat.cpu) popupRows += `<div class="popup-row"><span>CPU 利用率</span><span>${stat.cpu}%</span></div>`;
+            if (stat.mem) popupRows += `<div class="popup-row"><span>内存利用率</span><span>${stat.mem}%</span></div>`;
+            if (stat.connect_num) popupRows += `<div class="popup-row"><span>当前连接数</span><span>${stat.connect_num}</span></div>`;
+            const popupHtml = popupRows ? `<div class="popup-inner"><div class="popup-title">爱快路由器详情</div>${popupRows}</div>` : '';
+            const wanLabel = (stat.wans && stat.wans.length > 0) ? stat.wans.map(w => w.name).join('+') : '爱快路由';
+
+            html += `
+              <div class="live-stat ikuai-stat" data-popup="${encodeURIComponent(popupHtml)}" title="爱快实时网络流量">
+                <span class="live-stat-icon">🌐</span>
+                <span class="live-stat-label">${wanLabel}</span>
+                <span class="live-stat-label" style="margin-left:4px">↓</span><span class="live-stat-value" style="color:var(--accent-cyan)">${formatSpeed(stat.dl_speed)}</span>
+                <span class="live-stat-label">↑</span><span class="live-stat-value" style="color:var(--accent-green)">${formatSpeed(stat.up_speed)}</span>
+              </div>
+            `;
+          } else if (mid === 'qbittorrent') {
+            let torrentPopup = '';
+            if (stat.dl_torrents && stat.dl_torrents.length > 0) {
+              torrentPopup = `<div class="popup-inner"><div class="popup-title">正在下载 (${stat.dl_torrents.length})</div>`;
+              stat.dl_torrents.forEach(t => {
+                const pct = Math.round((t.progress || 0) * 100);
+                torrentPopup += `
+                  <div class="popup-torrent">
+                    <div class="popup-torrent-name">${t.name || '未知'}</div>
+                    <div class="popup-torrent-meta">
+                      <span>${pct}%</span>
+                      <span style="color:var(--accent-cyan)">↓${formatSpeed(t.dl_speed)}</span>
+                      <span>${formatSize(t.size)}</span>
+                    </div>
+                  </div>
+                `;
+              });
+              torrentPopup += `</div>`;
+            }
+            html += `
+              <div class="live-stat qb-stat" data-popup="${encodeURIComponent(torrentPopup)}" title="qBittorrent">
+                <span class="live-stat-icon">⬇️</span>
+                <span class="live-stat-label">qBittorrent</span>
+                <span class="live-stat-label" style="margin-left:4px">↓</span><span class="live-stat-value" style="color:var(--accent-cyan)">${formatSpeed(stat.dl_speed)}</span>
+                <span class="live-stat-label">↑</span><span class="live-stat-value" style="color:var(--accent-green)">${formatSpeed(stat.up_speed)}</span>
+                <span class="live-stat-label">错误</span><span class="live-stat-value" style="color:var(--accent-orange)">${stat.errored || 0}</span>
+              </div>
+            `;
+          } else if (mid === 'transmission') {
+            let torrentPopup = '';
+            if (stat.dl_torrents && stat.dl_torrents.length > 0) {
+              torrentPopup = `<div class="popup-inner"><div class="popup-title">正在下载 (${stat.dl_torrents.length})</div>`;
+              stat.dl_torrents.forEach(t => {
+                const pct = Math.round((t.progress || 0) * 100);
+                torrentPopup += `
+                  <div class="popup-torrent">
+                    <div class="popup-torrent-name">${t.name || '未知'}</div>
+                    <div class="popup-torrent-meta">
+                      <span>${pct}%</span>
+                      <span style="color:var(--accent-cyan)">↓${formatSpeed(t.dl_speed)}</span>
+                      <span>${formatSize(t.size)}</span>
+                    </div>
+                  </div>
+                `;
+              });
+              torrentPopup += `</div>`;
+            }
+            html += `
+              <div class="live-stat tr-stat" data-popup="${encodeURIComponent(torrentPopup)}" title="Transmission">
+                <span class="live-stat-icon">🔽</span>
+                <span class="live-stat-label">Transmission</span>
+                <span class="live-stat-label" style="margin-left:4px">↓</span><span class="live-stat-value" style="color:var(--accent-cyan)">${formatSpeed(stat.dl_speed)}</span>
+                <span class="live-stat-label">↑</span><span class="live-stat-value" style="color:var(--accent-green)">${formatSpeed(stat.up_speed)}</span>
+                <span class="live-stat-label">错误</span><span class="live-stat-value" style="color:var(--accent-orange)">${stat.errored || 0}</span>
+              </div>
+            `;
+          } else if (mid === 'pve') {
+            let vmPopup = `<div class="popup-inner"><div class="popup-title">虚拟机 / 容器 (${stat.node || 'PVE'})</div>`;
+            if (stat.vms && stat.vms.length > 0) {
+              stat.vms.forEach(vm => {
+                const typeLabel = vm.type === 'qemu' ? 'VM' : 'CT';
+                const statusIcon = vm.status === 'running' ? '🟢' : '🔴';
+                vmPopup += `
+                  <div class="popup-vm">
+                    <div class="popup-vm-name">${statusIcon} ${vm.name} (${typeLabel} ${vm.vmid})</div>
+                    <div class="popup-vm-row">
+                      <span>CPU: ${vm.cpu}%</span>
+                      <span>内存: ${vm.mem}%</span>
+                      <span>磁盘: ${vm.disk}%</span>
+                    </div>
+                  </div>
+                `;
+              });
+            } else {
+              vmPopup += `<div style="font-size:12px;color:var(--text-muted);padding:4px 0">无运行中的虚拟机</div>`;
+            }
+            vmPopup += `</div>`;
+
+            html += `
+              <div class="live-stat pve-stat" data-popup="${encodeURIComponent(vmPopup)}" title="Proxmox VE">
+                <span class="live-stat-icon">🖥️</span>
+                <span class="live-stat-label">PVE</span>
+                <span class="live-stat-label" style="margin-left:4px">CPU</span><span class="live-stat-value" style="color:var(--accent-purple)">${stat.cpu || 0}%</span>
+                <span class="live-stat-label">内存</span><span class="live-stat-value" style="color:var(--accent-purple)">${stat.mem || 0}%</span>
+              </div>
+            `;
+          } else if (mid === 'moviepilot') {
+            const dl = stat.downloader || {};
+            const st = stat.sites || {};
+            const recent = stat.recent || [];
+            const freeSpaceStr = dl.free_space ? formatSize(dl.free_space) : '';
+            const siteColor = (st.fail && st.fail > 0) ? 'var(--accent-orange)' : 'var(--accent-green)';
+            const latest = recent.length > 0 ? recent[0] : null;
+
+            let mpPopup = `<div class="popup-inner"><div class="popup-title">MoviePilot 状态详情</div>`;
+            if (dl.free_space) {
+              mpPopup += `
+                <div class="popup-row"><span>剩余空间</span><span>${formatSize(dl.free_space)}</span></div>
+                <div class="popup-row"><span>实时下载</span><span>${formatSpeed(dl.dl_speed)}</span></div>
+                <div class="popup-row"><span>实时上传</span><span>${formatSpeed(dl.ul_speed)}</span></div>
+              `;
+            }
+            if (st.total) {
+              mpPopup += `<div class="popup-row"><span>站点状态</span><span>${st.ok || 0} / ${st.total} 正常</span></div>`;
+            }
+            if (recent.length > 0) {
+              mpPopup += `<div style="font-size:11px;font-weight:600;color:var(--text-muted);margin:6px 0 2px">最新入库影片:</div>`;
+              recent.slice(0, 4).forEach(r => {
+                mpPopup += `<div style="font-size:12px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04)">${r.type === '电影' ? '🎬' : '📺'} ${r.title} (${r.year || ''})</div>`;
+              });
+            }
+            mpPopup += `</div>`;
+
+            html += `
+              <div class="live-stat mp-stat" data-popup="${encodeURIComponent(mpPopup)}" title="MoviePilot 状态">
+                <span class="live-stat-icon">🎥</span>
+                <span class="live-stat-label">MoviePilot</span>
+                ${freeSpaceStr ? `
+                  <span class="live-stat-label" style="margin-left:4px">剩余空间</span>
+                  <span class="live-stat-value" style="color:var(--accent-green)">${freeSpaceStr}</span>
+                ` : ''}
+                ${st.total ? `
+                  <span class="live-stat-label">站点</span>
+                  <span class="live-stat-value" style="color:${siteColor}">${st.ok || 0}/${st.total} 正常</span>
+                ` : ''}
+                ${latest ? `
+                  <span class="live-stat-label">${latest.type === '电影' ? '🎬' : '📺'}</span>
+                  <span class="live-stat-value" style="color:var(--accent-cyan);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${latest.title} (${latest.year || ''})">${latest.title}</span>
+                ` : ''}
+              </div>
+            `;
+          } else if (mid === 'istoreos') {
+            let isoPopup = `<div class="popup-inner"><div class="popup-title">iStoreOS 系统详情</div>`;
+            isoPopup += `<div class="popup-row"><span>内存利用率</span><span>${stat.mem_pct || 0}%</span></div>`;
+            if (stat.load_avg) isoPopup += `<div class="popup-row"><span>CPU 负载</span><span>${stat.load_avg}</span></div>`;
+            isoPopup += `</div>`;
+
+            html += `
+              <div class="live-stat" data-popup="${encodeURIComponent(isoPopup)}" title="iStoreOS">
+                <span class="live-stat-icon">📶</span>
+                <span class="live-stat-label">iStoreOS</span>
+                <span class="live-stat-label" style="margin-left:4px">内存</span><span class="live-stat-value">${stat.mem_pct || 0}%</span>
+              </div>
+            `;
+          } else if (mid === 'emby' || mid === 'jellyfin' || mid === 'plex') {
+            let mediaPopup = `<div class="popup-inner"><div class="popup-title">${stat.display_name} 播放会话</div>`;
+            if (stat.playing_items && stat.playing_items.length > 0) {
+              stat.playing_items.forEach(p => {
+                mediaPopup += `<div style="font-size:12px;padding:3px 0">${p.user ? p.user + ': ' : ''}${p.title}</div>`;
+              });
+            } else {
+              mediaPopup += `<div style="font-size:12px;color:var(--text-muted);padding:4px 0">当前暂无播放会话</div>`;
+            }
+            mediaPopup += `</div>`;
+
+            html += `
+              <div class="live-stat" data-popup="${encodeURIComponent(mediaPopup)}" title="${stat.display_name}">
+                <span class="live-stat-icon">🎬</span>
+                <span class="live-stat-label">${stat.display_name}</span>
+                <span class="live-stat-value" style="color:var(--accent-cyan)">${stat.active_streams || 0} 活跃播放</span>
+              </div>
+            `;
+          } else if (mid === 'homeassistant') {
+            let haPopup = `<div class="popup-inner"><div class="popup-title">Home Assistant 设备摘要</div>`;
+            haPopup += `<div class="popup-row"><span>点亮灯泡</span><span>${stat.lights_on || 0} / ${stat.lights_total || 0}</span></div>`;
+            haPopup += `<div class="popup-row"><span>开启开关</span><span>${stat.switches_on || 0} / ${stat.switches_total || 0}</span></div>`;
+            haPopup += `<div class="popup-row"><span>自动化总数</span><span>${stat.automations_count || 0}</span></div>`;
+            haPopup += `</div>`;
+
+            html += `
+              <div class="live-stat" data-popup="${encodeURIComponent(haPopup)}" title="Home Assistant">
+                <span class="live-stat-icon">🏠</span>
+                <span class="live-stat-label">HA</span>
+                <span class="live-stat-value">亮灯 ${stat.lights_on || 0} / 实体 ${stat.total_entities || 0}</span>
+              </div>
+            `;
+          } else if (mid === 'easynvr') {
+            let nvrPopup = `<div class="popup-inner"><div class="popup-title">EasyNVR 监控通道</div>`;
+            nvrPopup += `<div class="popup-row"><span>在线通道</span><span>${stat.online_channels || 0}</span></div>`;
+            nvrPopup += `<div class="popup-row"><span>总通道数</span><span>${stat.total_channels || 0}</span></div>`;
+            nvrPopup += `</div>`;
+
+            html += `
+              <div class="live-stat" data-popup="${encodeURIComponent(nvrPopup)}" title="EasyNVR">
+                <span class="live-stat-icon">📹</span>
+                <span class="live-stat-label">EasyNVR</span>
+                <span class="live-stat-value" style="color:var(--accent-green)">在线 ${stat.online_channels || 0} / ${stat.total_channels || 0}</span>
+              </div>
+            `;
+          }
+        }
+
+        banner.style.display = hasAny ? 'block' : 'none';
+        bannerGrid.innerHTML = html;
+        initPopups();
+      } catch (e) {}
+    }
+
+    // ─── 悬浮弹窗处理 ───
+    function initPopups() {
+      document.querySelectorAll('.live-stat[data-popup]').forEach(el => {
+        el.addEventListener('mouseenter', showPopup);
+        el.addEventListener('mouseleave', hidePopup);
+      });
+    }
+
+    function showPopup(e) {
+      const popupData = e.currentTarget.dataset.popup;
+      if (!popupData) return;
+      let popup = document.getElementById('genericPopup');
+      if (!popup) {
+        popup = document.createElement('div');
+        popup.id = 'genericPopup';
+        popup.className = 'popup-container';
+        document.body.appendChild(popup);
+      }
+      popup.innerHTML = decodeURIComponent(popupData);
+      const rect = e.currentTarget.getBoundingClientRect();
+      popup.style.left = rect.left + 'px';
+      popup.style.top = (rect.bottom + 8) + 'px';
+      popup.classList.add('visible');
+
+      requestAnimationFrame(() => {
+        const pr = popup.getBoundingClientRect();
+        if (pr.right > window.innerWidth - 8) {
+          popup.style.left = Math.max(8, window.innerWidth - pr.width - 8) + 'px';
+        }
+        if (pr.bottom > window.innerHeight - 8) {
+          popup.style.top = (rect.top - pr.height - 8) + 'px';
+        }
+      });
+    }
+
+    function hidePopup() {
+      const popup = document.getElementById('genericPopup');
+      if (popup) popup.classList.remove('visible');
+    }
+
+    // ─── 渲染服务卡片列表 ───
+    function renderServices(filter = '') {
+      const grid = document.getElementById('servicesGrid');
+      const term = filter.toLowerCase().trim();
+      const filtered = allServices.filter(s => {
+        if (!s.visible) return false;
+        if (!term) return true;
+        return (s.name && s.name.toLowerCase().includes(term)) ||
+               (s.description && s.description.toLowerCase().includes(term)) ||
+               (s.port && s.port.toString().includes(term));
+      });
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '';
+        document.getElementById('noResults').style.display = 'block';
+        return;
+      }
+      document.getElementById('noResults').style.display = 'none';
+
+      grid.innerHTML = filtered.map(s => {
+        const iconSrc = s.favicon || s.icon;
+        const isImg = iconSrc && (iconSrc.startsWith('http') || iconSrc.startsWith('data:image'));
+        const iconHtml = isImg ?
+          `<img src="${iconSrc}" class="card-icon-img" alt="">` :
+          `<span class="card-icon">${s.icon || '🔧'}</span>`;
+
+        const isFnosMusic = (s.name && s.name.includes('飞牛音乐')) || (s.name && s.name.toLowerCase() === 'fnos music');
+        let href = s.url ? `href="${s.url}" target="_blank"` : 'href="javascript:void(0)"';
+        let clickAttr = '';
+        let extBadge = '';
+
+        if (isFnosMusic) {
+          href = 'href="javascript:void(0)"';
+          clickAttr = `onclick="openMusicCardModal(true)"`;
+          if (s.url) {
+            extBadge = `<a href="${s.url}" target="_blank" onclick="event.stopPropagation()" class="card-external-badge" title="在新窗口打开飞牛音乐 Web 版">↗</a>`;
+          }
+        }
+
+        return `
+          <a class="service-card" ${href} ${clickAttr} style="position:relative">
+            ${extBadge}
+            <div class="card-top">${iconHtml}</div>
+            <div class="card-info">
+              <div class="card-name">${s.name}</div>
+              <div class="card-desc">${s.description || ''}</div>
+            </div>
+          </a>
+        `;
+      }).join('');
+    }
+
+    // ─── 拖拽排序逻辑 ───
+    function enableDragSort() {
+      const list = document.getElementById('adminServicesList');
+      let dragEl = null;
+
+      list.querySelectorAll('.admin-row').forEach(row => {
+        row.draggable = true;
+        row.addEventListener('dragstart', e => {
+          dragEl = row;
+          e.dataTransfer.effectAllowed = 'move';
+          row.style.opacity = '0.5';
+        });
+        row.addEventListener('dragend', () => {
+          row.style.opacity = '1';
+          list.querySelectorAll('.admin-row').forEach(r => r.style.borderColor = '');
+        });
+        row.addEventListener('dragover', e => {
+          e.preventDefault();
+          if (dragEl && dragEl !== row) {
+            const rect = row.getBoundingClientRect();
+            const midY = rect.top + rect.height / 2;
+            const before = e.clientY < midY;
+            if (before) {
+              list.insertBefore(dragEl, row);
+            } else {
+              list.insertBefore(dragEl, row.nextSibling);
+            }
+          }
+        });
+        row.addEventListener('drop', async e => {
+          e.preventDefault();
+          const rows = [...list.querySelectorAll('.admin-row')];
+          const order = rows.map((r, i) => ({ id: r.dataset.id, sort_order: i }));
+          await fetch('/api/services?action=reorder', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ order })
+          });
+          const orderMap = Object.fromEntries(order.map(o => [o.id, o.sort_order]));
+          allServices.sort((a, b) => (orderMap[a.id] ?? 999) - (orderMap[b.id] ?? 999));
+          renderServices(document.getElementById('searchInput').value);
+        });
+      });
+    }
+
+    // ─── 管理后台: 监控模块设置卡片 ───
+    async function loadMonitorsAdmin() {
+      const res = await fetch('/api/monitors');
+      const data = await res.json();
+      const container = document.getElementById('monitorsContainer');
+
+      container.innerHTML = data.items.map(m => {
+        const cfg = m.config || {};
+        const fieldsHtml = Object.entries(cfg).map(([k, v]) => `
+          <div class="monitor-field ${k === 'url' ? 'full' : ''}">
+            <label>${k}</label>
+            <input type="${k.includes('pass') || k.includes('token') || k.includes('key') ? 'password' : 'text'}"
+                   data-mid="${m.id}" data-key="${k}" value="${v || ''}">
+          </div>
+        `).join('');
+
+        return `
+          <div class="monitor-card">
+            <div class="monitor-header">
+              <span class="monitor-title">${m.display_name}</span>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:11px;color:var(--text-muted)">状态栏</span>
+                <input type="checkbox" id="banner_${m.id}" ${m.show_in_banner ? 'checked' : ''}>
+                <span style="font-size:11px;color:var(--text-muted)">启用</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="enable_${m.id}" ${m.enabled ? 'checked' : ''}>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+            <div class="monitor-fields">${fieldsHtml}</div>
+            <div class="monitor-actions">
+              <button class="admin-btn admin-btn-secondary" onclick="testMonitor('${m.id}')">测试连接</button>
+              <button class="admin-btn admin-btn-primary" onclick="saveMonitor('${m.id}')">保存配置</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function saveMonitor(mid) {
+      const inputs = document.querySelectorAll(`input[data-mid="${mid}"]`);
+      const cfg = {};
+      inputs.forEach(i => cfg[i.dataset.key] = i.value);
+      const enabled = document.getElementById(`enable_${mid}`).checked;
+      const show_in_banner = document.getElementById(`banner_${mid}`).checked;
+
+      try {
+        await fetch(`/api/monitors/${mid}`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ enabled, show_in_banner, config: cfg })
+        });
+        toast('监控配置已保存', 'success');
+        refreshStats();
+      } catch (e) {
+        toast('保存失败', 'error');
+      }
+    }
+
+    async function testMonitor(mid) {
+      toast('正在测试连接...', 'info');
+      try {
+        const res = await fetch(`/api/monitors/${mid}/test`, { method: 'POST' });
+        const d = await res.json();
+        if (d.ok || d.status === 'ok') {
+          toast(`${mid} 连接测试成功！`, 'success');
+        } else {
+          toast(`测试失败: ${d.error || '无法连通'}`, 'error');
+        }
+      } catch (e) {
+        toast('请求失败', 'error');
+      }
+    }
+
+    // ─── 管理后台: 服务列表 ───
+    async function loadServicesAdmin() {
+      const res = await fetch('/api/services?action=list');
+      const d = await res.json();
+      allServices = d.items || [];
+      renderServices();
+
+      const listEl = document.getElementById('adminServicesList');
+      listEl.innerHTML = allServices.map(s => {
+        const iconSrc = s.favicon || s.icon;
+        const isImg = iconSrc && (iconSrc.startsWith('http') || iconSrc.startsWith('data:image'));
+        const iconHtml = isImg ?
+          `<img src="${iconSrc}" style="width:20px;height:20px;border-radius:4px;object-fit:contain">` :
+          `<span style="font-size:16px">${s.icon || '🔧'}</span>`;
+
+        return `
+          <div class="admin-row" data-id="${s.id}">
+            <input type="checkbox" class="svc-item-select" data-id="${s.id}" style="margin-right:2px;cursor:pointer">
+            ${iconHtml}
+            <span class="admin-row-name" title="${s.name}">${s.name}</span>
+            <label class="toggle-switch">
+              <input type="checkbox" ${s.visible ? 'checked' : ''} onchange="toggleService('${s.id}', this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+            <button class="admin-btn admin-btn-secondary" style="padding:4px 8px;font-size:11px" onclick="openEditModal('${s.id}')">编辑</button>
+            <button class="admin-btn admin-btn-danger" style="padding:4px 8px;font-size:11px" onclick="deleteService('${s.id}')">删</button>
+          </div>
+        `;
+      }).join('');
+
+      updateSelectedCount();
+      enableDragSort();
+
+      // 单选勾选监听
+      document.querySelectorAll('.svc-item-select').forEach(cb => {
+        cb.addEventListener('change', updateSelectedCount);
+      });
+    }
+
+    function updateSelectedCount() {
+      const checkedBoxes = document.querySelectorAll('.svc-item-select:checked');
+      const countEl = document.getElementById('selectedCount');
+      if (countEl) countEl.textContent = checkedBoxes.length;
+      const allBoxes = document.querySelectorAll('.svc-item-select');
+      const selectAll = document.getElementById('svcSelectAll');
+      if (selectAll && allBoxes.length > 0) {
+        selectAll.checked = checkedBoxes.length === allBoxes.length;
+      }
+    }
+
+    // 全选/全不选
+    document.getElementById('svcSelectAll')?.addEventListener('change', e => {
+      const checked = e.target.checked;
+      document.querySelectorAll('.svc-item-select').forEach(cb => {
+        cb.checked = checked;
+      });
+      updateSelectedCount();
+    });
+
+    // 批量删除
+    document.getElementById('btnBatchDelete')?.addEventListener('click', async () => {
+      const selected = [...document.querySelectorAll('.svc-item-select:checked')].map(cb => cb.dataset.id);
+      if (selected.length === 0) {
+        toast('请先勾选要删除的服务', 'error');
+        return;
+      }
+      if (!confirm(`确认批量删除选中的 ${selected.length} 个服务卡片？此操作无法撤销。`)) return;
+
+      try {
+        const res = await fetch('/api/services?action=batch_delete', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ ids: selected })
+        });
+        const d = await res.json();
+        if (d.ok) {
+          toast(`已成功批量删除 ${d.count} 个服务`, 'success');
+          loadServicesAdmin();
+        } else {
+          toast('删除失败: ' + (d.error || '未知错误'), 'error');
+        }
+      } catch (e) {
+        toast('网络错误: ' + e.message, 'error');
+      }
+    });
+
+    // 批量获取图标
+    document.getElementById('btnBatchFetchIcons')?.addEventListener('click', async () => {
+      const selected = [...document.querySelectorAll('.svc-item-select:checked')].map(cb => cb.dataset.id);
+      const btn = document.getElementById('btnBatchFetchIcons');
+      btn.disabled = true;
+      btn.textContent = '⏳ 图标获取中...';
+      toast(selected.length > 0 ? `正在为选中的 ${selected.length} 个服务探测图标...` : '正在为所有配置了 URL 的服务探测图标...', 'info');
+
+      try {
+        const res = await fetch('/api/services?action=batch_fetch_icons', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(selected.length > 0 ? { ids: selected } : {})
+        });
+        const d = await res.json();
+        if (d.ok) {
+          toast(`批量探测完成！成功更新 ${d.updated} 个服务的图标`, 'success');
+          loadServicesAdmin();
+        } else {
+          toast('探测失败: ' + (d.error || '未知错误'), 'error');
+        }
+      } catch (e) {
+        toast('网络错误: ' + e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🖼️ 批量获取图标';
+      }
+    });
+
+    async function toggleService(id, visible) {
+      await fetch('/api/services?action=toggle', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ id, visible })
+      });
+      const s = allServices.find(x => x.id === id);
+      if (s) s.visible = visible;
+      renderServices(document.getElementById('searchInput').value);
+    }
+
+    async function deleteService(id) {
+      if (!confirm('确认删除此服务？')) return;
+      await fetch('/api/services?action=delete', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ id })
+      });
+      loadServicesAdmin();
+    }
+
+    // ─── 服务编辑弹窗与图标管理逻辑 ───
+    function openEditModal(id = null) {
+      editingServiceId = id;
+      const modal = document.getElementById('editModal');
+      document.getElementById('modalTitle').textContent = id ? '编辑服务' : '新建自定义服务';
+      const fp = document.getElementById('editFaviconPreview');
+      editFaviconData = '';
+
+      if (id) {
+        const s = allServices.find(x => x.id === id);
+        document.getElementById('editName').value = s.name || '';
+        document.getElementById('editIcon').value = s.icon || '';
+        document.getElementById('editUrl').value = s.url || '';
+        document.getElementById('editPort').value = s.port || '';
+        document.getElementById('editProtocol').value = s.protocol || 'http';
+        document.getElementById('editDesc').value = s.description || '';
+        if (s.favicon) {
+          fp.src = s.favicon;
+          fp.style.display = 'block';
+          editFaviconData = s.favicon;
+        } else {
+          fp.style.display = 'none';
+        }
+      } else {
+        document.getElementById('editName').value = '';
+        document.getElementById('editIcon').value = '🌐';
+        document.getElementById('editUrl').value = '';
+        document.getElementById('editPort').value = '';
+        document.getElementById('editProtocol').value = 'http';
+        document.getElementById('editDesc').value = '';
+        fp.style.display = 'none';
+      }
+      modal.classList.add('visible');
+    }
+
+    document.getElementById('editCancel').onclick = () => document.getElementById('editModal').classList.remove('visible');
+    document.getElementById('btnOpenAddModal').onclick = () => openEditModal(null);
+
+    // 1. 探测 Favicon
+    document.getElementById('editFetchIcon').addEventListener('click', async () => {
+      const url = document.getElementById('editUrl').value.trim();
+      if (!url) { toast('请先填写 URL 地址', 'error'); return; }
+      const btn = document.getElementById('editFetchIcon');
+      btn.disabled = true; btn.textContent = '探测中...';
+      try {
+        const res = await fetch('/api/fetch-meta', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ url })
+        });
+        const data = await res.json();
+        if (data.ok && data.icon) {
+          editFaviconData = data.icon;
+          const fp = document.getElementById('editFaviconPreview');
+          fp.src = data.icon; fp.style.display = 'block';
+          if (data.title && !document.getElementById('editName').value) {
+            document.getElementById('editName').value = data.title;
+          }
+          toast('成功提取网站 Favicon', 'success');
+        } else {
+          toast('未能从目标网页提取到图标', 'error');
+        }
+      } catch (e) {
+        toast('网络错误: ' + e.message, 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = '探测 Favicon';
+      }
+    });
+
+    // 2. 本地图片文件上传转 Base64
+    document.getElementById('editIconUpload').addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) { toast('请选择有效的图片文件', 'error'); return; }
+      if (file.size > 2 * 1024 * 1024) { toast('图片文件请限制在 2MB 以内', 'error'); return; }
+      const reader = new FileReader();
+      reader.onload = () => {
+        editFaviconData = reader.result;
+        const fp = document.getElementById('editFaviconPreview');
+        fp.src = reader.result; fp.style.display = 'block';
+        toast('本地图标图片已就绪', 'success');
+      };
+      reader.readAsDataURL(file);
+      e.target.value = '';
+    });
+
+    // 3. 从外链图片 URL 抓取
+    document.getElementById('editLoadIconUrl').addEventListener('click', async () => {
+      const url = document.getElementById('editIconUrl').value.trim();
+      if (!url) { toast('请输入图标图片 URL', 'error'); return; }
+      const btn = document.getElementById('editLoadIconUrl');
+      btn.disabled = true; btn.textContent = '加载中...';
+      try {
+        const res = await fetch('/api/load-icon-url', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ url })
+        });
+        const data = await res.json();
+        if (data.ok && data.icon) {
+          editFaviconData = data.icon;
+          const fp = document.getElementById('editFaviconPreview');
+          fp.src = data.icon; fp.style.display = 'block';
+          document.getElementById('editIconUrl').value = '';
+          toast('外链图标加载成功', 'success');
+        } else {
+          toast(data.error || '加载图标失败', 'error');
+        }
+      } catch (e) {
+        toast('加载错误: ' + e.message, 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = '加载';
+      }
+    });
+
+    // 4. 保存服务
+    document.getElementById('editSave').onclick = async () => {
+      const payload = {
+        id: editingServiceId,
+        name: document.getElementById('editName').value,
+        icon: document.getElementById('editIcon').value,
+        favicon: editFaviconData,
+        url: document.getElementById('editUrl').value,
+        port: parseInt(document.getElementById('editPort').value) || 0,
+        protocol: document.getElementById('editProtocol').value,
+        desc: document.getElementById('editDesc').value,
+      };
+      const action = editingServiceId ? 'update' : 'add';
+      await fetch(`/api/services?action=${action}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+      });
+      document.getElementById('editModal').classList.remove('visible');
+      toast('服务已保存', 'success');
+      loadServicesAdmin();
+    };
+
+    // ─── 智能导入: 从 URL 一键获取 ───
+    let urlFetchResult = null;
+    document.getElementById('btnFetchUrl').addEventListener('click', async () => {
+      const url = document.getElementById('urlImportInput').value.trim();
+      if (!url) { toast('请输入服务网页 URL', 'error'); return; }
+      const btn = document.getElementById('btnFetchUrl');
+      const preview = document.getElementById('urlPreview');
+      const addBtn = document.getElementById('btnAddUrl');
+
+      btn.disabled = true; btn.textContent = '获取中...';
+      preview.style.display = 'none';
+      addBtn.disabled = true;
+      urlFetchResult = null;
+
+      try {
+        const res = await fetch('/api/fetch-meta', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+        });
+        const data = await res.json();
+        if (data.error) {
+          toast('获取失败: ' + data.error, 'error');
+          return;
+        }
+
+        urlFetchResult = { url, title: data.title, icon: data.icon, port: data.port, protocol: data.protocol };
+        const pIcon = document.getElementById('urlPreviewIcon');
+        if (data.icon) { pIcon.src = data.icon; pIcon.style.display = 'block'; }
+        else { pIcon.style.display = 'none'; }
+
+        document.getElementById('urlPreviewTitle').textContent = data.title || '(无标题网页)';
+        document.getElementById('urlPreviewMeta').textContent = `${data.protocol || 'http'} | 端口 ${data.port || '自动探测'}`;
+        document.getElementById('urlEditName').value = data.title || '';
+        preview.style.display = 'block';
+        addBtn.disabled = false;
+        toast('成功读取网页信息！', 'success');
+      } catch (e) {
+        toast('网络错误: ' + e.message, 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = '获取网站信息';
+      }
+    });
+
+    document.getElementById('btnAddUrl').addEventListener('click', async () => {
+      if (!urlFetchResult) return;
+      const name = document.getElementById('urlEditName').value.trim() || urlFetchResult.title || '自定义服务';
+      const icon = document.getElementById('urlEditIcon').value.trim() || '🌐';
+
+      await fetch('/api/services?action=add', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          name,
+          icon,
+          favicon: urlFetchResult.icon || '',
+          url: urlFetchResult.url,
+          port: urlFetchResult.port || 0,
+          protocol: urlFetchResult.protocol || 'http',
+          desc: urlFetchResult.title || '',
+        })
+      });
+
+      toast(`已成功添加: ${name}`, 'success');
+      document.getElementById('urlImportInput').value = '';
+      document.getElementById('urlPreview').style.display = 'none';
+      document.getElementById('btnAddUrl').disabled = true;
+      loadServicesAdmin();
+    });
+
+    // ─── 局域网 NAS 端口扫描与选择添加 ───
+    let scanDiscovered = [];
+    document.getElementById('btnScanNas').addEventListener('click', async () => {
+      const modal = document.getElementById('scanModal');
+      const status = document.getElementById('scanStatus');
+      const results = document.getElementById('scanResults');
+      modal.classList.add('visible');
+      status.textContent = '正在扫描指定 NAS 端口及 Favicon，请稍候...';
+      results.innerHTML = '';
+      scanDiscovered = [];
+
+      try {
+        const res = await fetch('/api/scan-nas');
+        const data = await res.json();
+        if (!data.ok) { status.textContent = '扫描失败: ' + (data.error || '未知错误'); return; }
+        scanDiscovered = data.new_services || [];
+        if (!scanDiscovered.length) {
+          status.textContent = `扫描完成 — 发现 ${data.open_ports?.length || 0} 个开放端口，没有未添加的新服务`;
+          results.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted)">没有未收录的新服务</div>';
+          return;
+        }
+
+        status.textContent = `扫描完成 — 发现 ${scanDiscovered.length} 个新服务（共 ${data.open_ports?.length || 0} 个开放端口）`;
+        results.innerHTML = '<div class="scan-list">' + scanDiscovered.map((s, i) => {
+          const iconHtml = s.favicon ?
+            `<img src="${s.favicon}" style="width:20px;height:20px;border-radius:4px;object-fit:contain">` :
+            `<span style="font-size:16px">${s.icon || '🔧'}</span>`;
+          return `
+            <label class="scan-item selected" data-idx="${i}">
+              <input type="checkbox" checked data-idx="${i}">
+              ${iconHtml}
+              <div class="scan-item-info">
+                <div class="scan-item-name">${s.name}</div>
+                <div style="font-size:11px;color:var(--text-muted)">端口: ${s.port} (${s.protocol})</div>
+              </div>
+            </label>
+          `;
+        }).join('') + '</div>';
+
+        results.querySelectorAll('.scan-item input').forEach(cb => {
+          cb.addEventListener('change', () => {
+            cb.closest('.scan-item').classList.toggle('selected', cb.checked);
+          });
+        });
+      } catch (e) {
+        status.textContent = '扫描异常: ' + e.message;
+      }
+    });
+
+    document.getElementById('scanSelectAll').onclick = () => {
+      const boxes = document.querySelectorAll('#scanResults input[type="checkbox"]');
+      const allChecked = [...boxes].every(b => b.checked);
+      boxes.forEach(b => {
+        b.checked = !allChecked;
+        b.closest('.scan-item').classList.toggle('selected', !allChecked);
+      });
+    };
+    document.getElementById('scanCancel').onclick = () => document.getElementById('scanModal').classList.remove('visible');
+
+    document.getElementById('scanAddSelected').onclick = async () => {
+      const boxes = document.querySelectorAll('#scanResults input[type="checkbox"]:checked');
+      if (!boxes.length) { toast('请勾选要添加的服务', 'error'); return; }
+      let added = 0;
+      for (const b of boxes) {
+        const item = scanDiscovered[parseInt(b.dataset.idx)];
+        if (!item) continue;
+        await fetch('/api/services?action=add', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            name: item.name,
+            icon: item.icon || '🔧',
+            favicon: item.favicon || '',
+            url: item.url,
+            port: item.port,
+            protocol: item.protocol,
+            desc: item.name,
+          })
+        });
+        added++;
+      }
+      document.getElementById('scanModal').classList.remove('visible');
+      toast(`已批量添加 ${added} 个新服务！`, 'success');
+      loadServicesAdmin();
+    };
+
+    // ─── 批量 JSON 导入与导出 ───
+    document.getElementById('btnImportJson').onclick = async () => {
+      const text = document.getElementById('importJsonArea').value.trim();
+      if (!text) { toast('请粘贴 JSON 内容', 'error'); return; }
+      try {
+        const data = JSON.parse(text);
+        const res = await fetch('/api/services?action=import', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ services: data })
+        });
+        const r = await res.json();
+        toast(`导入完成: 新增 ${r.added || 0}, 跳过 ${r.skipped || 0}`, 'success');
+        document.getElementById('importJsonArea').value = '';
+        loadServicesAdmin();
+      } catch (e) {
+        toast('JSON 格式有误: ' + e.message, 'error');
+      }
+    };
+
+    document.getElementById('btnExportJson').onclick = () => {
+      const blob = new Blob([JSON.stringify(allServices, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `nas-services-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      toast('备份文件已下载', 'success');
+    };
+
+    // ─── 初始化与通用事件 ───
+    document.getElementById('adminToggle').onclick = () => {
+      const p = document.getElementById('adminPanel');
+      p.classList.toggle('visible');
+      if (p.classList.contains('visible')) {
+        loadMonitorsAdmin();
+        loadServicesAdmin();
+      }
+    };
+
+    document.querySelectorAll('.admin-tab').forEach(tab => {
+      tab.onclick = () => {
+        document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+        if (tab.dataset.tab === 'tab-logs') {
+          refreshMusicLogs('admin');
+        }
+      };
+    });
+
+    document.getElementById('searchInput').oninput = e => renderServices(e.target.value);
+
+    document.getElementById('btnSaveUISettings').onclick = async () => {
+      const ui = {
+        theme: document.getElementById('settingTheme').value,
+        card_style: document.getElementById('settingCardStyle').value,
+        show_search: document.getElementById('settingShowSearch').checked,
+        enable_music: document.getElementById('settingEnableMusic').checked,
+      };
+      await fetch('/api/config', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ ui })
+      });
+      applyUI(ui);
+      toast('界面外观设置已保存', 'success');
+    };
+
+    document.getElementById('btnSeed').onclick = async () => {
+      if (!confirm('确定要恢复默认预置服务吗？（现有端口会自动跳过）')) return;
+      await fetch('/api/services?action=seed', { method: 'POST' });
+      toast('已初始化预置服务', 'success');
+      loadServicesAdmin();
+    };
+
+    // ─── 身份验证表单与控制事件 ───
+    document.getElementById('authLoginForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('authUsername').value.trim();
+      const password = document.getElementById('authPassword').value;
+      const remember = document.getElementById('authRememberMe').checked;
+      const btn = document.getElementById('authBtnSubmit');
+      const errEl = document.getElementById('authErrorMsg');
+
+      if (!password) {
+        errEl.textContent = '⚠️ 请输入访问密码';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = '⏳ 正在验证凭据...';
+      errEl.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password, remember })
+        });
+        const data = await res.json();
+        if (data.ok && data.token) {
+          setStoredAuthToken(data.token, remember);
+          hideAuthOverlay();
+          toast('身份验证成功，欢迎访问！', 'success');
+          document.getElementById('authPassword').value = '';
+          currentAuthUser = data.username || 'admin';
+          const userBadge = document.getElementById('adminCurrentUsername');
+          if (userBadge) userBadge.textContent = currentAuthUser;
+        } else {
+          errEl.textContent = '❌ ' + (data.error || '验证失败，密码错误');
+          errEl.style.display = 'block';
+        }
+      } catch (err) {
+        errEl.textContent = '❌ 网络请求异常: ' + err.message;
+        errEl.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🚀 验 证 进 入';
+      }
+    });
+
+    document.getElementById('authPwdToggle')?.addEventListener('click', () => {
+      const pwd = document.getElementById('authPassword');
+      if (!pwd) return;
+      const isPwd = pwd.type === 'password';
+      pwd.type = isPwd ? 'text' : 'password';
+      document.getElementById('authPwdToggle').textContent = isPwd ? '🙈' : '👁️';
+    });
+
+    document.getElementById('toolbarLogoutBtn')?.addEventListener('click', async () => {
+      if (!confirm('确定退出当前登录并锁定监控面板吗？')) return;
+      const token = getStoredAuthToken();
+      if (token) {
+        try {
+          await fetch('/api/auth/logout', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+        } catch (e) {}
+      }
+      removeStoredAuthToken();
+      showAuthOverlay();
+      toast('已安全退出登录', 'info');
+    });
+
+    document.getElementById('btnChangeWebPwd')?.addEventListener('click', async () => {
+      const oldPwd = document.getElementById('inputOldPwd').value.trim();
+      const newPwd = document.getElementById('inputNewPwd').value.trim();
+      if (!oldPwd || !newPwd) {
+        toast('原密码和新密码均不能为空', 'error');
+        return;
+      }
+      if (newPwd.length < 3) {
+        toast('新密码长度至少需要 3 位字符', 'error');
+        return;
+      }
+      const btn = document.getElementById('btnChangeWebPwd');
+      btn.disabled = true;
+      btn.textContent = '正在修改...';
+      try {
+        const res = await fetch('/api/auth/password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ old_password: oldPwd, new_password: newPwd })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          toast('访问密码修改成功，请牢记新密码！', 'success');
+          document.getElementById('inputOldPwd').value = '';
+          document.getElementById('inputNewPwd').value = '';
+        } else {
+          toast('修改失败: ' + (data.error || '原密码错误'), 'error');
+        }
+      } catch (e) {
+        toast('网络错误: ' + e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🔒 确认修改访问密码';
+      }
+    });
+
+    async function init() {
+      try {
+        const res = await fetch('/api/config');
+        const cfg = await res.json();
+        applyUI(cfg.ui || {});
+        document.getElementById('nasIpInput').value = cfg.nas_ip || '127.0.0.1';
+      } catch (e) {}
+
+      loadBg();
+      loadServicesAdmin();
+      initMusicPlayer();
+      refreshStats();
+      setInterval(refreshStats, 5000);
+    }
+
+    init();
+  </script>
+</body>
+</html>

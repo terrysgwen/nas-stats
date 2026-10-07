@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EasyNVR 实时监控中心</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📹</text></svg>">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117;
+      --card-bg: #1a1d27;
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #e8eaf0;
+      --text-muted: #9ca3b4;
+      --accent: #3b82f6;
+      --online: #10b981;
+      --offline: #ef4444;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .back-btn {
+      padding: 6px 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 13px;
+      transition: background 0.2s;
+    }
+    .back-btn:hover {
+      background: rgba(255,255,255,0.12);
+    }
+    .stats-bar {
+      display: flex;
+      gap: 20px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .stats-val {
+      font-weight: 600;
+      color: var(--text);
+      font-family: monospace;
+    }
+    .main-content {
+      flex: 1;
+      padding: 24px;
+      max-width: 1800px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .video-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 16px;
+    }
+    .cam-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .cam-header {
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .cam-title {
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .status-dot.online {
+      background: var(--online);
+      box-shadow: 0 0 8px var(--online);
+    }
+    .status-dot.offline {
+      background: var(--offline);
+    }
+    .cam-screen {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .cam-snap {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .cam-placeholder {
+      color: #666;
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .cam-footer {
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .play-btn {
+      padding: 4px 10px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 11px;
+    }
+    .empty-msg {
+      text-align: center;
+      padding: 60px 0;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <a href="/" class="back-btn">⬅ 返回导航</a>
+      <span>📹 EasyNVR 实时监控</span>
+    </div>
+    <div class="stats-bar">
+      <div>总通道: <span id="totalChannels" class="stats-val">0</span></div>
+      <div>在线: <span id="onlineChannels" class="stats-val" style="color:var(--online)">0</span></div>
+      <div>离线: <span id="offlineChannels" class="stats-val" style="color:var(--offline)">0</span></div>
+      <button class="back-btn" onclick="loadNVRData()">🔄 刷新</button>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <div id="videoGrid" class="video-grid">
+      <div class="empty-msg">正在加载 EasyNVR 通道列表...</div>
+    </div>
+  </main>
+
+  <script>
+    async function loadNVRData() {
+      const grid = document.getElementById('videoGrid');
+      try {
+        const res = await fetch('/api/stats');
+        const data = await res.json();
+        const nvr = data.easynvr;
+
+        if (!nvr || !nvr.enabled) {
+          grid.innerHTML = `
+            <div class="empty-msg">
+              <h3 style="margin-bottom:8px">EasyNVR 监控未启用</h3>
+              <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">
+                请点击右上角返回主页，进入 <b>⚙️ 系统管理 -> 📡 监控服务设置</b>，找到 EasyNVR 并勾选<b>启用</b>，同时填入地址（例如 http://127.0.0.1:10000）。
+              </p>
+              <a href="/" class="back-btn" style="display:inline-block">前往管理面板配置</a>
+            </div>
+          `;
+          return;
+        }
+
+        if (nvr.status !== 'ok') {
+          grid.innerHTML = `
+            <div class="empty-msg" style="color:var(--offline)">
+              <h3 style="margin-bottom:8px">无法连接到 EasyNVR</h3>
+              <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">${nvr.error || '连接超时或接口无法访问'}</p>
+              <button class="back-btn" onclick="loadNVRData()">重新尝试</button>
+            </div>
+          `;
+          return;
+        }
+
+        document.getElementById('totalChannels').textContent = nvr.total_channels || 0;
+        document.getElementById('onlineChannels').textContent = nvr.online_channels || 0;
+        document.getElementById('offlineChannels').textContent = (nvr.total_channels || 0) - (nvr.online_channels || 0);
+
+        const channels = nvr.channels || [];
+        if (channels.length === 0) {
+          grid.innerHTML = '<div class="empty-msg">暂无可用摄像头通道</div>';
+          return;
+        }
+
+        grid.innerHTML = channels.map(ch => {
+          const isOnline = ch.online;
+          const snapUrl = ch.snap_url ? ch.snap_url : '';
+          return `
+            <div class="cam-card">
+              <div class="cam-header">
+                <div class="cam-title">
+                  <span class="status-dot ${isOnline ? 'online' : 'offline'}"></span>
+                  <span>${ch.name || '通道 ' + ch.channel}</span>
+                </div>
+                <span style="font-size:11px;color:var(--text-muted)">ID: ${ch.channel}</span>
+              </div>
+              <div class="cam-screen">
+                ${snapUrl ? `
+                  <img src="${snapUrl}" class="cam-snap" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                  <div class="cam-placeholder" style="display:none"><span>📷 快照不可用</span></div>
+                ` : `
+                  <div class="cam-placeholder">
+                    <span>${isOnline ? '🟢 通道在线' : '🔴 通道离线'}</span>
+                  </div>
+                `}
+              </div>
+              <div class="cam-footer">
+                <span>协议: RTSP/HLS/FLV</span>
+                ${isOnline && ch.flv ? `<a href="${ch.flv}" target="_blank" class="play-btn">播放流</a>` : ''}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+      } catch (err) {
+        grid.innerHTML = `<div class="empty-msg" style="color:var(--offline)">数据加载出错: ${err.message}</div>`;
+      }
+    }
+
+    loadNVRData();
+    setInterval(loadNVRData, 10000);
+  </script>
+</body>
+</html>

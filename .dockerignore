@@ -1,0 +1,30 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# 敏感与持久化配置及数据库
+config.json
+data/*.db
+data/*.db*
+data/*.log
+data/auth.json
+data/services.json
+!data/.gitkeep
+
+# 容器与打包忽略
+.dockerignore
+.git/
+.github/
+
+# IDE 与系统文件
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
