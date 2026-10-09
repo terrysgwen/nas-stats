@@ -230,7 +230,7 @@
           if (!raw || typeof raw !== 'string') return '';
           const trimmed = raw.trim();
           const lower = trimmed.toLowerCase();
-          if (lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('/')) return trimmed;
+          if (lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('/') || lower.startsWith('data:image/')) return trimmed;
           return '';
         }
 
@@ -248,19 +248,23 @@
                 </div>
                 <span style="font-size:11px;color:var(--text-muted)">ID: ${escapeHtml(ch.channel)}</span>
               </div>
-              <div class="cam-screen">
+              <div class="cam-screen" style="cursor:${isOnline ? 'pointer' : 'default'}" onclick="${isOnline && flvUrl ? `window.open('${escapeHtml(flvUrl)}', '_blank')` : ''}" title="${isOnline ? '点击在新窗口打开 EasyNVR 实时监控流' : '通道离线'}">
                 ${snapUrl ? `
-                  <img src="${escapeHtml(snapUrl)}" class="cam-snap" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                  <div class="cam-placeholder" style="display:none"><span>📷 快照不可用</span></div>
+                  <img src="${snapUrl}" class="cam-snap" alt="${chName}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                  <div class="cam-placeholder" style="display:none">
+                    <span>📷 快照不可用</span>
+                    <span style="font-size:11px;color:var(--accent)">点击尝试播放实时流</span>
+                  </div>
                 ` : `
                   <div class="cam-placeholder">
                     <span>${isOnline ? '🟢 通道在线' : '🔴 通道离线'}</span>
+                    ${isOnline ? '<span style="font-size:11px;color:var(--accent);margin-top:4px">▶ 点击开启实时视频</span>' : ''}
                   </div>
                 `}
               </div>
               <div class="cam-footer">
                 <span>协议: RTSP/HLS/FLV</span>
-                ${isOnline && flvUrl ? `<a href="${escapeHtml(flvUrl)}" target="_blank" class="play-btn">播放流</a>` : ''}
+                ${isOnline && flvUrl ? `<a href="${escapeHtml(flvUrl)}" target="_blank" class="play-btn">播放流 ↗</a>` : ''}
               </div>
             </div>
           `;
