@@ -24,7 +24,7 @@
 ```yaml
 services:
   nas-stats:
-    image: your-dockerhub-username/nas-stats:latest
+    image: terryhellwen/nas-stats:latest
     container_name: nas-stats
     restart: unless-stopped
     ports:
