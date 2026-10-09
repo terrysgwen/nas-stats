@@ -211,10 +211,12 @@ def add_service(svc: dict):
 
 def update_service(service_id: str, **kwargs):
     conn = get_conn()
+    allowed_cols = {"name", "icon", "description", "url", "port", "protocol", "favicon", "visible", "sort_order", "category"}
     sets, vals = [], []
     for k, v in kwargs.items():
-        sets.append(f"{k}=?")
-        vals.append(v)
+        if k in allowed_cols:
+            sets.append(f"{k}=?")
+            vals.append(v)
     if sets:
         vals.append(service_id)
         conn.execute(
@@ -295,8 +297,8 @@ def migrate_from_legacy(config_path: Path, services_path: Path):
             old = json.load(f)
 
         set_config("port", old.get("port", 8980))
-        set_config("nas_ip", old.get("nas_ip", "192.168.1.177"))
-        set_config("cors_origins", old.get("cors_origins", ["*"]))
+        set_config("nas_ip", old.get("nas_ip", "127.0.0.1"))
+        set_config("cors_origins", old.get("cors_origins", []))
         set_config("ui", old.get("ui", {"show_search": True, "theme": "dark"}))
 
         for i, (mid, (name, fields)) in enumerate(LEGACY_MONITOR_DEFS.items()):

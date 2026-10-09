@@ -102,12 +102,12 @@ class FnMusicClient:
                         # Token valid for 7 days
                         self.token_expiry = time.time() + 7 * 86400
                         self.last_error = ""
-                        logger.info("✅ 飞牛音乐登录成功！Token: %s...", self.token[:12])
+                        logger.info("✅ 飞牛音乐登录成功！Token 已获取")
                         return True
                     else:
                         msg = data.get("msg") or f"错误代码 {data.get('code')}"
                         self.last_error = f"飞牛音乐验证失败: {msg}"
-                        logger.error("❌ 飞牛音乐登录失败: %s (响应: %s)", msg, json.dumps(data, ensure_ascii=False))
+                        logger.error("❌ 飞牛音乐登录失败: %s", msg)
                 elif resp.status_code == 504:
                     self.last_error = "飞牛 Nginx 网关超时 (504)，飞牛音乐服务内部无响应，请在系统【应用中心】重启飞牛音乐"
                     logger.error("⚠️ 飞牛音乐网关超时 504 Gateway Timeout: 音乐服务内部进程卡死，需在飞牛应用中心重启")

@@ -902,7 +902,7 @@
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
             <input type="password" id="inputOldPwd" placeholder="输入原密码 (初始为 admin123)" style="flex:1;min-width:180px;padding:8px 12px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:13px;outline:none">
-            <input type="password" id="inputNewPwd" placeholder="输入新密码 (至少 3 位)" style="flex:1;min-width:180px;padding:8px 12px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:13px;outline:none">
+            <input type="password" id="inputNewPwd" placeholder="输入新密码 (至少 8 位，包含字母与数字)" style="flex:1;min-width:180px;padding:8px 12px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:13px;outline:none">
             <button type="button" class="admin-btn admin-btn-primary" id="btnChangeWebPwd" style="font-size:13px;padding:8px 16px;white-space:nowrap">🔒 确认修改访问密码</button>
           </div>
         </div>
@@ -1346,6 +1346,43 @@
       if (overlay) overlay.classList.add('hidden');
     }
 
+    // 全局网络请求自动附带 Authorization 头管理器
+    const _origFetch = window.fetch;
+    window.fetch = async function(url, options = {}) {
+      options = options || {};
+      const token = getStoredAuthToken();
+      if (token && typeof url === 'string' && url.startsWith('/api/')) {
+        options.headers = options.headers || {};
+        if (options.headers instanceof Headers) {
+          if (!options.headers.has('Authorization')) {
+            options.headers.set('Authorization', 'Bearer ' + token);
+          }
+        } else if (Array.isArray(options.headers)) {
+          const hasAuth = options.headers.some(([k]) => k.toLowerCase() === 'authorization');
+          if (!hasAuth) options.headers.push(['Authorization', 'Bearer ' + token]);
+        } else {
+          const hasAuth = Object.keys(options.headers).some(k => k.toLowerCase() === 'authorization');
+          if (!hasAuth) options.headers['Authorization'] = 'Bearer ' + token;
+        }
+      }
+      const response = await _origFetch(url, options);
+      // 401 自动唤起登录遮罩（除登录、状态探活接口外）
+      if (response.status === 401 && typeof url === 'string' && !url.includes('/api/auth/login') && !url.includes('/api/auth/status')) {
+        showAuthOverlay();
+      }
+      return response;
+    };
+
+    function sanitizeUrl(rawUrl) {
+      if (!rawUrl || typeof rawUrl !== 'string') return '';
+      const trimmed = rawUrl.trim();
+      const lower = trimmed.toLowerCase();
+      if (lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('/')) {
+        return trimmed;
+      }
+      return '';
+    }
+
     async function checkAuthStartup() {
       const token = getStoredAuthToken();
       if (!token) {
@@ -1353,7 +1390,7 @@
         return false;
       }
       try {
-        const res = await fetch('/api/auth/verify', {
+        const res = await _origFetch('/api/auth/verify', {
           headers: { 'Authorization': 'Bearer ' + token }
         });
         const data = await res.json();
@@ -1369,9 +1406,14 @@
           return false;
         }
       } catch (e) {
-        // 网络请求故障但本地存在保存的登录凭据时，保持放行
-        hideAuthOverlay();
-        return true;
+        // 网络请求故障时保持锁定状态并提示重试，杜绝 fail-open 风险
+        showAuthOverlay();
+        const errEl = document.getElementById('authErrorMsg');
+        if (errEl) {
+          errEl.textContent = '⚠️ 无法连接到服务验证身份，请检查网络后重试';
+          errEl.style.display = 'block';
+        }
+        return false;
       }
     }
 
@@ -2361,14 +2403,14 @@
             let popupRows = '';
             if (stat.wans && stat.wans.length > 0) {
               stat.wans.forEach(w => {
-                popupRows += `<div class="popup-row"><span>${w.name || 'WAN'}</span><span>${w.ip || '-'}</span></div>`;
+                popupRows += `<div class="popup-row"><span>${escapeHtml(w.name || 'WAN')}</span><span>${escapeHtml(w.ip || '-')}</span></div>`;
               });
             }
-            if (stat.cpu) popupRows += `<div class="popup-row"><span>CPU 利用率</span><span>${stat.cpu}%</span></div>`;
-            if (stat.mem) popupRows += `<div class="popup-row"><span>内存利用率</span><span>${stat.mem}%</span></div>`;
-            if (stat.connect_num) popupRows += `<div class="popup-row"><span>当前连接数</span><span>${stat.connect_num}</span></div>`;
+            if (stat.cpu) popupRows += `<div class="popup-row"><span>CPU 利用率</span><span>${escapeHtml(stat.cpu)}%</span></div>`;
+            if (stat.mem) popupRows += `<div class="popup-row"><span>内存利用率</span><span>${escapeHtml(stat.mem)}%</span></div>`;
+            if (stat.connect_num) popupRows += `<div class="popup-row"><span>当前连接数</span><span>${escapeHtml(stat.connect_num)}</span></div>`;
             const popupHtml = popupRows ? `<div class="popup-inner"><div class="popup-title">爱快路由器详情</div>${popupRows}</div>` : '';
-            const wanLabel = (stat.wans && stat.wans.length > 0) ? stat.wans.map(w => w.name).join('+') : '爱快路由';
+            const wanLabel = (stat.wans && stat.wans.length > 0) ? stat.wans.map(w => escapeHtml(w.name)).join('+') : '爱快路由';
 
             html += `
               <div class="live-stat ikuai-stat" data-popup="${encodeURIComponent(popupHtml)}" title="爱快实时网络流量">
@@ -2386,7 +2428,7 @@
                 const pct = Math.round((t.progress || 0) * 100);
                 torrentPopup += `
                   <div class="popup-torrent">
-                    <div class="popup-torrent-name">${t.name || '未知'}</div>
+                    <div class="popup-torrent-name">${escapeHtml(t.name || '未知')}</div>
                     <div class="popup-torrent-meta">
                       <span>${pct}%</span>
                       <span style="color:var(--accent-cyan)">↓${formatSpeed(t.dl_speed)}</span>
@@ -2414,7 +2456,7 @@
                 const pct = Math.round((t.progress || 0) * 100);
                 torrentPopup += `
                   <div class="popup-torrent">
-                    <div class="popup-torrent-name">${t.name || '未知'}</div>
+                    <div class="popup-torrent-name">${escapeHtml(t.name || '未知')}</div>
                     <div class="popup-torrent-meta">
                       <span>${pct}%</span>
                       <span style="color:var(--accent-cyan)">↓${formatSpeed(t.dl_speed)}</span>
@@ -2639,19 +2681,20 @@
         const iconSrc = s.favicon || s.icon;
         const isImg = iconSrc && (iconSrc.startsWith('http') || iconSrc.startsWith('data:image'));
         const iconHtml = isImg ?
-          `<img src="${iconSrc}" class="card-icon-img" alt="">` :
-          `<span class="card-icon">${s.icon || '🔧'}</span>`;
+          `<img src="${escapeHtml(iconSrc)}" class="card-icon-img" alt="">` :
+          `<span class="card-icon">${escapeHtml(s.icon || '🔧')}</span>`;
 
         const isFnosMusic = (s.name && s.name.includes('飞牛音乐')) || (s.name && s.name.toLowerCase() === 'fnos music');
-        let href = s.url ? `href="${s.url}" target="_blank"` : 'href="javascript:void(0)"';
+        const validUrl = sanitizeUrl(s.url);
+        let href = validUrl ? `href="${escapeHtml(validUrl)}" target="_blank"` : 'href="javascript:void(0)"';
         let clickAttr = '';
         let extBadge = '';
 
         if (isFnosMusic) {
           href = 'href="javascript:void(0)"';
           clickAttr = `onclick="openMusicCardModal(true)"`;
-          if (s.url) {
-            extBadge = `<a href="${s.url}" target="_blank" onclick="event.stopPropagation()" class="card-external-badge" title="在新窗口打开飞牛音乐 Web 版">↗</a>`;
+          if (validUrl) {
+            extBadge = `<a href="${escapeHtml(validUrl)}" target="_blank" onclick="event.stopPropagation()" class="card-external-badge" title="在新窗口打开飞牛音乐 Web 版">↗</a>`;
           }
         }
 
@@ -2660,8 +2703,8 @@
             ${extBadge}
             <div class="card-top">${iconHtml}</div>
             <div class="card-info">
-              <div class="card-name">${s.name}</div>
-              <div class="card-desc">${s.description || ''}</div>
+              <div class="card-name">${escapeHtml(s.name)}</div>
+              <div class="card-desc">${escapeHtml(s.description || '')}</div>
             </div>
           </a>
         `;
@@ -2723,9 +2766,9 @@
         const cfg = m.config || {};
         const fieldsHtml = Object.entries(cfg).map(([k, v]) => `
           <div class="monitor-field ${k === 'url' ? 'full' : ''}">
-            <label>${k}</label>
+            <label>${escapeHtml(k)}</label>
             <input type="${k.includes('pass') || k.includes('token') || k.includes('key') ? 'password' : 'text'}"
-                   data-mid="${m.id}" data-key="${k}" value="${v || ''}">
+                   data-mid="${escapeHtml(m.id)}" data-key="${escapeHtml(k)}" value="${escapeHtml(v || '')}">
           </div>
         `).join('');
 
@@ -2800,20 +2843,20 @@
         const iconSrc = s.favicon || s.icon;
         const isImg = iconSrc && (iconSrc.startsWith('http') || iconSrc.startsWith('data:image'));
         const iconHtml = isImg ?
-          `<img src="${iconSrc}" style="width:20px;height:20px;border-radius:4px;object-fit:contain">` :
-          `<span style="font-size:16px">${s.icon || '🔧'}</span>`;
+          `<img src="${escapeHtml(iconSrc)}" style="width:20px;height:20px;border-radius:4px;object-fit:contain">` :
+          `<span style="font-size:16px">${escapeHtml(s.icon || '🔧')}</span>`;
 
         return `
-          <div class="admin-row" data-id="${s.id}">
-            <input type="checkbox" class="svc-item-select" data-id="${s.id}" style="margin-right:2px;cursor:pointer">
+          <div class="admin-row" data-id="${escapeHtml(s.id)}">
+            <input type="checkbox" class="svc-item-select" data-id="${escapeHtml(s.id)}" style="margin-right:2px;cursor:pointer">
             ${iconHtml}
-            <span class="admin-row-name" title="${s.name}">${s.name}</span>
+            <span class="admin-row-name" title="${escapeHtml(s.name)}">${escapeHtml(s.name)}</span>
             <label class="toggle-switch">
-              <input type="checkbox" ${s.visible ? 'checked' : ''} onchange="toggleService('${s.id}', this.checked)">
+              <input type="checkbox" ${s.visible ? 'checked' : ''} onchange="toggleService('${escapeHtml(s.id)}', this.checked)">
               <span class="toggle-slider"></span>
             </label>
-            <button class="admin-btn admin-btn-secondary" style="padding:4px 8px;font-size:11px" onclick="openEditModal('${s.id}')">编辑</button>
-            <button class="admin-btn admin-btn-danger" style="padding:4px 8px;font-size:11px" onclick="deleteService('${s.id}')">删</button>
+            <button class="admin-btn admin-btn-secondary" style="padding:4px 8px;font-size:11px" onclick="openEditModal('${escapeHtml(s.id)}')">编辑</button>
+            <button class="admin-btn admin-btn-danger" style="padding:4px 8px;font-size:11px" onclick="deleteService('${escapeHtml(s.id)}')">删</button>
           </div>
         `;
       }).join('');
@@ -3154,15 +3197,15 @@
         status.textContent = `扫描完成 — 发现 ${scanDiscovered.length} 个新服务（共 ${data.open_ports?.length || 0} 个开放端口）`;
         results.innerHTML = '<div class="scan-list">' + scanDiscovered.map((s, i) => {
           const iconHtml = s.favicon ?
-            `<img src="${s.favicon}" style="width:20px;height:20px;border-radius:4px;object-fit:contain">` :
-            `<span style="font-size:16px">${s.icon || '🔧'}</span>`;
+            `<img src="${escapeHtml(s.favicon)}" style="width:20px;height:20px;border-radius:4px;object-fit:contain">` :
+            `<span style="font-size:16px">${escapeHtml(s.icon || '🔧')}</span>`;
           return `
             <label class="scan-item selected" data-idx="${i}">
               <input type="checkbox" checked data-idx="${i}">
               ${iconHtml}
               <div class="scan-item-info">
-                <div class="scan-item-name">${s.name}</div>
-                <div style="font-size:11px;color:var(--text-muted)">端口: ${s.port} (${s.protocol})</div>
+                <div class="scan-item-name">${escapeHtml(s.name)}</div>
+                <div style="font-size:11px;color:var(--text-muted)">端口: ${escapeHtml(s.port)} (${escapeHtml(s.protocol)})</div>
               </div>
             </label>
           `;
@@ -3369,8 +3412,8 @@
         toast('原密码和新密码均不能为空', 'error');
         return;
       }
-      if (newPwd.length < 3) {
-        toast('新密码长度至少需要 3 位字符', 'error');
+      if (newPwd.length < 8) {
+        toast('新密码长度至少需要 8 位字符', 'error');
         return;
       }
       const btn = document.getElementById('btnChangeWebPwd');

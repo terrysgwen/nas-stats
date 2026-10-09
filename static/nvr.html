@@ -182,7 +182,9 @@
     async function loadNVRData() {
       const grid = document.getElementById('videoGrid');
       try {
-        const res = await fetch('/api/stats');
+        const token = localStorage.getItem('nas_auth_token') || sessionStorage.getItem('nas_auth_token') || '';
+        const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+        const res = await fetch('/api/stats', { headers });
         const data = await res.json();
         const nvr = data.easynvr;
 
@@ -220,21 +222,35 @@
           return;
         }
 
+        function escapeHtml(str) {
+          if (!str) return '';
+          return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+        function sanitizeUrl(raw) {
+          if (!raw || typeof raw !== 'string') return '';
+          const trimmed = raw.trim();
+          const lower = trimmed.toLowerCase();
+          if (lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('/')) return trimmed;
+          return '';
+        }
+
         grid.innerHTML = channels.map(ch => {
           const isOnline = ch.online;
-          const snapUrl = ch.snap_url ? ch.snap_url : '';
+          const snapUrl = sanitizeUrl(ch.snap_url);
+          const flvUrl = sanitizeUrl(ch.flv);
+          const chName = escapeHtml(ch.name || ('通道 ' + ch.channel));
           return `
             <div class="cam-card">
               <div class="cam-header">
                 <div class="cam-title">
                   <span class="status-dot ${isOnline ? 'online' : 'offline'}"></span>
-                  <span>${ch.name || '通道 ' + ch.channel}</span>
+                  <span>${chName}</span>
                 </div>
-                <span style="font-size:11px;color:var(--text-muted)">ID: ${ch.channel}</span>
+                <span style="font-size:11px;color:var(--text-muted)">ID: ${escapeHtml(ch.channel)}</span>
               </div>
               <div class="cam-screen">
                 ${snapUrl ? `
-                  <img src="${snapUrl}" class="cam-snap" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                  <img src="${escapeHtml(snapUrl)}" class="cam-snap" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
                   <div class="cam-placeholder" style="display:none"><span>📷 快照不可用</span></div>
                 ` : `
                   <div class="cam-placeholder">
@@ -244,7 +260,7 @@
               </div>
               <div class="cam-footer">
                 <span>协议: RTSP/HLS/FLV</span>
-                ${isOnline && ch.flv ? `<a href="${ch.flv}" target="_blank" class="play-btn">播放流</a>` : ''}
+                ${isOnline && flvUrl ? `<a href="${escapeHtml(flvUrl)}" target="_blank" class="play-btn">播放流</a>` : ''}
               </div>
             </div>
           `;

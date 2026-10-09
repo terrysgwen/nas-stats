@@ -12,15 +12,75 @@ import re
 import threading
 import time
 from urllib.parse import urljoin, urlparse
-import uuid
-
+import ipaddress
 import logging
-from fastapi import FastAPI, Query, Request
+from fastapi import Depends, FastAPI, HTTPException, Header, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 import httpx
 
 logger = logging.getLogger("main")
+
+
+def validate_proxy_url(url: str, allow_private: bool = True) -> str:
+    """Validate proxy destination URL against SSRF and illegal schemes."""
+    if not url or not isinstance(url, str):
+        raise HTTPException(status_code=400, detail="缺少有效的 URL")
+    url = url.strip()
+    if not url.startswith(("http://", "https://")):
+        raise HTTPException(status_code=400, detail="只允许 HTTP 或 HTTPS 协议链接")
+
+    parsed = urlparse(url)
+    hostname = (parsed.hostname or "").lower()
+    if not hostname:
+        raise HTTPException(status_code=400, detail="无法解析的目标主机")
+
+    # Always block cloud metadata services
+    if hostname in ("169.254.169.254", "metadata.google.internal"):
+        raise HTTPException(status_code=403, detail="禁止请求云服务元数据端点")
+
+    # Check IP restrictions if hostname is an IP
+    try:
+        ip = ipaddress.ip_address(hostname)
+        if ip.is_multicast or ip.is_reserved:
+            raise HTTPException(status_code=403, detail="非法的目标 IP 地址")
+        if not allow_private and (ip.is_private or ip.is_loopback or ip.is_link_local):
+            raise HTTPException(status_code=403, detail="禁止向私有/回环网络发起外链代理请求")
+    except ValueError:
+        # Not a raw IP literal (e.g. domain name)
+        pass
+
+    return url
+
+from auth_manager import auth_mgr
+
+
+async def require_auth(request: Request):
+    """Dependency that requires valid authentication."""
+    auth_header = request.headers.get("authorization", "")
+    token = ""
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:].strip()
+    elif "x-auth-token" in request.headers:
+        token = request.headers["x-auth-token"].strip()
+
+    if not token:
+        raise HTTPException(status_code=401, detail="未授权，请先登录管理面板")
+
+    data = auth_mgr.validate_token(token)
+    if not data:
+        raise HTTPException(status_code=401, detail="登录凭证已失效或过期，请重新登录")
+
+    return data
+
+
+def _get_client_ip(request: Request) -> str:
+    """Extract client IP from request, taking proxy headers into account."""
+    x_forwarded_for = request.headers.get("x-forwarded-for")
+    if x_forwarded_for:
+        return x_forwarded_for.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
 
 import database as db
 from monitors import MONITOR_REGISTRY, BaseMonitor
@@ -102,14 +162,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="NAS Stats 2.0 API", lifespan=lifespan)
 
-# Setup CORS from DB config
-cors_origins = db.get_config("cors_origins", ["*"])
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=cors_origins,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Setup CORS from DB config (default to empty list to block unauthorized cross-origin requests)
+cors_origins = db.get_config("cors_origins", [])
+if cors_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 
 # ── Pages ──────────────────────────────────────────────────────────
@@ -203,7 +264,7 @@ async def list_monitors():
 
 
 @app.post("/api/monitors/{monitor_id}")
-async def update_monitor_endpoint(monitor_id: str, request: Request):
+async def update_monitor_endpoint(monitor_id: str, request: Request, _auth: dict = Depends(require_auth)):
     body = await request.json()
     existing = db.get_monitor(monitor_id)
     if not existing:
@@ -235,7 +296,7 @@ async def update_monitor_endpoint(monitor_id: str, request: Request):
 
 
 @app.post("/api/monitors/{monitor_id}/test")
-async def test_monitor(monitor_id: str):
+async def test_monitor(monitor_id: str, _auth: dict = Depends(require_auth)):
     if monitor_id not in active_monitors:
         return JSONResponse({"error": "未启用的监控组件"}, status_code=404)
     inst = active_monitors[monitor_id]
@@ -258,7 +319,7 @@ async def get_config_endpoint():
 
 
 @app.post("/api/config")
-async def update_config_endpoint(request: Request):
+async def update_config_endpoint(request: Request, _auth: dict = Depends(require_auth)):
     body = await request.json()
     if "ui" in body and isinstance(body["ui"], dict):
         ui = db.get_config("ui", {})
@@ -272,7 +333,6 @@ async def update_config_endpoint(request: Request):
 
 
 # ── Web Authentication API ──────────────────────────────────────────
-from auth_manager import auth_mgr
 
 
 @app.get("/api/auth/status")
@@ -283,7 +343,18 @@ async def auth_status_endpoint():
 
 @app.post("/api/auth/login")
 async def auth_login_endpoint(request: Request):
-    """Authenticate user credentials and generate persistent token."""
+    """Authenticate user credentials and generate persistent token with rate limiting."""
+    client_ip = _get_client_ip(request)
+
+    # Check IP lock
+    locked, remain_sec = auth_mgr.is_ip_locked(client_ip)
+    if locked:
+        logger.warning("登录被拦截: IP %s 已被临时封禁，剩余 %d 秒", client_ip, remain_sec)
+        return JSONResponse(
+            {"ok": False, "error": f"登录失败次数过多，该 IP 已被临时锁定，请在 {remain_sec} 秒后再试"},
+            status_code=429
+        )
+
     try:
         body = await request.json()
     except Exception:
@@ -293,9 +364,23 @@ async def auth_login_endpoint(request: Request):
     remember = bool(body.get("remember", True))
 
     if not auth_mgr.verify_credentials(username, password):
-        return JSONResponse({"ok": False, "error": "用户名或密码错误，请重试"}, status_code=401)
+        count, lock_time = auth_mgr.record_login_failure(client_ip)
+        logger.warning("登录失败: 用户名 '%s' 来自 IP %s (失败次数: %d)", username, client_ip, count)
+        if lock_time > 0:
+            return JSONResponse(
+                {"ok": False, "error": f"连续 5 次输入错误，该 IP 已被临时锁定 15 分钟"},
+                status_code=429
+            )
+        remain_tries = max(0, 5 - count)
+        return JSONResponse(
+            {"ok": False, "error": f"用户名或密码错误（还剩 {remain_tries} 次机会）"},
+            status_code=401
+        )
 
+    # Login successful
+    auth_mgr.record_login_success(client_ip)
     token = auth_mgr.create_token(username or "admin", remember=remember)
+    logger.info("用户 '%s' 从 IP %s 登录成功", username or "admin", client_ip)
     return {"ok": True, "token": token, "username": username or "admin", "remember": remember}
 
 
@@ -308,8 +393,6 @@ async def auth_verify_endpoint(request: Request):
         token = auth_header[7:].strip()
     elif "x-auth-token" in request.headers:
         token = request.headers["x-auth-token"].strip()
-    else:
-        token = request.query_params.get("token", "").strip()
 
     data = auth_mgr.validate_token(token)
     if data:
@@ -333,8 +416,8 @@ async def auth_logout_endpoint(request: Request):
 
 
 @app.post("/api/auth/password")
-async def auth_change_password_endpoint(request: Request):
-    """Change web dashboard password."""
+async def auth_change_password_endpoint(request: Request, _auth: dict = Depends(require_auth)):
+    """Change web dashboard password (requires active login session)."""
     try:
         body = await request.json()
     except Exception:
@@ -343,6 +426,7 @@ async def auth_change_password_endpoint(request: Request):
     new_pwd = body.get("new_password", "").strip()
     ok, msg = auth_mgr.change_password(old_pwd, new_pwd)
     if ok:
+        logger.info("管理员密码已成功修改")
         return {"ok": True, "message": msg}
     return JSONResponse({"ok": False, "error": msg}, status_code=400)
 
@@ -386,7 +470,7 @@ async def get_music_config_endpoint():
 
 
 @app.post("/api/music/config")
-async def update_music_config_endpoint(request: Request):
+async def update_music_config_endpoint(request: Request, _auth: dict = Depends(require_auth)):
     """Update fnOS Music connection credentials (stored in data/music.db)."""
     body = await request.json()
     if "host" in body and body["host"]:
@@ -597,7 +681,7 @@ async def search_music_from_fnos(q: str = ""):
 
 
 @app.post("/api/music/songs")
-async def add_music_song(request: Request):
+async def add_music_song(request: Request, _auth: dict = Depends(require_auth)):
     """Add a new song to music.db (independent from nas-stats.db)."""
     body = await request.json()
     title = body.get("title", "").strip()
@@ -614,14 +698,14 @@ async def add_music_song(request: Request):
 
 
 @app.delete("/api/music/songs/{song_id}")
-async def delete_music_song(song_id: str):
+async def delete_music_song(song_id: str, _auth: dict = Depends(require_auth)):
     """Delete a song from music.db."""
     music_db.delete_song(song_id)
     return {"ok": True}
 
 
 @app.post("/api/music/reset")
-async def reset_music_songs():
+async def reset_music_songs(_auth: dict = Depends(require_auth)):
     """Reset music playlist to default tracks."""
     music_db.reset_playlist()
     return {"ok": True}
@@ -729,8 +813,8 @@ async def fnos_music_cover(coverId: str):
 # ── Music Logs API ──────────────────────────────────────────────────
 
 @app.get("/api/music/logs")
-async def get_music_logs(limit: int = 150, level: str = "ALL", keyword: str = ""):
-    """Retrieve filtered logs from data/music.log buffer."""
+async def get_music_logs(limit: int = 150, level: str = "ALL", keyword: str = "", _auth: dict = Depends(require_auth)):
+    """Retrieve filtered logs from data/music.log buffer (requires auth)."""
     logs = music_logger.get_logs(limit=limit, level=level, keyword=keyword)
     return {
         "ok": True,
@@ -740,15 +824,15 @@ async def get_music_logs(limit: int = 150, level: str = "ALL", keyword: str = ""
 
 
 @app.post("/api/music/logs/clear")
-async def clear_music_logs():
-    """Clear music logs."""
+async def clear_music_logs(_auth: dict = Depends(require_auth)):
+    """Clear music logs (requires auth)."""
     ok = music_logger.clear_logs()
     return {"ok": ok, "message": "音乐运行日志已清空" if ok else "清空失败"}
 
 
 @app.get("/api/music/logs/download")
-async def download_music_logs():
-    """Download data/music.log directly."""
+async def download_music_logs(_auth: dict = Depends(require_auth)):
+    """Download data/music.log directly (requires auth)."""
     if not music_logger.MUSIC_LOG_FILE.exists():
         with open(music_logger.MUSIC_LOG_FILE, "w", encoding="utf-8") as f:
             f.write("")
@@ -760,9 +844,8 @@ async def download_music_logs():
 
 
 @app.get("/api/music/stream-proxy")
-async def music_stream_proxy(request: Request, url: str = ""):
-    if not url:
-        return JSONResponse({"error": "missing url"}, status_code=400)
+async def music_stream_proxy(request: Request, url: str = "", _auth: dict = Depends(require_auth)):
+    url = validate_proxy_url(url, allow_private=True)
     try:
         req_headers = {}
         if "range" in request.headers:
@@ -840,12 +923,16 @@ async def bing_bg():
 
 
 @app.get("/api/bg-proxy")
-async def bg_proxy(url: str = ""):
-    if not url:
-        return JSONResponse({"error": "missing url"}, status_code=400)
+async def bg_proxy(url: str = "", _auth: dict = Depends(require_auth)):
+    url = validate_proxy_url(url, allow_private=False)
     try:
         resp = await client.get(url, follow_redirects=True, timeout=10)
         ct = resp.headers.get("content-type", "image/jpeg")
+        if not ct.startswith("image/"):
+            return JSONResponse({"error": "Only image content allowed"}, status_code=400)
+        # Limit background proxy size to 15MB
+        if len(resp.content) > 15 * 1024 * 1024:
+            return JSONResponse({"error": "Image too large"}, status_code=413)
         return Response(content=resp.content, media_type=ct)
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=502)
@@ -858,6 +945,9 @@ async def handle_services(request: Request, action: str = Query(...)):
     if action == "list":
         services = db.get_all_services()
         return {"items": services}
+
+    # All mutating actions require active admin auth
+    await require_auth(request)
 
     body = await request.json() if request.method == "POST" else {}
 
@@ -1129,7 +1219,7 @@ async def _probe_http_title(ip, port, protocol):
 
 
 @app.get("/api/scan-nas")
-async def scan_nas():
+async def scan_nas(_auth: dict = Depends(require_auth)):
     nas_ip = db.get_config("nas_ip", "127.0.0.1")
     tasks = [_probe_port(nas_ip, p) for p in SCAN_PORTS]
     results = await asyncio.gather(*tasks)
@@ -1161,13 +1251,10 @@ async def scan_nas():
 
 
 @app.post("/api/fetch-meta")
-async def fetch_meta(request: Request):
+async def fetch_meta(request: Request, _auth: dict = Depends(require_auth)):
     body = await request.json()
     url = body.get("url", "").strip()
-    if not url:
-        return JSONResponse({"error": "需要 URL"}, status_code=400)
-    if not url.startswith(("http://", "https://")):
-        url = "http://" + url
+    url = validate_proxy_url(url, allow_private=True)
 
     try:
         parsed = urlparse(url)
@@ -1216,20 +1303,21 @@ async def fetch_meta(request: Request):
 
 
 @app.post("/api/load-icon-url")
-async def load_icon_url(request: Request):
+async def load_icon_url(request: Request, _auth: dict = Depends(require_auth)):
     body = await request.json()
     url = body.get("url", "").strip()
-    if not url:
-        return JSONResponse({"error": "请输入图标 URL"}, status_code=400)
-    if not url.startswith(("http://", "https://")):
-        url = "http://" + url
+    url = validate_proxy_url(url, allow_private=False)
+
     try:
         resp = await client.get(url, follow_redirects=True, timeout=8)
         if resp.status_code != 200:
             return JSONResponse({"error": f"获取失败 (HTTP {resp.status_code})"}, status_code=502)
         ct = resp.headers.get("content-type", "image/png")
         if not ct.startswith("image/"):
-            ct = "image/png"
+            return JSONResponse({"error": "只能加载图片资源"}, status_code=400)
+        # Limit icon size to 5MB
+        if len(resp.content) > 5 * 1024 * 1024:
+            return JSONResponse({"error": "图片尺寸过大"}, status_code=413)
         b64 = base64.b64encode(resp.content).decode()
         return {"ok": True, "icon": f"data:{ct};base64,{b64}"}
     except Exception as e:
