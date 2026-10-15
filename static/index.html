@@ -962,9 +962,24 @@
         </div>
 
         <h4 style="font-size:14px;margin-bottom:8px">2. 局域网 NAS 端口全盘扫描</h4>
-        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-          <input type="text" id="nasIpInput" placeholder="127.0.0.1" style="padding:8px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:13px;width:180px">
-          <button class="admin-btn admin-btn-primary" id="btnScanNas">扫描开放端口与网页图标</button>
+        <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:flex-end">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <span style="font-size:11px;color:var(--text-muted)">目标主机 IP (默认读取当前局域网地址)</span>
+            <input type="text" id="nasIpInput" placeholder="例如 192.168.1.100" style="padding:8px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:13px;width:180px">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <span style="font-size:11px;color:var(--text-muted)">扫描范围模式</span>
+            <select id="scanModeSelect" style="padding:8px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:13px;outline:none">
+              <option value="core">⚡ 常用 NAS & Docker 服务 (~350个核心端口，极速 2秒)</option>
+              <option value="range10k">🚀 常用应用全盘扫描 (1-10000 范围，约 15秒)</option>
+              <option value="custom">🛠️ 自定义端口 / 端口段</option>
+            </select>
+          </div>
+          <div id="customPortsBox" style="display:none;flex-direction:column;gap:4px">
+            <span style="font-size:11px;color:var(--text-muted)">自定义端口 (支持如 80,443,5888,8000-9000)</span>
+            <input type="text" id="customPortsInput" placeholder="80,443,5888,5244,8000-9000" style="padding:8px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:13px;width:240px">
+          </div>
+          <button class="admin-btn admin-btn-primary" id="btnScanNas" style="padding:8px 16px">🔍 扫描开放端口与网页图标</button>
         </div>
 
         <h4 style="font-size:14px;margin-bottom:8px">3. 批量 JSON 导入与导出</h4>
@@ -1292,12 +1307,19 @@
 
   <!-- NAS 端口扫描弹窗 -->
   <div class="modal-overlay" id="scanModal">
-    <div class="modal" style="max-width:640px">
-      <h3 style="font-size:16px;margin-bottom:6px">局域网 NAS 服务扫描</h3>
+    <div class="modal" style="max-width:680px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <h3 style="font-size:16px">局域网 NAS 服务扫描</h3>
+        <span id="scanTargetBadge" style="font-size:12px;color:var(--accent-blue);font-family:monospace;background:rgba(59,130,246,0.1);padding:2px 8px;border-radius:4px"></span>
+      </div>
       <p id="scanStatus" style="font-size:12px;color:var(--text-muted);margin-bottom:12px">正在扫描端口...</p>
-      <div id="scanResults"></div>
+      <div id="scanResults" style="max-height:320px;overflow-y:auto"></div>
+      <div id="scanExistingSection" style="margin-top:12px;display:none;border-top:1px dashed var(--border);padding-top:10px">
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">已在服务列表中的在线端口：</div>
+        <div id="scanExistingList" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+      </div>
       <div class="modal-actions" style="margin-top:14px">
-        <button class="admin-btn admin-btn-secondary" id="scanSelectAll">全选</button>
+        <button class="admin-btn admin-btn-secondary" id="scanSelectAll">全选新服务</button>
         <button class="admin-btn admin-btn-secondary" id="scanCancel">关闭</button>
         <button class="admin-btn admin-btn-primary" id="scanAddSelected">添加选中服务</button>
       </div>
@@ -3240,50 +3262,99 @@
 
     // ─── 局域网 NAS 端口扫描与选择添加 ───
     let scanDiscovered = [];
+
+    document.getElementById('scanModeSelect')?.addEventListener('change', e => {
+      const isCustom = e.target.value === 'custom';
+      const box = document.getElementById('customPortsBox');
+      if (box) box.style.display = isCustom ? 'flex' : 'none';
+    });
+
     document.getElementById('btnScanNas').addEventListener('click', async () => {
       const modal = document.getElementById('scanModal');
       const status = document.getElementById('scanStatus');
       const results = document.getElementById('scanResults');
+      const badge = document.getElementById('scanTargetBadge');
+      const existSection = document.getElementById('scanExistingSection');
+      const existList = document.getElementById('scanExistingList');
+      const addBtn = document.getElementById('scanAddSelected');
+
+      let ip = document.getElementById('nasIpInput').value.trim();
+      if (!ip) {
+        ip = location.hostname && location.hostname !== 'localhost' ? location.hostname : '127.0.0.1';
+        document.getElementById('nasIpInput').value = ip;
+      }
+      const mode = document.getElementById('scanModeSelect').value || 'core';
+      const customPorts = document.getElementById('customPortsInput').value.trim();
+
       modal.classList.add('visible');
-      status.textContent = '正在扫描指定 NAS 端口及 Favicon，请稍候...';
-      results.innerHTML = '';
+      if (badge) badge.textContent = `目标 IP: ${ip}`;
+      status.textContent = `正在全盘探测 ${ip} 端口及网页 Favicon，请稍候...`;
+      results.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted)">⏳ 正在连接并发扫描端口与网站信息...</div>';
+      if (existSection) existSection.style.display = 'none';
+      if (existList) existList.innerHTML = '';
       scanDiscovered = [];
+      addBtn.disabled = true;
 
       try {
-        const res = await fetch('/api/scan-nas');
+        const query = new URLSearchParams({ ip, mode, ports: customPorts });
+        const res = await fetch(`/api/scan-nas?${query.toString()}`);
         const data = await res.json();
-        if (!data.ok) { status.textContent = '扫描失败: ' + (data.error || '未知错误'); return; }
-        scanDiscovered = data.new_services || [];
-        if (!scanDiscovered.length) {
-          status.textContent = `扫描完成 — 发现 ${data.open_ports?.length || 0} 个开放端口，没有未添加的新服务`;
-          results.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted)">没有未收录的新服务</div>';
+        if (!res.ok || !data.ok) {
+          status.textContent = '扫描失败: ' + (data.detail || data.error || '无法完成扫描');
+          results.innerHTML = `<div style="text-align:center;padding:24px;color:var(--accent-red)">${data.detail || data.error || '扫描请求异常'}</div>`;
           return;
         }
 
-        status.textContent = `扫描完成 — 发现 ${scanDiscovered.length} 个新服务（共 ${data.open_ports?.length || 0} 个开放端口）`;
-        results.innerHTML = '<div class="scan-list">' + scanDiscovered.map((s, i) => {
-          const iconHtml = s.favicon ?
-            `<img src="${escapeHtml(s.favicon)}" style="width:20px;height:20px;border-radius:4px;object-fit:contain">` :
-            `<span style="font-size:16px">${escapeHtml(s.icon || '🔧')}</span>`;
-          return `
-            <label class="scan-item selected" data-idx="${i}">
-              <input type="checkbox" checked data-idx="${i}">
-              ${iconHtml}
-              <div class="scan-item-info">
-                <div class="scan-item-name">${escapeHtml(s.name)}</div>
-                <div style="font-size:11px;color:var(--text-muted)">端口: ${escapeHtml(s.port)} (${escapeHtml(s.protocol)})</div>
-              </div>
-            </label>
-          `;
-        }).join('') + '</div>';
+        scanDiscovered = data.new_services || [];
+        const existingServices = data.existing_services || [];
+        const openPorts = data.open_ports || [];
+        const scannedCount = data.scanned_count || 0;
 
-        results.querySelectorAll('.scan-item input').forEach(cb => {
-          cb.addEventListener('change', () => {
-            cb.closest('.scan-item').classList.toggle('selected', cb.checked);
+        status.textContent = `扫描完成 — 探测了 ${scannedCount} 个端口，发现 ${openPorts.length} 个开放端口（${scanDiscovered.length} 个新发现服务待添加，${existingServices.length} 个已在列表中）`;
+
+        if (scanDiscovered.length === 0) {
+          results.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted)">没有未收录的新服务（所有扫描到的开放端口均已在首页服务列表中）</div>';
+        } else {
+          addBtn.disabled = false;
+          results.innerHTML = '<div class="scan-list">' + scanDiscovered.map((s, i) => {
+            const iconHtml = s.favicon ?
+              `<img src="${escapeHtml(s.favicon)}" style="width:22px;height:22px;border-radius:4px;object-fit:contain">` :
+              `<span style="font-size:18px">${escapeHtml(s.icon || '🔧')}</span>`;
+            return `
+              <label class="scan-item selected" data-idx="${i}">
+                <input type="checkbox" checked data-idx="${i}">
+                ${iconHtml}
+                <div class="scan-item-info">
+                  <div class="scan-item-name">${escapeHtml(s.name)}</div>
+                  <div style="font-size:11px;color:var(--text-muted)">端口: ${escapeHtml(s.port)} (${escapeHtml(s.protocol.toUpperCase())}) ${s.is_web ? '• 🌐 网页服务' : '• 🔌 TCP'}</div>
+                </div>
+              </label>
+            `;
+          }).join('') + '</div>';
+
+          results.querySelectorAll('.scan-item input').forEach(cb => {
+            cb.addEventListener('change', () => {
+              cb.closest('.scan-item').classList.toggle('selected', cb.checked);
+            });
           });
-        });
+        }
+
+        // 渲染已收录并在运行的端口徽章
+        if (existingServices.length > 0 && existSection && existList) {
+          existSection.style.display = 'block';
+          existList.innerHTML = existingServices.map(s => {
+            return `
+              <span style="font-size:11px;padding:3px 8px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:4px;display:inline-flex;align-items:center;gap:4px">
+                <span style="color:var(--accent-green)">●</span>
+                <b>${escapeHtml(s.port)}</b>
+                <span style="color:var(--text-muted)">${escapeHtml(s.existing_name || s.name)}</span>
+              </span>
+            `;
+          }).join('');
+        }
       } catch (e) {
         status.textContent = '扫描异常: ' + e.message;
+        results.innerHTML = `<div style="text-align:center;padding:24px;color:var(--accent-red)">网络错误: ${e.message}</div>`;
       }
     });
 
@@ -3528,7 +3599,9 @@
         const res = await fetch('/api/config');
         const cfg = await res.json();
         applyUI(cfg.ui || {});
-        document.getElementById('nasIpInput').value = cfg.nas_ip || '127.0.0.1';
+        const savedIp = cfg.nas_ip;
+        const currentHost = (location.hostname && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') ? location.hostname : '';
+        document.getElementById('nasIpInput').value = (savedIp && savedIp !== '127.0.0.1') ? savedIp : (currentHost || savedIp || '127.0.0.1');
       } catch (e) {}
 
       loadBg();

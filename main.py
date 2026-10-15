@@ -1114,145 +1114,386 @@ async def handle_services(request: Request, action: str = Query(...)):
 
 # ── Discovery & Scans ───────────────────────────────────────────────
 
-SCAN_PORTS = [
-    21, 22, 23, 25, 53, 80, 110, 135, 139, 143, 443, 445, 548, 631,
-    993, 995, 1080, 1433, 1521, 1880, 1883, 2049, 2375, 2376, 3000,
-    3001, 3242, 3306, 3389, 4040, 4443, 5000, 5001, 5005, 5080, 5432,
-    5900, 5901, 6598, 6690, 6767, 6881, 7878, 8000, 8008, 8010, 8020,
-    8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088, 8089, 8090,
-    8091, 8095, 8096, 8112, 8123, 8181, 8200, 8222, 8334, 8384, 8443,
-    8448, 8554, 8787, 8880, 8888, 8920, 8980, 8989, 9000, 9002, 9090,
-    9091, 9117, 9443, 9696, 9980, 9999, 10000, 10101, 14000, 32400,
-    49152, 49153, 49154, 51413, 51414, 51415,
-]
-
 KNOWN_SERVICES = {
-    21: ("FTP 服务", "📁", "tcp"), 22: ("SSH", "🔒", "tcp"),
-    23: ("Telnet", "🖥️", "tcp"), 25: ("SMTP 邮件", "📧", "tcp"),
-    53: ("DNS", "🌐", "tcp"), 80: ("Web 服务", "🌐", "http"),
-    110: ("POP3 邮件", "📧", "tcp"), 135: ("RPC", "🖥️", "tcp"),
-    139: ("NetBIOS", "🖥️", "tcp"), 143: ("IMAP 邮件", "📧", "tcp"),
-    443: ("HTTPS 服务", "🔒", "https"), 445: ("SMB 文件共享", "📂", "tcp"),
-    548: ("AFP 文件共享", "📂", "tcp"), 631: ("打印服务", "🖨️", "http"),
-    993: ("IMAPS 邮件", "📧", "tcp"), 995: ("POP3S 邮件", "📧", "tcp"),
-    1880: ("Node-RED", "🔧", "http"), 1883: ("MQTT", "📡", "tcp"),
-    2049: ("NFS 文件共享", "📂", "tcp"), 2375: ("Docker", "🐳", "http"),
-    2376: ("Docker TLS", "🐳", "tcp"), 3000: ("Web 应用", "🌐", "http"),
-    3306: ("MySQL 数据库", "🗄️", "tcp"), 3389: ("远程桌面 RDP", "🖥️", "tcp"),
-    4040: ("Web 应用", "🌐", "http"), 5000: ("Web 应用", "🌐", "http"),
-    5001: ("Web 应用", "🌐", "https"), 5005: ("Web 应用", "🌐", "http"),
-    5080: ("Web 应用", "🌐", "http"), 5432: ("PostgreSQL 数据库", "🗄️", "tcp"),
-    5900: ("VNC 远程", "🖥️", "tcp"), 5901: ("VNC 远程", "🖥️", "tcp"),
-    6767: ("BaiduPCS", "📁", "http"), 6881: ("BitTorrent", "📥", "tcp"),
-    7878: ("Sonarr", "📺", "http"), 8000: ("Web 应用", "🌐", "http"),
-    8008: ("Web 应用", "🌐", "http"), 8080: ("Web 代理", "🌐", "http"),
-    8081: ("Web 应用", "🌐", "http"), 8082: ("Web 应用", "🌐", "http"),
-    8083: ("Web 应用", "🌐", "https"), 8085: ("qBittorrent", "📥", "http"),
-    8086: ("Web 应用", "🌐", "http"), 8087: ("Web 应用", "🌐", "http"),
-    8088: ("Web 应用", "🌐", "http"), 8089: ("Web 应用", "🌐", "http"),
-    8090: ("Web 应用", "🌐", "http"), 8091: ("Web 应用", "🌐", "http"),
-    8112: ("Deluge", "📥", "http"), 8123: ("Home Assistant", "🏠", "http"),
-    8181: ("Web 应用", "🌐", "http"), 8200: ("Web 应用", "🌐", "http"),
-    8222: ("Web 应用", "🌐", "http"), 8384: ("Syncthing", "🔄", "http"),
-    8443: ("HTTPS 应用", "🔒", "https"), 8554: ("RTSP 流媒体", "🎬", "tcp"),
-    8787: ("Web 应用", "🌐", "http"), 8888: ("Web 应用", "🌐", "http"),
-    8920: ("Web 应用", "🌐", "http"), 8980: ("NAS 面板", "🖥️", "http"),
-    8989: ("Web 应用", "🌐", "http"), 9000: ("Web 应用", "🌐", "http"),
-    9090: ("Web 应用", "🌐", "http"), 9091: ("Transmission", "📥", "http"),
-    9117: ("Prowlarr", "🔍", "http"), 9443: ("HTTPS 应用", "🔒", "https"),
-    9696: ("Prowlarr", "🔍", "http"), 9980: ("TVHeadend", "📺", "http"),
-    9999: ("Web 应用", "🌐", "http"), 10000: ("EasyNVR / Webmin", "📹", "http"),
-    32400: ("Plex", "🎬", "http"), 51413: ("Transmission", "📥", "tcp"),
+    # 基础协议与远程管理
+    21: ("FTP 文件服务", "📁", "tcp"),
+    22: ("SSH 终端服务", "🔒", "tcp"),
+    23: ("Telnet", "🖥️", "tcp"),
+    25: ("SMTP 邮件服务", "📧", "tcp"),
+    53: ("DNS 域名解析", "🌐", "tcp"),
+    80: ("HTTP 网站服务", "🌐", "http"),
+    81: ("Nginx 代理", "🌐", "http"),
+    88: ("Heimdall 导航", "🏠", "http"),
+    110: ("POP3 邮件接收", "📧", "tcp"),
+    135: ("RPC 远程调用", "🖥️", "tcp"),
+    139: ("NetBIOS 文件共享", "📂", "tcp"),
+    143: ("IMAP 邮件服务", "📧", "tcp"),
+    443: ("HTTPS 安全网站", "🔒", "https"),
+    444: ("Heimdall (HTTPS)", "🏠", "https"),
+    445: ("SMB 文件共享", "📂", "tcp"),
+    548: ("AFP 苹果文件共享", "📂", "tcp"),
+    631: ("CUPS 打印服务", "🖨️", "http"),
+    873: ("rsync 数据同步", "🔄", "tcp"),
+    993: ("IMAPS 加密邮件", "📧", "tcp"),
+    995: ("POP3S 加密邮件", "📧", "tcp"),
+    1080: ("Socks 代理服务", "🛡️", "tcp"),
+    1433: ("MSSQL 数据库", "🗄️", "tcp"),
+    1521: ("Oracle 数据库", "🗄️", "tcp"),
+    1880: ("Node-RED 自动化", "🔧", "http"),
+    1883: ("MQTT 物联网消息", "📡", "tcp"),
+    2049: ("NFS 网络文件共享", "📂", "tcp"),
+    2375: ("Docker 引擎 API", "🐳", "http"),
+    2376: ("Docker TLS API", "🐳", "tcp"),
+    2829: ("Nginx 欢迎页", "🌐", "http"),
+    3000: ("MoviePilot / 前端", "🎥", "http"),
+    3001: ("Uptime Kuma / API", "📊", "http"),
+    3003: ("天翼云盘转存", "☁️", "http"),
+    3004: ("Vertex PT 管理", "🔄", "http"),
+    3006: ("PanSou 盘搜", "🔍", "http"),
+    3009: ("在线电视直播", "📡", "http"),
+    3011: ("Uptime Kuma 监控", "📊", "http"),
+    3012: ("AI 智能错题本", "❌", "http"),
+    3018: ("字幕助手", "💬", "http"),
+    3019: ("Ting Reader 有声书", "🔊", "http"),
+    3020: ("在线音乐播放器", "🐟", "http"),
+    3024: ("IPTV 控制中心", "📺", "http"),
+    3027: ("字幕助手 (备)", "💬", "http"),
+    3028: ("Vigil 镜像监控", "👁️", "http"),
+    3029: ("MoonTV 影视", "🌙", "http"),
+    3031: ("WorkBuddy 用量看板", "📈", "http"),
+    3128: ("Squid 代理", "🌐", "tcp"),
+    3242: ("Web 应用", "🌐", "http"),
+    3306: ("MySQL 数据库", "🗄️", "tcp"),
+    3307: ("MySQL 备用", "🗄️", "tcp"),
+    3389: ("Windows 远程桌面 RDP", "🖥️", "tcp"),
+    4000: ("Halo / Hexo 博客", "📝", "http"),
+    4040: ("Subsonic 音频流", "🎵", "http"),
+    4443: ("HTTPS 应用", "🔒", "https"),
+    4533: ("Navidrome 音乐服务器", "🎵", "http"),
+    45849: ("Go2RTC 视频流转发", "📹", "http"),
+    5000: ("群晖 DSM / Web 应用", "🌐", "http"),
+    5001: ("群晖 DSM (HTTPS)", "🔒", "https"),
+    5005: ("WebDAV / Python App", "🐍", "http"),
+    5006: ("WebDAV (HTTPS)", "🔒", "https"),
+    5055: ("Overseerr 影视订阅", "🎬", "http"),
+    5080: ("Web 视频/流媒体", "🌐", "http"),
+    5212: ("Cloudreve 自建云盘", "☁️", "http"),
+    5230: ("Memos 自托管备忘录", "🗒️", "http"),
+    5244: ("Alist 网盘聚合列表", "📁", "http"),
+    5245: ("Alist 备用端口", "📁", "http"),
+    5432: ("PostgreSQL 数据库", "🗄️", "tcp"),
+    5601: ("Kibana 可视化平台", "📊", "http"),
+    5678: ("n8n 自动化工作流", "⚡", "http"),
+    5700: ("青龙自动化面板", "🐉", "http"),
+    5800: ("JDownloader / VNC Web", "📥", "http"),
+    5888: ("飞牛 fnOS 系统面板", "🐂", "http"),
+    5889: ("飞牛 fnOS (HTTPS)", "🐂", "https"),
+    5900: ("VNC 远程桌面", "🖥️", "tcp"),
+    5901: ("VNC 远程桌面", "🖥️", "tcp"),
+    6379: ("Redis 内存数据库", "⚡", "tcp"),
+    6598: ("Web 应用", "🌐", "http"),
+    6690: ("Synology Drive 同步", "📂", "tcp"),
+    6767: ("BaiduPCS-Go 百度网盘", "📁", "http"),
+    6800: ("Aria2 下载 RPC", "📥", "http"),
+    6881: ("BitTorrent 传入", "📥", "tcp"),
+    7000: ("Lucky / frp 反向代理", "🍀", "https"),
+    7500: ("frp 管理面板", "📡", "http"),
+    7860: ("Stable Diffusion / Gradio", "🎨", "http"),
+    7878: ("Radarr 电影管理", "🎬", "http"),
+    7890: ("Clash 代理服务", "🛡️", "http"),
+    8000: ("Web 应用服务", "🌐", "http"),
+    8005: ("飞牛影视原生应用", "🎞️", "http"),
+    8006: ("Proxmox VE 虚拟化", "🖥️", "https"),
+    8008: ("Web 媒体应用", "🌐", "http"),
+    8010: ("Web 应用", "🌐", "http"),
+    8020: ("Web 应用", "🌐", "http"),
+    8024: ("Python Web 应用", "🐍", "http"),
+    8080: ("通用 Web 代理 / 容器", "🌐", "http"),
+    8081: ("Web 应用", "🌐", "http"),
+    8082: ("轻阅读 / Web 应用", "📖", "http"),
+    8083: ("轻课堂 / HTTPS 应用", "🎓", "https"),
+    8085: ("qBittorrent 下载器", "⬇️", "http"),
+    8086: ("InfluxDB 时序数据库", "📈", "http"),
+    8087: ("Web 应用", "🌐", "http"),
+    8088: ("Web 应用", "🌐", "http"),
+    8089: ("Web 应用", "🌐", "http"),
+    8090: ("talebook 电子图书馆", "📚", "http"),
+    8091: ("Web 应用", "🌐", "http"),
+    8095: ("Web 应用", "🌐", "http"),
+    8096: ("Jellyfin / Emby 媒体库", "📺", "http"),
+    8099: ("SQMusic 音乐播放器", "🎵", "http"),
+    8112: ("Deluge BT 下载器", "📥", "http"),
+    8123: ("Home Assistant 智能家居", "🏠", "http"),
+    8181: ("Web 应用", "🌐", "http"),
+    8191: ("Flaresolverr 验证码绕过", "🛡️", "http"),
+    8200: ("Vault 密钥管理", "🔒", "http"),
+    8222: ("Web 应用", "🌐", "http"),
+    8282: ("1Panel 运维面板备用", "🛠️", "http"),
+    8334: ("Web 应用", "🌐", "http"),
+    8384: ("Syncthing 文件同步", "🔄", "http"),
+    8443: ("Lucky / HTTPS 反向代理", "🍀", "https"),
+    8448: ("Matrix 通信服务", "💬", "https"),
+    8501: ("Streamlit 仪表盘", "📊", "http"),
+    8554: ("RTSP 监控视频流", "📹", "tcp"),
+    8686: ("Lidarr 音乐管理", "🎵", "http"),
+    8689: ("Leelaa Playlist 播放列表", "📋", "http"),
+    8787: ("GalaxyJAV / Readarr", "🌌", "http"),
+    8848: ("Nacos 配置中心", "⚙️", "http"),
+    8880: ("Web 代理端口", "🌐", "http"),
+    8888: ("1Panel / 宝塔 / Jupyter", "🛠️", "http"),
+    8901: ("个人网址收藏夹", "🔖", "http"),
+    8920: ("Jellyfin / Emby (HTTPS)", "📺", "https"),
+    8923: ("QD 自动签到框架", "✅", "http"),
+    8980: ("NAS Stats 仪表盘", "🖥️", "http"),
+    8989: ("Sonarr 剧集自动化", "📺", "http"),
+    9000: ("Portainer 容器 / MinIO", "🐳", "http"),
+    9001: ("MinIO 控制台", "🗄️", "http"),
+    9002: ("Web 应用", "🌐", "http"),
+    9090: ("hlink / Prometheus", "🔗", "http"),
+    9091: ("Transmission 下载管理", "📥", "http"),
+    9100: ("Node Exporter 监控探针", "📊", "http"),
+    9117: ("Prowlarr / Jackett 索引器", "🔍", "http"),
+    9200: ("Elasticsearch 搜索引擎", "🔍", "http"),
+    9280: ("WizNote 为知笔记", "📝", "http"),
+    9443: ("Portainer (HTTPS)", "🔒", "https"),
+    9696: ("Prowlarr 聚合索引器", "🔍", "http"),
+    9980: ("TVHeadend 电视直播", "📺", "http"),
+    9990: ("飞牛桌面管理工具", "🖥️", "http"),
+    9999: ("Web 应用 / Remux", "🌐", "http"),
+    10000: ("EasyNVR 监控 / Webmin", "📹", "http"),
+    10050: ("Zabbix 监控客户端", "📊", "tcp"),
+    10086: ("1Panel 现代化服务器面板", "🛠️", "http"),
+    10101: ("Web 应用", "🌐", "http"),
+    10789: ("BestNav 飞牛导航页", "🧭", "http"),
+    10808: ("代理客户端 SOCKS/HTTP", "🛡️", "tcp"),
+    10809: ("代理客户端 HTTP", "🛡️", "tcp"),
+    11434: ("Ollama 本地 AI 大模型", "🦙", "http"),
+    13378: ("Audiobookshelf 有声书", "🎧", "http"),
+    14000: ("Web 应用", "🌐", "http"),
+    18080: ("Web 代理端口", "🌐", "http"),
+    18090: ("phpMyAdmin 数据库管理", "🗄️", "http"),
+    18230: ("FnMessageBot 飞牛机器人", "🤖", "http"),
+    18787: ("IYUUPlus 辅种利器", "📨", "http"),
+    19999: ("Netdata 系统实时监控", "📊", "http"),
+    27017: ("MongoDB 数据库", "🍃", "tcp"),
+    28017: ("MongoDB Web 监控", "🍃", "http"),
+    32400: ("Plex 媒体中心", "▶️", "http"),
+    45849: ("Go2RTC 视频转发", "📹", "http"),
+    49152: ("UPnP 局域网服务", "🔗", "tcp"),
+    49153: ("UPnP 服务", "🔗", "tcp"),
+    49154: ("UPnP 服务", "🔗", "tcp"),
+    51413: ("Transmission BT 传入", "⬇️", "tcp"),
+    51414: ("BT 传入端口", "⬇️", "tcp"),
+    51415: ("BT 传入端口", "⬇️", "tcp"),
+    61208: ("Glances 系统监控", "📊", "http"),
 }
 
-HTTP_PROBE_PORTS = {
-    80, 443, 631, 1880, 2375, 3000, 3001, 4040, 4443, 5000, 5001, 5005,
-    5080, 6767, 7878, 8000, 8008, 8010, 8020, 8080, 8081, 8082, 8083,
-    8084, 8085, 8086, 8087, 8088, 8089, 8090, 8091, 8095, 8096, 8112,
-    8123, 8181, 8200, 8222, 8384, 8443, 8448, 8787, 8880, 8888, 8920,
-    8980, 8989, 9000, 9002, 9090, 9091, 9117, 9443, 9696, 9980, 9999,
-    10000, 32400,
-}
+CORE_SCAN_PORTS = sorted(list(set(
+    list(KNOWN_SERVICES.keys()) +
+    [
+        80, 81, 82, 83, 84, 85, 86, 87, 88, 89,
+        443, 444, 445, 446, 447, 448,
+        *list(range(3000, 3051)),
+        *list(range(5000, 5021)),
+        *list(range(5880, 5896)),
+        *list(range(8000, 8026)),
+        *list(range(8080, 8111)),
+        *list(range(8880, 8896)),
+        *list(range(8980, 8996)),
+        *list(range(9000, 9021)),
+        *list(range(9090, 9106)),
+        *list(range(10000, 10021)),
+        *list(range(18080, 18101)),
+    ]
+)))
 
 
-async def _probe_port(ip, port):
-    try:
-        _, w = await asyncio.wait_for(asyncio.open_connection(ip, port), timeout=1.5)
-        w.close()
-        await w.wait_closed()
-        return True
-    except Exception:
-        return False
+def parse_port_specs(spec: str) -> list[int]:
+    """Parse ports spec like '80,443,5000-5010,8080-8090' into sorted unique list."""
+    ports = set()
+    for part in (spec or "").split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if "-" in part:
+            try:
+                start, end = part.split("-", 1)
+                s_int, e_int = int(start.strip()), int(end.strip())
+                if s_int > e_int:
+                    s_int, e_int = e_int, s_int
+                s_int = max(1, s_int)
+                e_int = min(65535, e_int)
+                for p in range(s_int, e_int + 1):
+                    ports.add(p)
+                    if len(ports) >= 10000:
+                        break
+            except Exception:
+                pass
+        else:
+            try:
+                p_int = int(part)
+                if 1 <= p_int <= 65535:
+                    ports.add(p_int)
+            except Exception:
+                pass
+        if len(ports) >= 10000:
+            break
+    return sorted(ports)
 
 
-async def _probe_http_title(ip, port, protocol):
-    url = f"{protocol}://{ip}:{port}"
-    try:
-        resp = await client.get(url, follow_redirects=True, timeout=4)
-        html = resp.text[:30000]
-        title = ""
-        m = re.search(r"<title[^>]*>(.*?)</title>", html, re.IGNORECASE | re.DOTALL)
-        if m:
-            title = m.group(1).strip()
-        favicon_url = ""
-        for pat in [
-            r'<link[^>]+rel=["\'](?:shortcut )?icon["\'][^>]+href=["\']([^"\']+)["\']',
-            r'<link[^>]+href=["\']([^"\']+)["\'][^>]+rel=["\'](?:shortcut )?icon["\']',
-            r'<link[^>]+rel=["\']apple-touch-icon["\'][^>]+href=["\']([^"\']+)["\']',
-        ]:
-            fm = re.search(pat, html, re.IGNORECASE)
-            if fm:
-                favicon_url = fm.group(1)
-                break
-        favicon = ""
-        if favicon_url:
+async def _probe_port(ip: str, port: int, sem: asyncio.Semaphore) -> int | None:
+    async with sem:
+        try:
+            _, w = await asyncio.wait_for(asyncio.open_connection(ip, port), timeout=0.6)
+            w.close()
+            await w.wait_closed()
+            return port
+        except Exception:
+            return None
+
+
+async def _probe_web_service(ip: str, port: int, client: httpx.AsyncClient | None) -> dict:
+    http_client = client if (client and not client.is_closed) else httpx.AsyncClient(timeout=4, verify=False, follow_redirects=True)
+    is_likely_ssl = port in (443, 444, 5001, 5889, 7000, 8006, 8083, 8443, 8920, 9443)
+    proto_order = ["https", "http"] if is_likely_ssl else ["http", "https"]
+
+    for proto in proto_order:
+        url = f"{proto}://{ip}:{port}"
+        try:
+            resp = await http_client.get(url, follow_redirects=True, timeout=3.5)
+            if proto == "http" and resp.status_code == 400 and ("HTTPS" in resp.text or "SSL" in resp.text):
+                continue
+
+            html = resp.text[:40000]
+            title = ""
+            m = re.search(r"<title[^>]*>(.*?)</title>", html, re.IGNORECASE | re.DOTALL)
+            if m:
+                title = html_lib.unescape(m.group(1).strip())
+
+            favicon_url = ""
+            for pat in [
+                r'<link[^>]+rel=["\'](?:shortcut )?icon["\'][^>]+href=["\']([^"\']+)["\']',
+                r'<link[^>]+href=["\']([^"\']+)["\'][^>]+rel=["\'](?:shortcut )?icon["\']',
+                r'<link[^>]+rel=["\']apple-touch-icon["\'][^>]+href=["\']([^"\']+)["\']',
+                r'<link[^>]+rel=["\']icon["\'][^>]+href=["\']([^"\']+)["\']',
+            ]:
+                fm = re.search(pat, html, re.IGNORECASE)
+                if fm:
+                    favicon_url = fm.group(1)
+                    break
+            if not favicon_url:
+                favicon_url = "/favicon.ico"
+
+            favicon = ""
             if favicon_url.startswith("data:"):
                 favicon = favicon_url
             else:
                 abs_icon = urljoin(url, favicon_url)
                 try:
-                    ir = await client.get(abs_icon, follow_redirects=True, timeout=3)
+                    ir = await http_client.get(abs_icon, follow_redirects=True, timeout=2.5)
                     if ir.status_code == 200:
                         ct = ir.headers.get("content-type", "image/x-icon")
                         b64 = base64.b64encode(ir.content).decode()
                         favicon = f"data:{ct};base64,{b64}"
                 except Exception:
                     pass
-        return {"title": title, "favicon": favicon}
-    except Exception:
-        return {"title": "", "favicon": ""}
+
+            return {
+                "is_web": True,
+                "protocol": proto,
+                "title": title,
+                "favicon": favicon,
+                "url": url
+            }
+        except Exception:
+            continue
+
+    return {
+        "is_web": False,
+        "protocol": "tcp",
+        "title": "",
+        "favicon": "",
+        "url": ""
+    }
 
 
 @app.get("/api/scan-nas")
-async def scan_nas(_auth: dict = Depends(require_auth)):
-    nas_ip = db.get_config("nas_ip", "127.0.0.1")
-    tasks = [_probe_port(nas_ip, p) for p in SCAN_PORTS]
+async def scan_nas(
+    request: Request,
+    ip: str = Query("", description="Target IP to scan"),
+    mode: str = Query("core", description="Scan mode: core, range, custom"),
+    ports: str = Query("", description="Custom port list or range, e.g. 1-10000"),
+    _auth: dict = Depends(require_auth)
+):
+    target_ip = (ip or "").strip()
+    if not target_ip:
+        target_ip = db.get_config("nas_ip", "")
+    if not target_ip:
+        client_host = request.headers.get("host", "").split(":")[0]
+        target_ip = client_host if client_host and client_host not in ("localhost", "0.0.0.0") else "127.0.0.1"
+
+    if target_ip and target_ip != "127.0.0.1":
+        db.set_config("nas_ip", target_ip)
+
+    if mode in ("range", "range10k") or ports:
+        port_spec = ports or ("1-10000" if mode == "range10k" else "1-10000")
+        ports_to_scan = parse_port_specs(port_spec)
+        if not ports_to_scan:
+            ports_to_scan = CORE_SCAN_PORTS
+    else:
+        ports_to_scan = CORE_SCAN_PORTS
+
+    sem = asyncio.Semaphore(150)
+    tasks = [_probe_port(target_ip, p, sem) for p in ports_to_scan]
     results = await asyncio.gather(*tasks)
-    open_ports = [p for p, ok in zip(SCAN_PORTS, results) if ok]
+    open_ports = [p for p in results if p is not None]
 
     existing_ports = db.get_service_ports()
+    all_services = {s["port"]: s for s in db.get_all_services() if s.get("port")}
+
+    web_tasks = [_probe_web_service(target_ip, p, client) for p in open_ports]
+    web_results = await asyncio.gather(*web_tasks)
+
     discovered = []
-    for port in sorted(open_ports):
-        if port in existing_ports:
-            continue
-        info = KNOWN_SERVICES.get(port, (f"端口 {port} 服务", "🔧", "tcp"))
-        name, icon, default_proto = info
-        proto = default_proto
-        if port in HTTP_PROBE_PORTS:
-            proto = "https" if port in (443, 5001, 8083, 8443, 9443) else "http"
+    existing = []
+
+    for port, web_info in zip(open_ports, web_results):
+        known_info = KNOWN_SERVICES.get(port, (f"端口 {port} 服务", "🔧", "tcp"))
+        known_name, known_icon, known_proto = known_info
+
+        is_web = web_info["is_web"]
+        proto = web_info["protocol"] if is_web else known_proto
+        title = web_info["title"] or known_name
+        favicon = web_info["favicon"]
+        url = web_info["url"] if is_web else (f"{proto}://{target_ip}:{port}" if proto in ("http", "https") else "")
+        icon = known_icon if not favicon else ""
 
         item = {
-            "port": port, "name": name, "icon": icon, "protocol": proto,
-            "favicon": "", "url": f"{proto}://{nas_ip}:{port}" if proto in ("http", "https") else ""
+            "port": port,
+            "name": title,
+            "icon": icon or ("🌐" if is_web else "🔧"),
+            "protocol": proto,
+            "favicon": favicon,
+            "url": url,
+            "is_web": is_web,
+            "already_exists": port in existing_ports
         }
-        if port in HTTP_PROBE_PORTS:
-            meta = await _probe_http_title(nas_ip, port, proto)
-            if meta["title"]:
-                item["name"] = meta["title"]
-            item["favicon"] = meta["favicon"]
-        discovered.append(item)
 
-    return {"ok": True, "nas_ip": nas_ip, "open_ports": open_ports, "new_services": discovered}
+        if port in existing_ports:
+            existing_svc = all_services.get(port, {})
+            item["existing_name"] = existing_svc.get("name", title)
+            existing.append(item)
+        else:
+            discovered.append(item)
+
+    return {
+        "ok": True,
+        "nas_ip": target_ip,
+        "scanned_count": len(ports_to_scan),
+        "open_ports": open_ports,
+        "new_services": discovered,
+        "existing_services": existing,
+    }
 
 
 @app.post("/api/fetch-meta")
