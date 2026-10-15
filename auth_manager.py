@@ -203,10 +203,14 @@ class AuthManager:
         self._save()
         return True, "密码已成功修改"
 
+    def is_enabled(self) -> bool:
+        """Check if authentication is enabled."""
+        return bool(self._cache.get("enabled", True))
+
     def get_status(self) -> Dict[str, Any]:
         """Get auth status."""
         return {
-            "enabled": self._cache.get("enabled", True),
+            "enabled": self.is_enabled(),
             "username": self._cache.get("username", DEFAULT_USER),
             "custom_password_set": self._cache.get("custom_password_set", False)
         }

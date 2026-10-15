@@ -3007,8 +3007,12 @@
 
     // 1. 探测 Favicon
     document.getElementById('editFetchIcon').addEventListener('click', async () => {
-      const url = document.getElementById('editUrl').value.trim();
+      let url = document.getElementById('editUrl').value.trim();
       if (!url) { toast('请先填写 URL 地址', 'error'); return; }
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'http://' + url;
+        document.getElementById('editUrl').value = url;
+      }
       const btn = document.getElementById('editFetchIcon');
       btn.disabled = true; btn.textContent = '探测中...';
       try {
@@ -3017,16 +3021,24 @@
           body: JSON.stringify({ url })
         });
         const data = await res.json();
-        if (data.ok && data.icon) {
-          editFaviconData = data.icon;
-          const fp = document.getElementById('editFaviconPreview');
-          fp.src = data.icon; fp.style.display = 'block';
+        if (res.ok && data.ok) {
+          if (data.icon) {
+            editFaviconData = data.icon;
+            const fp = document.getElementById('editFaviconPreview');
+            fp.src = data.icon; fp.style.display = 'block';
+          }
           if (data.title && !document.getElementById('editName').value) {
             document.getElementById('editName').value = data.title;
           }
-          toast('成功提取网站 Favicon', 'success');
+          if (data.port && !document.getElementById('editPort').value) {
+            document.getElementById('editPort').value = data.port;
+          }
+          if (data.protocol) {
+            document.getElementById('editProtocol').value = data.protocol;
+          }
+          toast('成功提取网站信息与 Favicon', 'success');
         } else {
-          toast('未能从目标网页提取到图标', 'error');
+          toast(data.detail || data.error || '未能从目标网页提取到图标', 'error');
         }
       } catch (e) {
         toast('网络错误: ' + e.message, 'error');
@@ -3054,8 +3066,12 @@
 
     // 3. 从外链图片 URL 抓取
     document.getElementById('editLoadIconUrl').addEventListener('click', async () => {
-      const url = document.getElementById('editIconUrl').value.trim();
+      let url = document.getElementById('editIconUrl').value.trim();
       if (!url) { toast('请输入图标图片 URL', 'error'); return; }
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'http://' + url;
+        document.getElementById('editIconUrl').value = url;
+      }
       const btn = document.getElementById('editLoadIconUrl');
       btn.disabled = true; btn.textContent = '加载中...';
       try {
@@ -3064,14 +3080,14 @@
           body: JSON.stringify({ url })
         });
         const data = await res.json();
-        if (data.ok && data.icon) {
+        if (res.ok && data.ok && data.icon) {
           editFaviconData = data.icon;
           const fp = document.getElementById('editFaviconPreview');
           fp.src = data.icon; fp.style.display = 'block';
           document.getElementById('editIconUrl').value = '';
           toast('外链图标加载成功', 'success');
         } else {
-          toast(data.error || '加载图标失败', 'error');
+          toast(data.detail || data.error || '加载图标失败', 'error');
         }
       } catch (e) {
         toast('加载错误: ' + e.message, 'error');
@@ -3082,32 +3098,73 @@
 
     // 4. 保存服务
     document.getElementById('editSave').onclick = async () => {
+      const name = document.getElementById('editName').value.trim();
+      if (!name) {
+        toast('请填写服务名称', 'error');
+        return;
+      }
+      let url = document.getElementById('editUrl').value.trim();
+      let port = parseInt(document.getElementById('editPort').value) || 0;
+      let protocol = document.getElementById('editProtocol').value || 'http';
+
+      // 自动补全 URL 与智能提取端口
+      if (url) {
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          url = `${protocol}://${url}`;
+          document.getElementById('editUrl').value = url;
+        }
+        try {
+          const parsed = new URL(url);
+          if (!port && parsed.port) {
+            port = parseInt(parsed.port) || 0;
+            document.getElementById('editPort').value = port;
+          }
+          if (parsed.protocol) {
+            protocol = parsed.protocol.replace(':', '');
+            document.getElementById('editProtocol').value = protocol;
+          }
+        } catch (e) {}
+      }
+
       const payload = {
         id: editingServiceId,
-        name: document.getElementById('editName').value,
-        icon: document.getElementById('editIcon').value,
+        name,
+        icon: document.getElementById('editIcon').value.trim() || '🌐',
         favicon: editFaviconData,
-        url: document.getElementById('editUrl').value,
-        port: parseInt(document.getElementById('editPort').value) || 0,
-        protocol: document.getElementById('editProtocol').value,
-        desc: document.getElementById('editDesc').value,
+        url,
+        port,
+        protocol,
+        desc: document.getElementById('editDesc').value.trim(),
       };
       const action = editingServiceId ? 'update' : 'add';
-      await fetch(`/api/services?action=${action}`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(payload)
-      });
-      document.getElementById('editModal').classList.remove('visible');
-      toast('服务已保存', 'success');
-      loadServicesAdmin();
+      try {
+        const res = await fetch(`/api/services?action=${action}`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          document.getElementById('editModal').classList.remove('visible');
+          toast('服务已保存', 'success');
+          loadServicesAdmin();
+        } else {
+          toast('保存失败: ' + (data.detail || data.error || '未知错误'), 'error');
+        }
+      } catch (e) {
+        toast('网络异常: ' + e.message, 'error');
+      }
     };
 
     // ─── 智能导入: 从 URL 一键获取 ───
     let urlFetchResult = null;
     document.getElementById('btnFetchUrl').addEventListener('click', async () => {
-      const url = document.getElementById('urlImportInput').value.trim();
+      let url = document.getElementById('urlImportInput').value.trim();
       if (!url) { toast('请输入服务网页 URL', 'error'); return; }
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'http://' + url;
+        document.getElementById('urlImportInput').value = url;
+      }
       const btn = document.getElementById('btnFetchUrl');
       const preview = document.getElementById('urlPreview');
       const addBtn = document.getElementById('btnAddUrl');
@@ -3123,8 +3180,8 @@
           body: JSON.stringify({ url }),
         });
         const data = await res.json();
-        if (data.error) {
-          toast('获取失败: ' + data.error, 'error');
+        if (!res.ok || data.error) {
+          toast('获取失败: ' + (data.detail || data.error || '无法读取目标网页'), 'error');
           return;
         }
 
@@ -3151,25 +3208,34 @@
       const name = document.getElementById('urlEditName').value.trim() || urlFetchResult.title || '自定义服务';
       const icon = document.getElementById('urlEditIcon').value.trim() || '🌐';
 
-      await fetch('/api/services?action=add', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          name,
-          icon,
-          favicon: urlFetchResult.icon || '',
-          url: urlFetchResult.url,
-          port: urlFetchResult.port || 0,
-          protocol: urlFetchResult.protocol || 'http',
-          desc: urlFetchResult.title || '',
-        })
-      });
-
-      toast(`已成功添加: ${name}`, 'success');
-      document.getElementById('urlImportInput').value = '';
-      document.getElementById('urlPreview').style.display = 'none';
-      document.getElementById('btnAddUrl').disabled = true;
-      loadServicesAdmin();
+      try {
+        const res = await fetch('/api/services?action=add', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            name,
+            icon,
+            favicon: urlFetchResult.icon || '',
+            url: urlFetchResult.url,
+            port: urlFetchResult.port || 0,
+            protocol: urlFetchResult.protocol || 'http',
+            desc: urlFetchResult.title || '',
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          toast(`已成功添加: ${name}`, 'success');
+          document.getElementById('urlImportInput').value = '';
+          document.getElementById('urlPreview').style.display = 'none';
+          document.getElementById('btnAddUrl').disabled = true;
+          urlFetchResult = null;
+          loadServicesAdmin();
+        } else {
+          toast('添加失败: ' + (data.detail || data.error || '未知错误'), 'error');
+        }
+      } catch (e) {
+        toast('网络请求异常: ' + e.message, 'error');
+      }
     });
 
     // ─── 局域网 NAS 端口扫描与选择添加 ───
@@ -3238,20 +3304,23 @@
       for (const b of boxes) {
         const item = scanDiscovered[parseInt(b.dataset.idx)];
         if (!item) continue;
-        await fetch('/api/services?action=add', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({
-            name: item.name,
-            icon: item.icon || '🔧',
-            favicon: item.favicon || '',
-            url: item.url,
-            port: item.port,
-            protocol: item.protocol,
-            desc: item.name,
-          })
-        });
-        added++;
+        try {
+          const res = await fetch('/api/services?action=add', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              name: item.name,
+              icon: item.icon || '🔧',
+              favicon: item.favicon || '',
+              url: item.url,
+              port: item.port,
+              protocol: item.protocol,
+              desc: item.name,
+            })
+          });
+          const d = await res.json();
+          if (res.ok && d.ok) added++;
+        } catch (e) {}
       }
       document.getElementById('scanModal').classList.remove('visible');
       toast(`已批量添加 ${added} 个新服务！`, 'success');
@@ -3270,9 +3339,13 @@
           body: JSON.stringify({ services: data })
         });
         const r = await res.json();
-        toast(`导入完成: 新增 ${r.added || 0}, 跳过 ${r.skipped || 0}`, 'success');
-        document.getElementById('importJsonArea').value = '';
-        loadServicesAdmin();
+        if (res.ok && r.ok) {
+          toast(`导入完成: 新增 ${r.added || 0}, 跳过 ${r.skipped || 0}`, 'success');
+          document.getElementById('importJsonArea').value = '';
+          loadServicesAdmin();
+        } else {
+          toast('导入失败: ' + (r.detail || r.error || '未知错误'), 'error');
+        }
       } catch (e) {
         toast('JSON 格式有误: ' + e.message, 'error');
       }
@@ -3329,9 +3402,18 @@
 
     document.getElementById('btnSeed').onclick = async () => {
       if (!confirm('确定要恢复默认预置服务吗？（现有端口会自动跳过）')) return;
-      await fetch('/api/services?action=seed', { method: 'POST' });
-      toast('已初始化预置服务', 'success');
-      loadServicesAdmin();
+      try {
+        const res = await fetch('/api/services?action=seed', { method: 'POST' });
+        const r = await res.json();
+        if (res.ok && r.ok) {
+          toast(`已恢复预置服务，新增了 ${r.count || 0} 个服务`, 'success');
+          loadServicesAdmin();
+        } else {
+          toast('恢复失败: ' + (r.detail || r.error || '未知错误'), 'error');
+        }
+      } catch (e) {
+        toast('请求失败: ' + e.message, 'error');
+      }
     };
 
     // ─── 身份验证表单与控制事件 ───

@@ -12,8 +12,10 @@ import re
 import threading
 import time
 from urllib.parse import urljoin, urlparse
+import html as html_lib
 import ipaddress
 import logging
+import uuid
 from fastapi import Depends, FastAPI, HTTPException, Header, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
@@ -57,6 +59,9 @@ from auth_manager import auth_mgr
 
 async def require_auth(request: Request):
     """Dependency that requires valid authentication."""
+    if not auth_mgr.is_enabled():
+        return {"username": "admin", "auth_disabled": True}
+
     auth_header = request.headers.get("authorization", "")
     token = ""
     if auth_header.startswith("Bearer "):
@@ -151,7 +156,7 @@ from contextlib import asynccontextmanager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global client
-    client = httpx.AsyncClient(timeout=10, follow_redirects=True)
+    client = httpx.AsyncClient(timeout=10, follow_redirects=True, verify=False)
     for m in active_monitors.values():
         m.set_client(client)
     reload_monitors()
@@ -1254,26 +1259,37 @@ async def scan_nas(_auth: dict = Depends(require_auth)):
 async def fetch_meta(request: Request, _auth: dict = Depends(require_auth)):
     body = await request.json()
     url = body.get("url", "").strip()
+    if not url:
+        return JSONResponse({"error": "缺少 URL 地址"}, status_code=400)
+    if not url.startswith(("http://", "https://")):
+        url = "http://" + url
     url = validate_proxy_url(url, allow_private=True)
+
+    http_client = client if (client and not client.is_closed) else httpx.AsyncClient(timeout=8, verify=False, follow_redirects=True)
 
     try:
         parsed = urlparse(url)
         port = parsed.port
+        if not port:
+            port = 443 if parsed.scheme == "https" else 80
         protocol = parsed.scheme
 
-        resp = await client.get(url, follow_redirects=True, timeout=8)
+        resp = await http_client.get(url, follow_redirects=True, timeout=8)
         html = resp.text[:50000]
 
         title = ""
         m = re.search(r"<title[^>]*>(.*?)</title>", html, re.IGNORECASE | re.DOTALL)
         if m:
-            title = m.group(1).strip()
+            title = html_lib.unescape(m.group(1).strip())
+        if not title:
+            title = parsed.hostname or ""
 
         favicon_url = ""
         for pat in [
             r'<link[^>]+rel=["\'](?:shortcut )?icon["\'][^>]+href=["\']([^"\']+)["\']',
             r'<link[^>]+href=["\']([^"\']+)["\'][^>]+rel=["\'](?:shortcut )?icon["\']',
             r'<link[^>]+rel=["\']apple-touch-icon["\'][^>]+href=["\']([^"\']+)["\']',
+            r'<link[^>]+rel=["\']icon["\'][^>]+href=["\']([^"\']+)["\']',
         ]:
             fm = re.search(pat, html, re.IGNORECASE)
             if fm:
@@ -1289,7 +1305,7 @@ async def fetch_meta(request: Request, _auth: dict = Depends(require_auth)):
         else:
             abs_icon = urljoin(url, favicon_url)
             try:
-                ir = await client.get(abs_icon, follow_redirects=True, timeout=5)
+                ir = await http_client.get(abs_icon, follow_redirects=True, timeout=5)
                 if ir.status_code == 200:
                     ct = ir.headers.get("content-type", "image/x-icon")
                     b64 = base64.b64encode(ir.content).decode()
@@ -1306,10 +1322,16 @@ async def fetch_meta(request: Request, _auth: dict = Depends(require_auth)):
 async def load_icon_url(request: Request, _auth: dict = Depends(require_auth)):
     body = await request.json()
     url = body.get("url", "").strip()
+    if not url:
+        return JSONResponse({"error": "请输入图标 URL"}, status_code=400)
+    if not url.startswith(("http://", "https://")):
+        url = "http://" + url
     url = validate_proxy_url(url, allow_private=False)
 
+    http_client = client if (client and not client.is_closed) else httpx.AsyncClient(timeout=8, verify=False, follow_redirects=True)
+
     try:
-        resp = await client.get(url, follow_redirects=True, timeout=8)
+        resp = await http_client.get(url, follow_redirects=True, timeout=8)
         if resp.status_code != 200:
             return JSONResponse({"error": f"获取失败 (HTTP {resp.status_code})"}, status_code=502)
         ct = resp.headers.get("content-type", "image/png")
