@@ -504,17 +504,105 @@
     .services-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
     .service-card {
       background: var(--bg-card); border: 1px solid var(--border);
-      transition: all 0.2s ease; text-decoration: none; color: inherit;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); text-decoration: none; color: inherit;
       display: flex; position: relative; overflow: hidden;
     }
     .service-card:hover {
       background: var(--bg-card-hover); border-color: rgba(255,255,255,0.18);
       transform: translateY(-2px); box-shadow: var(--shadow);
     }
+    .card-icon-wrapper {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.25s ease;
+      border-radius: 10px;
+    }
     .card-icon { font-size: 32px; line-height: 1; }
     .card-icon-img { width: 32px; height: 32px; border-radius: 6px; object-fit: contain; }
     .card-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
     .card-desc { display: none; }
+
+    /* ─── 图标主色自适应卡片样式 ─── */
+    /* 模式 1：柔和氛围光晕 (Ambient Glow - 推荐) */
+    .card-color-active[data-color-mode="ambient"] .service-card[data-has-color="true"] {
+      background: linear-gradient(145deg, rgba(var(--card-rgb), 0.12) 0%, rgba(20, 24, 33, 0.75) 55%), var(--bg-card);
+      border: 1px solid rgba(var(--card-rgb), 0.25);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.3);
+    }
+    .card-color-active[data-color-mode="ambient"] .service-card[data-has-color="true"]::before {
+      content: '';
+      position: absolute;
+      top: -24px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80px;
+      height: 80px;
+      background: radial-gradient(circle, rgba(var(--card-rgb), 0.35) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      transition: all 0.3s ease;
+    }
+    .card-color-active[data-color-mode="ambient"] .service-card[data-has-color="true"]:hover {
+      border-color: rgba(var(--card-rgb), 0.65);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 28px -4px rgba(var(--card-rgb), 0.3), 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+    .card-color-active[data-color-mode="ambient"] .service-card[data-has-color="true"]:hover::before {
+      width: 130px;
+      height: 130px;
+      background: radial-gradient(circle, rgba(var(--card-rgb), 0.5) 0%, transparent 70%);
+    }
+    .card-color-active[data-color-mode="ambient"] .service-card[data-has-color="true"] .card-icon-wrapper {
+      background: rgba(var(--card-rgb), 0.15);
+      border: 1px solid rgba(var(--card-rgb), 0.28);
+      box-shadow: 0 0 14px -2px rgba(var(--card-rgb), 0.22);
+      padding: 6px;
+    }
+    .card-color-active[data-color-mode="ambient"] .service-card[data-has-color="true"]:hover .card-icon-wrapper {
+      box-shadow: 0 0 18px rgba(var(--card-rgb), 0.45);
+      transform: scale(1.06);
+    }
+
+    /* 模式 2：全彩透润浸润 (Vibrant Glass) */
+    .card-color-active[data-color-mode="vibrant"] .service-card[data-has-color="true"] {
+      background: linear-gradient(135deg, rgba(var(--card-rgb), 0.22) 0%, rgba(var(--card-rgb), 0.06) 100%), rgba(15, 18, 26, 0.7);
+      border: 1px solid rgba(var(--card-rgb), 0.35);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .card-color-active[data-color-mode="vibrant"] .service-card[data-has-color="true"]:hover {
+      background: linear-gradient(135deg, rgba(var(--card-rgb), 0.32) 0%, rgba(var(--card-rgb), 0.12) 100%), rgba(15, 18, 26, 0.8);
+      border-color: rgba(var(--card-rgb), 0.8);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 30px -4px rgba(var(--card-rgb), 0.35);
+    }
+    .card-color-active[data-color-mode="vibrant"] .service-card[data-has-color="true"] .card-icon-wrapper {
+      background: rgba(var(--card-rgb), 0.25);
+      border: 1px solid rgba(var(--card-rgb), 0.4);
+      padding: 6px;
+    }
+
+    /* 模式 3：极简霓虹描边 (Accent Border) */
+    .card-color-active[data-color-mode="neon"] .service-card[data-has-color="true"] {
+      background: rgba(18, 22, 31, 0.85);
+      border: 1px solid rgba(var(--card-rgb), 0.2);
+      border-top: 2.5px solid rgba(var(--card-rgb), 0.85);
+    }
+    .card-color-active[data-color-mode="neon"] .service-card[data-has-color="true"]:hover {
+      background: rgba(26, 32, 45, 0.95);
+      border-color: rgba(var(--card-rgb), 0.6);
+      border-top-color: rgba(var(--card-rgb), 1);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px -2px rgba(var(--card-rgb), 0.25);
+    }
+    .card-color-active[data-color-mode="neon"] .service-card[data-has-color="true"] .card-icon-wrapper {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(var(--card-rgb), 0.3);
+      padding: 6px;
+    }
 
     /* 分页式管理控制面板 */
     .admin-panel {
@@ -849,6 +937,21 @@
                 <option value="compact">紧凑药丸圆角</option>
                 <option value="horizontal">水平横向列表</option>
                 <option value="glass">毛玻璃高级质感</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="setting-item">
+            <div>
+              <div class="setting-label">图标主色自适应</div>
+              <div class="setting-desc">提取 Logo 主色实时生成氛围光晕与高光边框</div>
+            </div>
+            <div class="setting-control">
+              <select id="settingCardColorMode">
+                <option value="ambient">✨ 柔和氛围光晕 (推荐)</option>
+                <option value="vibrant">🌈 全彩透润浸润</option>
+                <option value="neon">⚡ 极简霓虹描边</option>
+                <option value="none">⚪ 关闭 (经典纯灰底色)</option>
               </select>
             </div>
           </div>
@@ -1486,6 +1589,16 @@
       document.body.className = `theme-${ui.theme || 'dark'}`;
       const grid = document.getElementById('servicesGrid');
       grid.className = `services-grid style-${ui.card_style || 'default'}`;
+      
+      const colorMode = ui.card_color_mode || 'ambient';
+      if (colorMode !== 'none') {
+        grid.classList.add('card-color-active');
+        grid.setAttribute('data-color-mode', colorMode);
+      } else {
+        grid.classList.remove('card-color-active');
+        grid.removeAttribute('data-color-mode');
+      }
+
       document.getElementById('searchBarWrapper').style.display = ui.show_search !== false ? 'block' : 'none';
       
       const enableMusic = ui.enable_music !== false;
@@ -1497,6 +1610,8 @@
 
       document.getElementById('settingTheme').value = ui.theme || 'dark';
       document.getElementById('settingCardStyle').value = ui.card_style || 'default';
+      const elColorMode = document.getElementById('settingCardColorMode');
+      if (elColorMode) elColorMode.value = colorMode;
       document.getElementById('settingShowSearch').checked = ui.show_search !== false;
       document.getElementById('settingEnableMusic').checked = enableMusic;
     }
@@ -2961,6 +3076,130 @@
       if (popup) popup.classList.remove('visible');
     }
 
+    // ─── 服务卡片图标主色智能提取与自适应缓存 ───
+    const colorCache = {};
+    try {
+      const saved = localStorage.getItem('nas_card_color_cache');
+      if (saved) Object.assign(colorCache, JSON.parse(saved));
+    } catch (e) {}
+
+    const EMOJI_COLOR_MAP = {
+      '🎬': '229, 160, 13',   // 影音/Plex
+      '📥': '47, 103, 153',   // 下载/qBittorrent
+      '🎵': '16, 185, 129',   // 飞牛音乐
+      '✈️': '255, 125, 0',    // MoviePilot
+      '🏠': '3, 169, 244',    // Home Assistant
+      '📹': '24, 144, 255',   // EasyNVR
+      '🐳': '0, 180, 216',    // Docker/Portainer
+      '⚡': '194, 30, 48',    // Transmission
+      '🍀': '139, 92, 246',   // Lucky
+      '📺': '124, 58, 237',   // 电视/IPTV
+      '🔍': '14, 165, 233',   // Prowlarr/搜索
+      '🖥️': '100, 116, 139',  // NAS面板
+      '🔧': '99, 102, 241',   // 工具
+      '🌐': '59, 130, 246',   // Web服务
+      '🔒': '234, 88, 12',    // HTTPS
+      '📁': '245, 158, 11',   // 文件/网盘
+      '🔄': '16, 185, 129',   // 同步
+      '📊': '99, 102, 241',   // 仪表盘
+      '📖': '245, 158, 11',   // 阅读/图书
+      '📚': '168, 85, 247',   // 书库
+      '💡': '234, 179, 8',    // 知识
+      '⚙️': '100, 116, 139',  // 运维
+      '🚀': '239, 68, 68',    // 效率
+      '🛡️': '59, 130, 246',   // 防火墙
+      '🤖': '16, 185, 129',   // AI服务
+      '💬': '34, 197, 94',    // 消息通知
+    };
+
+    function getInitialServiceColor(s) {
+      if (s.color) return s.color;
+      const iconSrc = s.favicon || s.icon;
+      if (iconSrc && colorCache[iconSrc]) return colorCache[iconSrc];
+      if (s.icon && EMOJI_COLOR_MAP[s.icon]) return EMOJI_COLOR_MAP[s.icon];
+
+      const name = (s.name || '').toLowerCase();
+      if (name.includes('emby')) return '82, 181, 75';
+      if (name.includes('plex')) return '229, 160, 13';
+      if (name.includes('jellyfin')) return '0, 164, 228';
+      if (name.includes('qbittorrent')) return '47, 103, 153';
+      if (name.includes('transmission')) return '194, 30, 48';
+      if (name.includes('fnos') || name.includes('飞牛')) return '16, 185, 129';
+      if (name.includes('moviepilot')) return '255, 125, 0';
+      if (name.includes('home assistant') || name.includes('hass')) return '3, 169, 244';
+      if (name.includes('portainer')) return '0, 180, 216';
+      if (name.includes('lucky')) return '139, 92, 246';
+      if (name.includes('easynvr')) return '24, 144, 255';
+      if (name.includes('ikuai') || name.includes('爱快')) return '30, 144, 255';
+      if (name.includes('pve') || name.includes('proxmox')) return '229, 90, 0';
+      if (name.includes('alist')) return '24, 144, 255';
+      if (name.includes('memos')) return '234, 179, 8';
+
+      return '59, 130, 246';
+    }
+
+    function extractDominantColor(imgSrc, callback) {
+      if (!imgSrc) return;
+      if (colorCache[imgSrc]) {
+        callback(colorCache[imgSrc]);
+        return;
+      }
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          canvas.width = 16;
+          canvas.height = 16;
+          ctx.drawImage(img, 0, 0, 16, 16);
+          const data = ctx.getImageData(0, 0, 16, 16).data;
+
+          let rSum = 0, gSum = 0, bSum = 0, count = 0;
+          let maxSat = -1, bestRgb = null;
+
+          for (let i = 0; i < data.length; i += 4) {
+            const a = data[i + 3];
+            if (a < 128) continue;
+            const r = data[i], g = data[i + 1], b = data[i + 2];
+            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            if (brightness > 245 || brightness < 15) continue;
+
+            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+            const sat = max === 0 ? 0 : (max - min) / max;
+            if (sat > maxSat) {
+              maxSat = sat;
+              bestRgb = `${r}, ${g}, ${b}`;
+            }
+            rSum += r; gSum += g; bSum += b; count++;
+          }
+
+          let result = bestRgb;
+          if (!result && count > 0) {
+            result = `${Math.round(rSum / count)}, ${Math.round(gSum / count)}, ${Math.round(bSum / count)}`;
+          }
+          if (result) {
+            colorCache[imgSrc] = result;
+            try {
+              localStorage.setItem('nas_card_color_cache', JSON.stringify(colorCache));
+            } catch (e) {}
+            callback(result);
+          }
+        } catch (e) {}
+      };
+      img.src = imgSrc;
+    }
+
+    window.onCardImgLoaded = function(imgEl, iconSrc, cardId) {
+      extractDominantColor(iconSrc, (rgb) => {
+        const card = document.getElementById(cardId);
+        if (card) {
+          card.style.setProperty('--card-rgb', rgb);
+          card.setAttribute('data-has-color', 'true');
+        }
+      });
+    };
+
     // ─── 渲染服务卡片列表 ───
     function renderServices(filter = '') {
       const grid = document.getElementById('servicesGrid');
@@ -2980,12 +3219,15 @@
       }
       document.getElementById('noResults').style.display = 'none';
 
-      grid.innerHTML = filtered.map(s => {
+      grid.innerHTML = filtered.map((s, idx) => {
         const iconSrc = s.favicon || s.icon;
         const isImg = iconSrc && (iconSrc.startsWith('http') || iconSrc.startsWith('data:image'));
+        const cardRgb = getInitialServiceColor(s);
+        const cardId = `srv-card-${s.id || s.port || idx}`;
+
         const iconHtml = isImg ?
-          `<img src="${escapeHtml(iconSrc)}" class="card-icon-img" alt="">` :
-          `<span class="card-icon">${escapeHtml(s.icon || '🔧')}</span>`;
+          `<div class="card-icon-wrapper"><img src="${escapeHtml(iconSrc)}" class="card-icon-img" alt="" onload="onCardImgLoaded(this, '${escapeHtml(iconSrc)}', '${cardId}')"></div>` :
+          `<div class="card-icon-wrapper"><span class="card-icon">${escapeHtml(s.icon || '🔧')}</span></div>`;
 
         const isFnosMusic = (s.name && s.name.includes('飞牛音乐')) || (s.name && s.name.toLowerCase() === 'fnos music');
         const validUrl = sanitizeUrl(s.url);
@@ -3002,7 +3244,7 @@
         }
 
         return `
-          <a class="service-card" ${href} ${clickAttr} style="position:relative">
+          <a class="service-card" id="${cardId}" ${href} ${clickAttr} data-has-color="true" style="--card-rgb: ${cardRgb}; position:relative">
             ${extBadge}
             <div class="card-top">${iconHtml}</div>
             <div class="card-info">
@@ -3736,10 +3978,26 @@
 
     document.getElementById('searchInput').oninput = e => renderServices(e.target.value);
 
+    const updateLiveColorMode = () => {
+      const mode = document.getElementById('settingCardColorMode')?.value || 'ambient';
+      const grid = document.getElementById('servicesGrid');
+      if (grid) {
+        if (mode !== 'none') {
+          grid.classList.add('card-color-active');
+          grid.setAttribute('data-color-mode', mode);
+        } else {
+          grid.classList.remove('card-color-active');
+          grid.removeAttribute('data-color-mode');
+        }
+      }
+    };
+    document.getElementById('settingCardColorMode')?.addEventListener('change', updateLiveColorMode);
+
     document.getElementById('btnSaveUISettings').onclick = async () => {
       const ui = {
         theme: document.getElementById('settingTheme').value,
         card_style: document.getElementById('settingCardStyle').value,
+        card_color_mode: document.getElementById('settingCardColorMode')?.value || 'ambient',
         show_search: document.getElementById('settingShowSearch').checked,
         enable_music: document.getElementById('settingEnableMusic').checked,
       };
