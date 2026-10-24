@@ -41,8 +41,7 @@ config.json
 data/*.db
 data/*.db*
 data/*.log
-data/auth.json
-data/services.json
+data/*.json
 !data/.gitkeep
 
 # IDEs & OS
