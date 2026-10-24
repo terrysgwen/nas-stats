@@ -1065,10 +1065,10 @@
     </div>
 
     <div class="music-controls">
-      <button class="music-btn" id="musicShuffleBtn" title="一键切换随机播放">🔀</button>
-      <button class="music-btn" id="musicPrev" title="上一曲">⏮️</button>
-      <button class="music-btn play-toggle" id="musicPlayToggle" title="播放/暂停">▶️</button>
-      <button class="music-btn" id="musicNext" title="下一曲">⏭️</button>
+      <button class="music-btn" id="musicShuffleBtn" title="一键切换随机播放 (快捷键: S)">🔀</button>
+      <button class="music-btn" id="musicPrev" title="上一曲 (快捷键: [ 或 Ctrl+← / 键盘上一曲键)">⏮️</button>
+      <button class="music-btn play-toggle" id="musicPlayToggle" title="播放/暂停 (快捷键: 空格 Space / 键盘播放键)">▶️</button>
+      <button class="music-btn" id="musicNext" title="下一曲 (快捷键: ] 或 Ctrl+→ / 键盘下一曲键)">⏭️</button>
       <button class="music-btn" id="musicModeBtn" title="播放模式: 列表循环">🔁</button>
       <div class="music-progress-wrapper">
         <span id="musicCurrentTime">00:00</span>
@@ -1134,19 +1134,31 @@
 
           <!-- 播放控制按钮 -->
           <div class="card-control-buttons">
-            <button class="card-btn" id="cardBtnShuffle" title="一键切换随机播放">🔀</button>
-            <button class="card-btn" id="cardBtnPrev" title="上一曲">⏮️</button>
-            <button class="card-btn play-main" id="cardBtnPlay" title="播放/暂停">▶️</button>
-            <button class="card-btn" id="cardBtnNext" title="下一曲">⏭️</button>
+            <button class="card-btn" id="cardBtnShuffle" title="一键切换随机播放 (快捷键: S)">🔀</button>
+            <button class="card-btn" id="cardBtnPrev" title="上一曲 (快捷键: [ 或 Ctrl+← / 键盘上一曲键)">⏮️</button>
+            <button class="card-btn play-main" id="cardBtnPlay" title="播放/暂停 (快捷键: 空格 Space / 键盘播放键)">▶️</button>
+            <button class="card-btn" id="cardBtnNext" title="下一曲 (快捷键: ] 或 Ctrl+→ / 键盘下一曲键)">⏭️</button>
             <button class="card-btn" id="cardBtnMode" title="播放模式 (列表循环/单曲循环/随机播放)">🔁</button>
-            <button class="card-btn" id="cardBtnMute" title="静音切换">🔊</button>
+            <button class="card-btn" id="cardBtnMute" title="静音切换 (快捷键: M)">🔊</button>
           </div>
 
           <!-- 音量滑块 -->
           <div class="card-volume-box">
             <span style="font-size:12px;color:var(--text-muted)">音量</span>
-            <input type="range" id="cardVolumeSlider" min="0" max="100" value="80" class="card-vol-slider">
+            <input type="range" id="cardVolumeSlider" min="0" max="100" value="80" class="card-vol-slider" title="音量调节 (快捷键: ↑ 增大 / ↓ 减小)">
             <span id="cardVolumeText" style="font-size:11px;color:var(--text-muted);width:32px;text-align:right">80%</span>
+          </div>
+
+          <!-- 键盘快捷键提示卡片 -->
+          <div style="margin-top:12px;padding:8px 10px;background:rgba(255,255,255,0.03);border:1px dashed var(--border);border-radius:8px;font-size:11px;color:var(--text-muted);line-height:1.7">
+            <div style="font-weight:600;color:var(--text-secondary);margin-bottom:2px;display:flex;align-items:center;gap:4px">
+              ⌨️ 键盘与多媒体按键支持
+            </div>
+            <div>• <kbd style="background:var(--bg-card);border:1px solid var(--border);border-radius:3px;padding:1px 4px;font-size:10px">空格 Space</kbd> : 播放 / 暂停</div>
+            <div>• <kbd style="background:var(--bg-card);border:1px solid var(--border);border-radius:3px;padding:1px 4px;font-size:10px">[</kbd> / <kbd style="background:var(--bg-card);border:1px solid var(--border);border-radius:3px;padding:1px 4px;font-size:10px">]</kbd> 或 <kbd style="background:var(--bg-card);border:1px solid var(--border);border-radius:3px;padding:1px 4px;font-size:10px">Ctrl+←/→</kbd> : 上一首 / 下一首</div>
+            <div>• <kbd style="background:var(--bg-card);border:1px solid var(--border);border-radius:3px;padding:1px 4px;font-size:10px">←</kbd> / <kbd style="background:var(--bg-card);border:1px solid var(--border);border-radius:3px;padding:1px 4px;font-size:10px">→</kbd> : 快退 / 快进 5秒</div>
+            <div>• <kbd style="background:var(--bg-card);border:1px solid var(--border);border-radius:3px;padding:1px 4px;font-size:10px">↑</kbd> / <kbd style="background:var(--bg-card);border:1px solid var(--border);border-radius:3px;padding:1px 4px;font-size:10px">↓</kbd> : 调大/小音量，<kbd style="background:var(--bg-card);border:1px solid var(--border);border-radius:3px;padding:1px 4px;font-size:10px">M</kbd> 静音</div>
+            <div style="color:var(--accent-cyan);margin-top:2px">• 原生适配键盘多媒体键 (Play/Pause/Prev/Next) 及蓝牙耳机切歌</div>
           </div>
         </div>
 
@@ -2081,6 +2093,9 @@
           audio.src = streamUrl;
         }
 
+        // 同步更新系统 MediaSession 元数据（支持键盘多媒体键与系统通知栏）
+        updateMediaSession(track);
+
         if (autoplay) {
           setTimeout(() => {
             const p = audio.play();
@@ -2165,6 +2180,12 @@
       if (toggleBtn) {
         if (isPlaying) toggleBtn.classList.add('active');
         else toggleBtn.classList.remove('active');
+      }
+
+      if ('mediaSession' in navigator) {
+        try {
+          navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+        } catch(e) {}
       }
 
       renderCardPlaylist();
@@ -2460,6 +2481,198 @@
 
     document.getElementById('musicProgress')?.addEventListener('click', seekAudio);
     document.getElementById('cardProgressBar')?.addEventListener('click', seekAudio);
+
+    // ─── 飞牛音乐键盘快捷键与系统 MediaSession (键盘硬件多媒体键) 支持 ───
+    function updateMediaSession(track) {
+      if (!('mediaSession' in navigator)) return;
+      if (!track) {
+        navigator.mediaSession.metadata = null;
+        return;
+      }
+      try {
+        const coverSrc = track.cover ? (track.cover.startsWith('http') ? track.cover : (location.origin + track.cover)) : '';
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: track.title || '飞牛音乐',
+          artist: track.artist || '飞牛曲库',
+          album: track.album || '飞牛音乐媒体库',
+          artwork: coverSrc ? [
+            { src: coverSrc, sizes: '96x96', type: 'image/webp' },
+            { src: coverSrc, sizes: '128x128', type: 'image/webp' },
+            { src: coverSrc, sizes: '192x192', type: 'image/webp' },
+            { src: coverSrc, sizes: '256x256', type: 'image/webp' },
+            { src: coverSrc, sizes: '512x512', type: 'image/webp' }
+          ] : []
+        });
+      } catch (e) {
+        console.warn('Update MediaSession metadata error:', e);
+      }
+    }
+
+    function setupMediaSession() {
+      if (!('mediaSession' in navigator)) return;
+      try {
+        navigator.mediaSession.setActionHandler('play', () => togglePlay(true));
+        navigator.mediaSession.setActionHandler('pause', () => togglePlay(false));
+        navigator.mediaSession.setActionHandler('previoustrack', () => playPrevTrack());
+        navigator.mediaSession.setActionHandler('nexttrack', () => playNextTrack());
+        navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+          const skipTime = details.seekOffset || 5;
+          if (audio) {
+            audio.currentTime = Math.max(0, audio.currentTime - skipTime);
+          }
+        });
+        navigator.mediaSession.setActionHandler('seekforward', (details) => {
+          const skipTime = details.seekOffset || 5;
+          if (audio && audio.duration) {
+            audio.currentTime = Math.min(audio.duration, audio.currentTime + skipTime);
+          }
+        });
+        navigator.mediaSession.setActionHandler('seekto', (details) => {
+          if (audio && details.seekTime !== undefined) {
+            audio.currentTime = details.seekTime;
+          }
+        });
+        navigator.mediaSession.setActionHandler('stop', () => {
+          if (audio) {
+            audio.pause();
+            audio.currentTime = 0;
+            setPlayingState(false);
+          }
+        });
+      } catch (e) {
+        console.warn('Setup MediaSession handlers error:', e);
+      }
+    }
+
+    setupMediaSession();
+
+    function changeVolumeDelta(delta) {
+      if (!audio) return;
+      let newVol = Math.max(0, Math.min(1, (audio.volume !== undefined ? audio.volume : 0.8) + delta));
+      newVol = Math.round(newVol * 100) / 100;
+      audio.volume = newVol;
+      previousVolume = newVol;
+      isMuted = newVol === 0;
+      const vSlider = document.getElementById('cardVolumeSlider');
+      const vText = document.getElementById('cardVolumeText');
+      const mBtn = document.getElementById('cardBtnMute');
+      if (vSlider) vSlider.value = Math.round(newVol * 100);
+      if (vText) vText.textContent = `${Math.round(newVol * 100)}%`;
+      if (mBtn) mBtn.textContent = isMuted ? '🔇' : '🔊';
+      toast(`🔊 音量: ${Math.round(newVol * 100)}%`, 'info');
+    }
+
+    function toggleMute() {
+      const mBtn = document.getElementById('cardBtnMute');
+      if (mBtn) mBtn.click();
+    }
+
+    function isUserInputActive() {
+      const activeEl = document.activeElement;
+      if (!activeEl) return false;
+      const tag = activeEl.tagName ? activeEl.tagName.toLowerCase() : '';
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+      if (activeEl.isContentEditable) return true;
+      return false;
+    }
+
+    window.addEventListener('keydown', (e) => {
+      // 1. 键盘专用多媒体硬件键（Play/Pause, Next Track, Prev Track, Stop）优先响应
+      if (e.code === 'MediaPlayPause' || e.key === 'MediaPlayPause') {
+        e.preventDefault();
+        togglePlay();
+        return;
+      }
+      if (e.code === 'MediaTrackNext' || e.key === 'MediaTrackNext') {
+        e.preventDefault();
+        playNextTrack();
+        return;
+      }
+      if (e.code === 'MediaTrackPrevious' || e.key === 'MediaTrackPrevious') {
+        e.preventDefault();
+        playPrevTrack();
+        return;
+      }
+      if (e.code === 'MediaStop' || e.key === 'MediaStop') {
+        e.preventDefault();
+        if (audio) { audio.pause(); audio.currentTime = 0; setPlayingState(false); }
+        return;
+      }
+
+      // 2. 如果用户正在任何输入框打字（如端口扫描、服务编辑、搜索框），屏蔽常规快捷键
+      if (isUserInputActive()) return;
+
+      // 3. 空格键 (Space): 播放 / 暂停
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePlay();
+        return;
+      }
+
+      // 4. 下一首: "]" 或 Ctrl + ArrowRight
+      if ((e.ctrlKey && e.code === 'ArrowRight') || e.key === ']' || e.key === '}') {
+        e.preventDefault();
+        playNextTrack();
+        toast('下一首 ⏭️', 'info');
+        return;
+      }
+
+      // 5. 上一首: "[" 或 Ctrl + ArrowLeft
+      if ((e.ctrlKey && e.code === 'ArrowLeft') || e.key === '[' || e.key === '{') {
+        e.preventDefault();
+        playPrevTrack();
+        toast('上一首 ⏮️', 'info');
+        return;
+      }
+
+      // 6. 快退 5 秒: 单独按下方向键左 ←
+      if (e.code === 'ArrowLeft' && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+        if (audio && isFinite(audio.duration) && audio.duration > 0) {
+          e.preventDefault();
+          audio.currentTime = Math.max(0, audio.currentTime - 5);
+          toast(`快退 5 秒 (${formatTime(audio.currentTime)})`, 'info');
+        }
+        return;
+      }
+
+      // 7. 快进 5 秒: 单独按下方向键右 →
+      if (e.code === 'ArrowRight' && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+        if (audio && isFinite(audio.duration) && audio.duration > 0) {
+          e.preventDefault();
+          audio.currentTime = Math.min(audio.duration, audio.currentTime + 5);
+          toast(`快进 5 秒 (${formatTime(audio.currentTime)})`, 'info');
+        }
+        return;
+      }
+
+      // 8. 增加音量 5%: 方向键上 ↑
+      if (e.code === 'ArrowUp' && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+        e.preventDefault();
+        changeVolumeDelta(0.05);
+        return;
+      }
+
+      // 9. 降低音量 5%: 方向键下 ↓
+      if (e.code === 'ArrowDown' && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+        e.preventDefault();
+        changeVolumeDelta(-0.05);
+        return;
+      }
+
+      // 10. 静音切换: 按键 M
+      if ((e.key === 'm' || e.key === 'M') && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        toggleMute();
+        return;
+      }
+
+      // 11. 随机播放切换: 按键 S
+      if ((e.key === 's' || e.key === 'S') && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        toggleShuffleMode();
+        return;
+      }
+    });
 
     // ─── 壁纸加载 ───
     async function loadBg() {
