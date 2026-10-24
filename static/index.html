@@ -917,6 +917,366 @@
       background: rgba(248, 81, 73, 0.12); border: 1px solid rgba(248, 81, 73, 0.25);
       border-radius: 6px; padding: 8px 12px; display: none; text-align: left;
     }
+
+    /* ─── 手机与移动端全屏响应式适配 (Mobile Responsive Layout) ─── */
+    @media (max-width: 768px) {
+      .container {
+        padding: 12px 12px 85px;
+      }
+
+      /* 顶部工具栏与歌词栏 */
+      .toolbar {
+        gap: 8px;
+        margin-bottom: 12px;
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .toolbar-lyric-bar {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        min-height: 38px;
+        padding: 4px 10px;
+        border-radius: 12px;
+      }
+      .lyric-track-tag {
+        max-width: 85px;
+        font-size: 10.5px;
+        padding: 1px 6px;
+      }
+      .lyric-line {
+        font-size: 11.5px;
+        line-height: 1.3;
+      }
+      .toolbar-actions {
+        width: 100%;
+        margin-left: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .toolbar-btn {
+        padding: 6px 8px;
+        font-size: 11.5px;
+        border-radius: 8px;
+        flex: 1 1 calc(33.333% - 6px);
+        min-width: 65px;
+        justify-content: center;
+        white-space: nowrap;
+        text-align: center;
+      }
+
+      /* 顶部监控状态条 */
+      .live-banner {
+        padding: 10px 12px;
+        margin-bottom: 12px;
+      }
+      .live-banner-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px 12px;
+      }
+      .live-stat-label {
+        font-size: 11px;
+      }
+      .live-stat-value {
+        font-size: 12px;
+      }
+
+      /* 搜索框 */
+      .search-bar {
+        max-width: 100%;
+        margin: 0 auto 14px;
+      }
+      .search-bar input {
+        padding: 8px 12px 8px 34px;
+        font-size: 13px;
+        border-radius: 8px;
+      }
+      .search-bar .search-icon {
+        left: 10px;
+        font-size: 13px;
+      }
+
+      /* 核心卡片网格自适应：手机端紧凑多列，彻底解决卡片巨大问题 */
+      .services-grid {
+        grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)) !important;
+        gap: 8px;
+      }
+      .services-grid.style-default .service-card {
+        padding: 10px 6px;
+        border-radius: 12px;
+        gap: 6px;
+      }
+      .services-grid.style-compact .service-card {
+        padding: 6px 10px;
+        border-radius: 16px;
+      }
+      .services-grid.style-horizontal {
+        grid-template-columns: 1fr !important;
+        gap: 8px;
+      }
+      .services-grid.style-horizontal .service-card {
+        padding: 10px 12px;
+      }
+
+      .card-icon {
+        font-size: 24px;
+      }
+      .card-icon-img {
+        width: 26px;
+        height: 26px;
+      }
+      .card-name {
+        font-size: 11.5px;
+        margin-top: 2px;
+      }
+      .card-desc {
+        display: none !important;
+      }
+      .card-external-badge {
+        width: 18px;
+        height: 18px;
+        font-size: 9px;
+        top: 4px;
+        right: 4px;
+      }
+
+      /* 光晕适度收拢，防止在小屏溢出过强 */
+      .card-color-active[data-color-mode="ambient"] .service-card[data-has-color="true"]::before {
+        width: 50px;
+        height: 50px;
+        top: -15px;
+      }
+
+      /* 底部音乐播放条 */
+      .music-player-bar {
+        padding: 6px 10px;
+        gap: 8px;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+      }
+      .music-progress-wrapper {
+        position: absolute;
+        top: -3px;
+        left: 0;
+        right: 0;
+        height: 3px;
+        padding: 0;
+        gap: 0;
+      }
+      .music-progress-wrapper span {
+        display: none;
+      }
+      .music-progress {
+        width: 100%;
+        height: 3px;
+        border-radius: 0;
+      }
+      .music-track-info {
+        min-width: 0;
+        flex: 1;
+        gap: 8px;
+      }
+      .music-cover {
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+        border-radius: 6px;
+      }
+      .music-title {
+        font-size: 11.5px;
+        max-width: 110px;
+      }
+      .music-artist {
+        font-size: 10px;
+        max-width: 110px;
+      }
+      .music-controls {
+        gap: 4px;
+        flex: 0 0 auto;
+      }
+      .music-btn {
+        padding: 4px;
+        font-size: 15px;
+      }
+      .music-btn.play-toggle {
+        width: 32px;
+        height: 32px;
+        font-size: 18px;
+      }
+      .music-extra {
+        display: none;
+      }
+
+      /* 音乐播放器弹窗 Modal */
+      .music-card-dialog {
+        width: 96%;
+        max-height: 94vh;
+        border-radius: 16px;
+      }
+      .music-card-header {
+        padding: 10px 14px;
+      }
+      .music-card-title {
+        font-size: 14px;
+      }
+      .music-card-body {
+        padding: 12px;
+        gap: 12px;
+      }
+      .music-card-player-panel {
+        min-width: 0;
+        width: 100%;
+        padding: 12px;
+        border-radius: 12px;
+      }
+      .vinyl-wrapper {
+        width: 110px;
+        height: 110px;
+        margin: 4px auto 10px;
+      }
+      .vinyl-disc {
+        width: 110px;
+        height: 110px;
+      }
+      .vinyl-center {
+        width: 44px;
+        height: 44px;
+        font-size: 18px;
+      }
+      .music-card-track-title {
+        font-size: 14px;
+      }
+      .music-card-track-artist {
+        font-size: 11px;
+      }
+      .card-ctrl-btn {
+        font-size: 16px;
+        width: 32px;
+        height: 32px;
+      }
+      .card-play-btn {
+        width: 42px;
+        height: 42px;
+        font-size: 20px;
+      }
+      .music-playlist-panel {
+        min-width: 0;
+        width: 100%;
+        max-height: 240px;
+      }
+      .playlist-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .playlist-tab {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+
+      /* 管理后台面板移动端适配 */
+      .admin-panel {
+        margin-bottom: 16px;
+        border-radius: 10px;
+      }
+      .admin-tabs {
+        padding: 0 4px;
+      }
+      .admin-tab {
+        padding: 10px 12px;
+        font-size: 12.5px;
+      }
+      .admin-tab-content {
+        padding: 12px 10px;
+      }
+      .settings-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      .setting-item {
+        padding: 10px 12px;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .setting-item .setting-label {
+        font-size: 12.5px;
+      }
+      .setting-item .setting-desc {
+        font-size: 10.5px;
+      }
+      .monitors-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      .monitor-card {
+        padding: 10px 12px;
+      }
+      .monitor-fields {
+        grid-template-columns: 1fr;
+      }
+      .admin-list {
+        grid-template-columns: 1fr;
+        max-height: 380px;
+      }
+      .scan-list {
+        grid-template-columns: 1fr;
+        max-height: 280px;
+      }
+
+      /* 弹窗对话框 */
+      .modal {
+        width: 94%;
+        padding: 16px 14px;
+        border-radius: 12px;
+      }
+      .auth-card {
+        width: 92%;
+        padding: 24px 16px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 8px 8px 75px;
+      }
+      /* 超小屏时卡片固定 3 列，紧凑精致像原生 App */
+      .services-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 6px;
+      }
+      .services-grid.style-default .service-card {
+        padding: 8px 4px;
+        border-radius: 10px;
+      }
+      .card-icon {
+        font-size: 22px;
+      }
+      .card-icon-img {
+        width: 24px;
+        height: 24px;
+      }
+      .card-name {
+        font-size: 11px;
+      }
+      .toolbar-actions {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4px;
+      }
+      .toolbar-btn {
+        font-size: 10.5px;
+        padding: 5px 2px;
+      }
+      .music-title {
+        max-width: 80px;
+      }
+      .music-artist {
+        max-width: 80px;
+      }
+    }
   </style>
 </head>
 <body class="theme-dark">
