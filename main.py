@@ -165,6 +165,13 @@ async def lifespan(app: FastAPI):
         await client.aclose()
 
 
+def get_http_client(timeout: float = 10.0) -> httpx.AsyncClient:
+    global client
+    if client and not client.is_closed:
+        return client
+    return httpx.AsyncClient(timeout=timeout, verify=False, follow_redirects=True)
+
+
 app = FastAPI(title="NAS Stats 2.0 API", lifespan=lifespan)
 
 # Setup CORS from DB config (default to empty list to block unauthorized cross-origin requests)
@@ -938,27 +945,32 @@ BING_CACHE_TTL = 4 * 3600
 
 
 async def _fetch_bing_images():
-    resp = await client.get(
-        "https://www.bing.com/HPImageArchive.aspx",
-        params={"format": "js", "idx": "0", "n": "8", "mkt": "zh-CN"},
-        follow_redirects=True, timeout=8,
-    )
-    resp.raise_for_status()
-    data = resp.json()
-    images = []
-    for img in data.get("images", []):
-        url_path = img.get("url", "")
-        if not url_path:
+    http_cli = get_http_client(timeout=8.0)
+    for host in ["https://cn.bing.com", "https://www.bing.com"]:
+        try:
+            resp = await http_cli.get(
+                f"{host}/HPImageArchive.aspx",
+                params={"format": "js", "idx": "0", "n": "8", "mkt": "zh-CN"},
+                follow_redirects=True, timeout=8,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                images = []
+                for img in data.get("images", []):
+                    url_path = img.get("url", "")
+                    if not url_path:
+                        continue
+                    full_url = host + url_path
+                    images.append({
+                        "url": "/api/bg-proxy?url=" + full_url,
+                        "title": img.get("copyright", ""),
+                        "date": img.get("startdate", ""),
+                    })
+                if images:
+                    return images
+        except Exception:
             continue
-        full_url = "https://www.bing.com" + url_path
-        images.append({
-            "url": "/api/bg-proxy?url=" + full_url,
-            "title": img.get("copyright", ""),
-            "date": img.get("startdate", ""),
-        })
-    if not images:
-        raise ValueError("Bing returned no images")
-    return images
+    raise ValueError("All Bing endpoints failed")
 
 
 async def _fetch_picsum_images():
@@ -992,17 +1004,22 @@ async def bing_bg():
 
 
 @app.get("/api/bg-proxy")
-async def bg_proxy(url: str = "", _auth: dict = Depends(require_auth)):
+async def bg_proxy(url: str = ""):
     url = validate_proxy_url(url, allow_private=False)
+    http_cli = get_http_client(timeout=12.0)
     try:
-        resp = await client.get(url, follow_redirects=True, timeout=10)
+        resp = await http_cli.get(url, follow_redirects=True, timeout=12)
         ct = resp.headers.get("content-type", "image/jpeg")
         if not ct.startswith("image/"):
             return JSONResponse({"error": "Only image content allowed"}, status_code=400)
         # Limit background proxy size to 15MB
         if len(resp.content) > 15 * 1024 * 1024:
             return JSONResponse({"error": "Image too large"}, status_code=413)
-        return Response(content=resp.content, media_type=ct)
+        return Response(
+            content=resp.content,
+            media_type=ct,
+            headers={"Cache-Control": "public, max-age=86400"}
+        )
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=502)
 
