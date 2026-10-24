@@ -268,6 +268,20 @@ class FnMusicClient:
         logger.info("✅ 歌单 [%s] 累计拉取完成，共 %d 首歌曲", playlist_id, len(all_tracks))
         return all_tracks
 
+    async def get_lyrics(self, guid: str) -> Optional[Dict[str, Any]]:
+        """Retrieve lyric content for a given track from fnOS Music."""
+        if not guid:
+            return None
+        path = "/music/api/v1/lyric/list"
+        params = {"trackGUID": guid}
+        logger.info("正在获取歌曲 [%s] 的歌词...", guid)
+        d = await self._get_json(path, params=params, timeout=10.0)
+        if d:
+            data = d.get("data") or {}
+            logger.info("✅ 成功获取歌曲 [%s] 歌词数据", guid)
+            return data
+        return None
+
     def get_stream_url(self, guid: str) -> str:
         """Returns direct proxy streaming URL in nas-stats."""
         return f"/api/music/fnos/stream?guid={guid}"

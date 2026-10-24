@@ -864,6 +864,21 @@ async def fnos_music_cover(coverId: str):
             return JSONResponse({"error": str(e)}, status_code=502)
 
 
+@app.get("/api/music/fnos/lyric")
+async def fnos_music_lyric(guid: str = ""):
+    """Retrieve lyric content for a track from fnOS Music."""
+    if not guid:
+        return JSONResponse({"ok": False, "error": "missing guid"}, status_code=400)
+    try:
+        data = await fnmusic_client.get_lyrics(guid)
+        if data:
+            return {"ok": True, "guid": guid, "data": data}
+        return JSONResponse({"ok": False, "error": "lyric not found"}, status_code=404)
+    except Exception as e:
+        logger.error("fnos lyric proxy error: %s", e)
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=502)
+
+
 @app.post("/api/music/fnos/reconnect")
 async def fnos_music_reconnect(_auth: dict = Depends(require_auth)):
     """Force re-authenticate with fnOS Music service and perform diagnostic health check."""

@@ -465,7 +465,10 @@
     .container { max-width: 1600px; margin: 0 auto; padding: 24px 24px 90px; }
 
     .toolbar {
-      display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
+      display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .toolbar-actions {
+      display: flex; align-items: center; gap: 10px; margin-left: auto; flex-wrap: wrap;
     }
     .toolbar-btn {
       padding: 7px 16px; background: var(--bg-secondary); border: 1px solid var(--border);
@@ -474,6 +477,60 @@
     }
     .toolbar-btn:hover { border-color: rgba(255,255,255,0.2); color: var(--text-primary); }
     .toolbar-btn.active { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
+
+    /* 顶部实时滚动歌词条 (方案 2 居中/靠左呈现) */
+    .toolbar-lyric-bar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 5px 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      max-width: 580px;
+      flex: 1;
+      min-width: 220px;
+      min-height: 36px;
+      user-select: none;
+    }
+    .toolbar-lyric-bar:hover {
+      border-color: rgba(16, 185, 129, 0.5);
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.15);
+      transform: translateY(-1px);
+    }
+    .toolbar-lyric-bar .lyric-eq {
+      display: inline-flex; align-items: flex-end; gap: 2.5px; height: 14px; width: 14px; flex-shrink: 0;
+    }
+    .toolbar-lyric-bar .lyric-eq span {
+      width: 2.5px; height: 40%; background: var(--accent-green); border-radius: 1px; transition: height 0.2s;
+    }
+    .toolbar-lyric-bar.playing .lyric-eq span:nth-child(1) { height: 100%; animation: eqBounce 0.8s ease-in-out infinite; }
+    .toolbar-lyric-bar.playing .lyric-eq span:nth-child(2) { height: 60%; animation: eqBounce 1.1s ease-in-out infinite 0.2s; }
+    .toolbar-lyric-bar.playing .lyric-eq span:nth-child(3) { height: 80%; animation: eqBounce 0.9s ease-in-out infinite 0.4s; }
+    .toolbar-lyric-bar.paused .lyric-eq span { height: 40% !important; animation: none !important; opacity: 0.6; }
+
+    .lyric-track-tag {
+      font-size: 11px; font-weight: 600; color: var(--accent-green);
+      background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.25);
+      padding: 2px 8px; border-radius: 12px; white-space: nowrap; flex-shrink: 0;
+      max-width: 140px; overflow: hidden; text-overflow: ellipsis;
+    }
+    .lyric-text-container {
+      position: relative; overflow: hidden; height: 20px; flex: 1; min-width: 120px;
+      display: flex; align-items: center;
+    }
+    .lyric-text {
+      font-size: 13px; font-weight: 500; color: var(--text-primary);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      letter-spacing: 0.3px;
+    }
+    .lyric-text.switching {
+      opacity: 0; transform: translateY(-4px);
+    }
 
     /* 顶部 Live Banner 监控状态栏 */
     .live-banner {
@@ -874,11 +931,24 @@
 
   <div class="container">
     <div class="toolbar">
-      <button class="toolbar-btn" id="musicCardToggle" title="打开弹窗音乐播放器">🎵 飞牛音乐</button>
-      <a href="/nvr" class="toolbar-btn" title="查看 EasyNVR 实时摄像头">📹 NVR 监控</a>
-      <button class="toolbar-btn" id="toolbarLogsBtn" title="查看运行与排查日志">📋 运行日志</button>
-      <button class="toolbar-btn" id="adminToggle">⚙️ 系统管理</button>
-      <button class="toolbar-btn" id="toolbarLogoutBtn" title="退出登录并锁定面板">🔒 退出登录</button>
+      <!-- 顶部实时滚动歌词条 (方案 2 居中/靠左呈现) -->
+      <div class="toolbar-lyric-bar" id="headerLyricBar" style="display: none;" title="点击呼出/收起音乐播放器">
+        <div class="lyric-eq">
+          <span></span><span></span><span></span>
+        </div>
+        <div class="lyric-track-tag" id="headerLyricTrack">飞牛音乐</div>
+        <div class="lyric-text-container">
+          <div class="lyric-text" id="headerLyricText">歌词准备中...</div>
+        </div>
+      </div>
+
+      <div class="toolbar-actions">
+        <button class="toolbar-btn" id="musicCardToggle" title="打开弹窗音乐播放器">🎵 飞牛音乐</button>
+        <a href="/nvr" class="toolbar-btn" title="查看 EasyNVR 实时摄像头">📹 NVR 监控</a>
+        <button class="toolbar-btn" id="toolbarLogsBtn" title="查看运行与排查日志">📋 运行日志</button>
+        <button class="toolbar-btn" id="adminToggle">⚙️ 系统管理</button>
+        <button class="toolbar-btn" id="toolbarLogoutBtn" title="退出登录并锁定面板">🔒 退出登录</button>
+      </div>
     </div>
 
     <!-- 顶部状态栏 -->
@@ -1630,6 +1700,132 @@
     let trackEndTimeout = null;
     const audio = document.getElementById('audioElement');
 
+    // ─── 顶部实时滚动歌词状态与同步控制器 ───
+    let currentLyrics = []; // [{ time: number, text: string }]
+    let currentLyricIndex = -1;
+    const lyricCache = {};
+    let currentLyricGuid = '';
+
+    function parseLRC(text) {
+      if (!text || typeof text !== 'string') return [];
+      const lines = text.split('\n');
+      const timeRegex = /\[(\d{2}):(\d{2})(?:\.(\d{2,3}))?\]/g;
+      const result = [];
+      for (const line of lines) {
+        timeRegex.lastIndex = 0;
+        const matches = [...line.matchAll(timeRegex)];
+        if (matches.length > 0) {
+          const content = line.replace(timeRegex, '').trim();
+          if (!content) continue;
+          for (const m of matches) {
+            const min = parseInt(m[1], 10);
+            const sec = parseInt(m[2], 10);
+            const msStr = m[3] || '0';
+            const ms = parseFloat('0.' + msStr);
+            const totalSec = min * 60 + sec + ms;
+            result.push({ time: totalSec, text: content });
+          }
+        }
+      }
+      result.sort((a, b) => a.time - b.time);
+      return result;
+    }
+
+    async function loadLyricsForTrack(track) {
+      const guid = track?.guid;
+      const bar = document.getElementById('headerLyricBar');
+      const trackEl = document.getElementById('headerLyricTrack');
+      const textEl = document.getElementById('headerLyricText');
+
+      if (!track || !guid) {
+        currentLyrics = [];
+        currentLyricIndex = -1;
+        currentLyricGuid = '';
+        if (bar) bar.style.display = 'none';
+        return;
+      }
+
+      currentLyricGuid = guid;
+      currentLyricIndex = -1;
+      currentLyrics = [];
+
+      if (trackEl) trackEl.textContent = track.title || '飞牛音乐';
+      if (textEl) {
+        textEl.textContent = '🎵 歌词加载中...';
+        textEl.classList.remove('switching');
+      }
+      if (bar) bar.style.display = 'flex';
+
+      if (lyricCache[guid]) {
+        currentLyrics = lyricCache[guid];
+        updateLyricDisplay(audio.currentTime);
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/music/fnos/lyric?guid=${encodeURIComponent(guid)}`);
+        const json = await res.json();
+        if (currentLyricGuid !== guid) return;
+
+        if (json.ok && json.data) {
+          let rawLrc = '';
+          const d = json.data;
+          if (typeof d === 'string') {
+            rawLrc = d;
+          } else if (d.list && Array.isArray(d.list) && d.list.length > 0) {
+            const pref = d.list.find(x => x.guid === d.preferred) || d.list[0];
+            rawLrc = pref.content || pref.lyric || pref.lrc || '';
+          } else if (d.content || d.lyric) {
+            rawLrc = d.content || d.lyric || '';
+          }
+
+          const parsed = parseLRC(rawLrc);
+          if (parsed.length > 0) {
+            currentLyrics = parsed;
+            lyricCache[guid] = parsed;
+            updateLyricDisplay(audio.currentTime);
+          } else if (rawLrc.trim()) {
+            if (textEl) textEl.textContent = rawLrc.trim().split('\n')[0];
+          } else {
+            if (textEl) textEl.textContent = `《${track.title || '当前曲目'}》 享受美好音乐`;
+          }
+        } else {
+          if (textEl) textEl.textContent = `《${track.title || '当前曲目'}》 享受美好音乐`;
+        }
+      } catch (e) {
+        if (textEl) textEl.textContent = `《${track.title || '当前曲目'}》 享受美好音乐`;
+      }
+    }
+
+    function updateLyricDisplay(currentTime) {
+      if (!currentLyrics || currentLyrics.length === 0) return;
+      const textEl = document.getElementById('headerLyricText');
+      if (!textEl) return;
+
+      let activeIndex = -1;
+      for (let i = 0; i < currentLyrics.length; i++) {
+        if (currentTime >= currentLyrics[i].time) {
+          activeIndex = i;
+        } else {
+          break;
+        }
+      }
+
+      if (activeIndex === -1 && currentLyrics.length > 0) {
+        activeIndex = 0;
+      }
+
+      if (activeIndex !== -1 && activeIndex !== currentLyricIndex) {
+        currentLyricIndex = activeIndex;
+        const lineText = currentLyrics[activeIndex].text || '';
+        textEl.classList.add('switching');
+        setTimeout(() => {
+          textEl.textContent = lineText;
+          textEl.classList.remove('switching');
+        }, 120);
+      }
+    }
+
     function escapeHtml(str) {
       if (!str) return '';
       return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -2211,6 +2407,9 @@
         // 同步更新系统 MediaSession 元数据（支持键盘多媒体键与系统通知栏）
         updateMediaSession(track);
 
+        // 同步加载顶部实时歌词
+        loadLyricsForTrack(track);
+
         if (autoplay) {
           setTimeout(() => {
             const p = audio.play();
@@ -2295,6 +2494,17 @@
       if (toggleBtn) {
         if (isPlaying) toggleBtn.classList.add('active');
         else toggleBtn.classList.remove('active');
+      }
+
+      const headerBar = document.getElementById('headerLyricBar');
+      if (headerBar) {
+        if (isPlaying) {
+          headerBar.classList.add('playing');
+          headerBar.classList.remove('paused');
+        } else {
+          headerBar.classList.remove('playing');
+          headerBar.classList.add('paused');
+        }
       }
 
       if ('mediaSession' in navigator) {
@@ -2516,10 +2726,17 @@
       const cCur = document.getElementById('cardCurTime');
       if (cCur) cCur.textContent = timeStr;
 
+      // 同步顶部实时滚动歌词
+      updateLyricDisplay(audio.currentTime);
+
       // 自动切歌保障 1：当播放进度距离歌曲结束小于 0.4 秒时主动触发切歌
       if (!isSwitchingTrack && !audio.paused && curDur > 2 && audio.currentTime >= curDur - 0.4) {
         handleTrackEnded('timeupdate-eof');
       }
+    });
+
+    document.getElementById('headerLyricBar')?.addEventListener('click', () => {
+      openMusicCardModal(false);
     });
 
     audio?.addEventListener('loadedmetadata', () => {
