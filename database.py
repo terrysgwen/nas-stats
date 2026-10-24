@@ -52,11 +52,19 @@ def init_db():
             icon        TEXT    DEFAULT '🔧',
             description TEXT    DEFAULT '',
             url         TEXT    DEFAULT '',
+            wan_url     TEXT    DEFAULT '',
             favicon     TEXT    DEFAULT '',
             visible     INTEGER DEFAULT 1,
             sort_order  INTEGER DEFAULT 0
         );
     """)
+    # Migration for existing database
+    try:
+        cols = [c["name"] for c in conn.execute("PRAGMA table_info(services)").fetchall()]
+        if cols and "wan_url" not in cols:
+            conn.execute("ALTER TABLE services ADD COLUMN wan_url TEXT DEFAULT ''")
+    except Exception:
+        pass
     conn.commit()
 
 
@@ -196,14 +204,15 @@ def add_service(svc: dict):
         "icon": svc.get("icon", "🔧"),
         "description": svc.get("description", ""),
         "url": svc.get("url", ""),
+        "wan_url": svc.get("wan_url", ""),
         "favicon": svc.get("favicon", ""),
         "visible": svc.get("visible", 1),
         "sort_order": svc.get("sort_order", 0),
     }
     conn.execute(
         """INSERT INTO services
-           (id, port, name, category, protocol, icon, description, url, favicon, visible, sort_order)
-           VALUES (:id, :port, :name, :category, :protocol, :icon, :description, :url, :favicon, :visible, :sort_order)""",
+           (id, port, name, category, protocol, icon, description, url, wan_url, favicon, visible, sort_order)
+           VALUES (:id, :port, :name, :category, :protocol, :icon, :description, :url, :wan_url, :favicon, :visible, :sort_order)""",
         data,
     )
     conn.commit()
@@ -211,7 +220,7 @@ def add_service(svc: dict):
 
 def update_service(service_id: str, **kwargs):
     conn = get_conn()
-    allowed_cols = {"name", "icon", "description", "url", "port", "protocol", "favicon", "visible", "sort_order", "category"}
+    allowed_cols = {"name", "icon", "description", "url", "wan_url", "port", "protocol", "favicon", "visible", "sort_order", "category"}
     sets, vals = [], []
     for k, v in kwargs.items():
         if k in allowed_cols:

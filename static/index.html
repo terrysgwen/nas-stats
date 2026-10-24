@@ -2023,8 +2023,15 @@
         </div>
       </div>
       <div class="modal-field">
-        <label>URL 地址</label>
-        <input type="text" id="editUrl">
+        <label>URL 地址 (局域网/默认)</label>
+        <input type="text" id="editUrl" placeholder="例如: http://192.168.1.177:5888/">
+      </div>
+      <div class="modal-field">
+        <label>外网独立访问地址 (可选)</label>
+        <input type="text" id="editWanUrl" placeholder="例如: https://music.terrysg.cn 或留空按默认域名自动替换">
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
+          💡 选填。在外网/域名环境下访问时优先使用此地址；若留空则自动按上方的局域网端口或默认域名自动替换。
+        </div>
       </div>
       <div class="modal-field">
         <label>端口</label>
@@ -2160,8 +2167,18 @@
       return false;
     }
 
+    function isCurrentWanAccess() {
+      if (currentUI && currentUI.enable_wan_replace === false) return false;
+      const cur = location.hostname;
+      if (cur && !isLocalOrPrivateHost(cur)) return true;
+      if (currentUI && currentUI.wan_domain && currentUI.wan_domain.trim()) {
+        if (cur && cur.toLowerCase() === currentUI.wan_domain.toLowerCase().trim()) return true;
+      }
+      return false;
+    }
+
     function getTargetWanHost() {
-      if (currentUI && currentUI.enable_wan_replace === false) return '';
+      if (!isCurrentWanAccess()) return '';
       if (currentUI && currentUI.wan_domain && currentUI.wan_domain.trim()) {
         return currentUI.wan_domain.trim();
       }
@@ -2196,9 +2213,25 @@
       return trimmed;
     }
 
+    function getServiceCardUrl(s, fallbackUrl = '') {
+      if (!s) return fallbackUrl;
+      const rawUrl = s.url || fallbackUrl || '';
+      // 外网/域名环境下优先使用单独设置的外网独立访问地址（可选）
+      if (isCurrentWanAccess() && s.wan_url && s.wan_url.trim()) {
+        return s.wan_url.trim();
+      }
+      // 若仅填写了外网独立地址且无局域网地址时作为通用兜底
+      if (!rawUrl && s.wan_url && s.wan_url.trim()) {
+        return s.wan_url.trim();
+      }
+      // 默认按原有规则自动替换局域网 IP 为外网访问域名
+      return adaptServiceUrl(rawUrl);
+    }
+
     function openFnosMusicWeb() {
-      const candidate = rawFnosMusicUrl || `http://${location.hostname}:5888/music/`;
-      const targetUrl = adaptServiceUrl(candidate);
+      const fnosSvc = (allServices || []).find(s => (s.name && s.name.includes('飞牛音乐')) || (s.name && s.name.toLowerCase() === 'fnos music'));
+      const fallback = rawFnosMusicUrl || `http://${location.hostname}:5888/music/`;
+      const targetUrl = fnosSvc ? getServiceCardUrl(fnosSvc, fallback) : adaptServiceUrl(fallback);
       window.open(targetUrl, '_blank');
     }
 
@@ -2536,7 +2569,10 @@
         if (data.fnos_music_url) {
           rawFnosMusicUrl = data.fnos_music_url;
           const appBtn = document.getElementById('musicAppBtn');
-          if (appBtn) appBtn.href = adaptServiceUrl(data.fnos_music_url);
+          if (appBtn) {
+            const fnosSvc = (allServices || []).find(s => (s.name && s.name.includes('飞牛音乐')) || (s.name && s.name.toLowerCase() === 'fnos music'));
+            appBtn.href = fnosSvc ? getServiceCardUrl(fnosSvc, data.fnos_music_url) : adaptServiceUrl(data.fnos_music_url);
+          }
         }
 
         // 2. 加载飞牛现存歌单列表
@@ -4125,8 +4161,9 @@
           `<div class="card-icon-wrapper"><span class="card-icon">${escapeHtml(s.icon || '🔧')}</span></div>`;
 
         const isFnosMusic = (s.name && s.name.includes('飞牛音乐')) || (s.name && s.name.toLowerCase() === 'fnos music');
-        const effectiveUrl = s.url || (isFnosMusic ? (rawFnosMusicUrl || `http://${location.hostname}:5888/music/`) : '');
-        const validUrl = sanitizeUrl(adaptServiceUrl(effectiveUrl));
+        const effectiveFallback = isFnosMusic ? (rawFnosMusicUrl || `http://${location.hostname}:5888/music/`) : '';
+        const targetUrl = getServiceCardUrl(s, effectiveFallback);
+        const validUrl = sanitizeUrl(targetUrl);
         let href = validUrl ? `href="${escapeHtml(validUrl)}" target="_blank"` : 'href="javascript:void(0)"';
         let clickAttr = '';
         let extBadge = '';
@@ -4134,7 +4171,7 @@
         if (isFnosMusic) {
           href = 'href="javascript:void(0)"';
           clickAttr = `onclick="openMusicCardModal(true)"`;
-          const musicWebUrl = validUrl || sanitizeUrl(adaptServiceUrl(rawFnosMusicUrl || `http://${location.hostname}:5888/music/`));
+          const musicWebUrl = validUrl || sanitizeUrl(getServiceCardUrl(s, rawFnosMusicUrl || `http://${location.hostname}:5888/music/`));
           if (musicWebUrl) {
             extBadge = `<a href="${escapeHtml(musicWebUrl)}" target="_blank" onclick="event.stopPropagation()" class="card-external-badge" title="在新窗口打开飞牛音乐 Web 版">↗</a>`;
           }
@@ -4287,12 +4324,15 @@
         const iconHtml = isImg ?
           `<img src="${escapeHtml(iconSrc)}" style="width:20px;height:20px;border-radius:4px;object-fit:contain">` :
           `<span style="font-size:16px">${escapeHtml(s.icon || '🔧')}</span>`;
+        const wanBadge = (s.wan_url && s.wan_url.trim()) ?
+          `<span style="font-size:10px;padding:1px 5px;background:rgba(59,130,246,0.12);color:var(--accent-blue);border-radius:3px;margin-left:4px;flex-shrink:0" title="已配置独立外网地址: ${escapeHtml(s.wan_url)}">外网</span>` : '';
 
         return `
           <div class="admin-row" data-id="${escapeHtml(s.id)}">
             <input type="checkbox" class="svc-item-select" data-id="${escapeHtml(s.id)}" style="margin-right:2px;cursor:pointer">
             ${iconHtml}
             <span class="admin-row-name" title="${escapeHtml(s.name)}">${escapeHtml(s.name)}</span>
+            ${wanBadge}
             <label class="toggle-switch">
               <input type="checkbox" ${s.visible ? 'checked' : ''} onchange="toggleService('${escapeHtml(s.id)}', this.checked)">
               <span class="toggle-slider"></span>
@@ -4422,6 +4462,7 @@
         document.getElementById('editName').value = s.name || '';
         document.getElementById('editIcon').value = s.icon || '';
         document.getElementById('editUrl').value = s.url || '';
+        document.getElementById('editWanUrl').value = s.wan_url || '';
         document.getElementById('editPort').value = s.port || '';
         document.getElementById('editProtocol').value = s.protocol || 'http';
         document.getElementById('editDesc').value = s.description || '';
@@ -4436,6 +4477,7 @@
         document.getElementById('editName').value = '';
         document.getElementById('editIcon').value = '🌐';
         document.getElementById('editUrl').value = '';
+        document.getElementById('editWanUrl').value = '';
         document.getElementById('editPort').value = '';
         document.getElementById('editProtocol').value = 'http';
         document.getElementById('editDesc').value = '';
@@ -4568,12 +4610,19 @@
         } catch (e) {}
       }
 
+      let wanUrl = document.getElementById('editWanUrl').value.trim();
+      if (wanUrl && !wanUrl.startsWith('http://') && !wanUrl.startsWith('https://')) {
+        wanUrl = `${protocol}://${wanUrl}`;
+        document.getElementById('editWanUrl').value = wanUrl;
+      }
+
       const payload = {
         id: editingServiceId,
         name,
         icon: document.getElementById('editIcon').value.trim() || '🌐',
         favicon: editFaviconData,
         url,
+        wan_url: wanUrl,
         port,
         protocol,
         desc: document.getElementById('editDesc').value.trim(),
