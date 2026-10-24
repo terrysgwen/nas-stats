@@ -174,6 +174,16 @@ def get_http_client(timeout: float = 10.0) -> httpx.AsyncClient:
 
 app = FastAPI(title="NAS Stats 2.0 API", lifespan=lifespan)
 
+@app.middleware("http")
+async def add_no_cache_for_html(request: Request, call_next):
+    response = await call_next(request)
+    ct = response.headers.get("content-type", "")
+    if "text/html" in ct:
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
 # Setup CORS from DB config (default to empty list to block unauthorized cross-origin requests)
 cors_origins = db.get_config("cors_origins", [])
 if cors_origins:
@@ -188,13 +198,20 @@ if cors_origins:
 # ── Pages ──────────────────────────────────────────────────────────
 
 @app.get("/")
+@app.get("/index.html")
 async def index():
-    return FileResponse(STATIC_DIR / "index.html", media_type="text/html")
+    resp = FileResponse(STATIC_DIR / "index.html", media_type="text/html")
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 
 @app.get("/nvr")
 async def nvr_page():
-    return FileResponse(STATIC_DIR / "nvr.html", media_type="text/html")
+    resp = FileResponse(STATIC_DIR / "nvr.html", media_type="text/html")
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return resp
 
 
 # ── Health & Stats ──────────────────────────────────────────────────

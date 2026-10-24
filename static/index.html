@@ -478,10 +478,10 @@
     .toolbar-btn:hover { border-color: rgba(255,255,255,0.2); color: var(--text-primary); }
     .toolbar-btn.active { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
 
-    /* 顶部实时滚动歌词条 (方案 2 居中/靠左呈现) */
+    /* 顶部实时滚动歌词条 (双行左右交替模式) */
     .toolbar-lyric-bar {
       display: flex; align-items: center; gap: 10px;
-      padding: 5px 14px;
+      padding: 4px 14px;
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: 20px;
@@ -490,10 +490,10 @@
       box-shadow: 0 2px 10px rgba(0,0,0,0.12);
       cursor: pointer;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      max-width: 580px;
+      max-width: 640px;
       flex: 1;
-      min-width: 220px;
-      min-height: 36px;
+      min-width: 240px;
+      min-height: 42px;
       user-select: none;
     }
     .toolbar-lyric-bar:hover {
@@ -502,7 +502,7 @@
       transform: translateY(-1px);
     }
     .toolbar-lyric-bar .lyric-eq {
-      display: inline-flex; align-items: flex-end; gap: 2.5px; height: 14px; width: 14px; flex-shrink: 0;
+      display: inline-flex; align-items: flex-end; gap: 2.5px; height: 16px; width: 14px; flex-shrink: 0;
     }
     .toolbar-lyric-bar .lyric-eq span {
       width: 2.5px; height: 40%; background: var(--accent-green); border-radius: 1px; transition: height 0.2s;
@@ -516,20 +516,49 @@
       font-size: 11px; font-weight: 600; color: var(--accent-green);
       background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.25);
       padding: 2px 8px; border-radius: 12px; white-space: nowrap; flex-shrink: 0;
-      max-width: 140px; overflow: hidden; text-overflow: ellipsis;
+      max-width: 130px; overflow: hidden; text-overflow: ellipsis;
     }
     .lyric-text-container {
-      position: relative; overflow: hidden; height: 20px; flex: 1; min-width: 120px;
-      display: flex; align-items: center;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 1px;
+      flex: 1;
+      min-width: 140px;
+      overflow: hidden;
     }
-    .lyric-text {
-      font-size: 13px; font-weight: 500; color: var(--text-primary);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      transition: opacity 0.25s ease, transform 0.25s ease;
+    .lyric-line {
+      font-size: 12px;
+      line-height: 1.35;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: color 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
       letter-spacing: 0.3px;
+      width: 100%;
     }
-    .lyric-text.switching {
-      opacity: 0; transform: translateY(-4px);
+    .lyric-line.line-left {
+      text-align: left;
+    }
+    .lyric-line.line-right {
+      text-align: right;
+    }
+    .lyric-line.active {
+      color: var(--accent-green, #10b981);
+      font-weight: 600;
+      opacity: 1;
+      transform: translateY(0);
+      text-shadow: 0 0 10px rgba(16, 185, 129, 0.25);
+    }
+    .lyric-line.inactive {
+      color: var(--text-muted, #8b949e);
+      font-weight: 400;
+      opacity: 0.65;
+    }
+    .lyric-line.switching {
+      opacity: 0.15;
+      transform: translateY(-2px);
     }
 
     /* 顶部 Live Banner 监控状态栏 */
@@ -931,14 +960,15 @@
 
   <div class="container">
     <div class="toolbar">
-      <!-- 顶部实时滚动歌词条 (方案 2 居中/靠左呈现) -->
+      <!-- 顶部实时滚动歌词条 (双行左右交替模式) -->
       <div class="toolbar-lyric-bar" id="headerLyricBar" style="display: none;" title="点击呼出/收起音乐播放器">
         <div class="lyric-eq">
           <span></span><span></span><span></span>
         </div>
         <div class="lyric-track-tag" id="headerLyricTrack">飞牛音乐</div>
         <div class="lyric-text-container">
-          <div class="lyric-text" id="headerLyricText">歌词准备中...</div>
+          <div class="lyric-line line-left active" id="headerLyricLine1">歌词准备中...</div>
+          <div class="lyric-line line-right inactive" id="headerLyricLine2">飞牛系统音乐</div>
         </div>
       </div>
 
@@ -1823,7 +1853,8 @@
       const guid = track?.guid;
       const bar = document.getElementById('headerLyricBar');
       const trackEl = document.getElementById('headerLyricTrack');
-      const textEl = document.getElementById('headerLyricText');
+      const line1El = document.getElementById('headerLyricLine1');
+      const line2El = document.getElementById('headerLyricLine2');
 
       if (!track || !guid) {
         currentLyrics = [];
@@ -1838,9 +1869,15 @@
       currentLyrics = [];
 
       if (trackEl) trackEl.textContent = track.title || '飞牛音乐';
-      if (textEl) {
-        textEl.textContent = '🎵 歌词加载中...';
-        textEl.classList.remove('switching');
+      if (line1El) {
+        line1El.textContent = '🎵 歌词加载中...';
+        line1El.className = 'lyric-line line-left active';
+        line1El.classList.remove('switching');
+      }
+      if (line2El) {
+        line2El.textContent = '飞牛系统音乐 🎵';
+        line2El.className = 'lyric-line line-right inactive';
+        line2El.classList.remove('switching');
       }
       if (bar) bar.style.display = 'flex';
 
@@ -1871,24 +1908,32 @@
           if (parsed.length > 0) {
             currentLyrics = parsed;
             lyricCache[guid] = parsed;
+            if (line1El) line1El.textContent = parsed[0].text || '';
+            if (line2El) line2El.textContent = parsed.length > 1 ? (parsed[1].text || '') : '🎵';
             updateLyricDisplay(audio.currentTime);
           } else if (rawLrc.trim()) {
-            if (textEl) textEl.textContent = rawLrc.trim().split('\n')[0];
+            const lines = rawLrc.trim().split('\n').filter(Boolean);
+            if (line1El) line1El.textContent = lines[0] || '';
+            if (line2El) line2El.textContent = lines[1] || '🎵';
           } else {
-            if (textEl) textEl.textContent = `《${track.title || '当前曲目'}》 享受美好音乐`;
+            if (line1El) line1El.textContent = `《${track.title || '当前曲目'}》`;
+            if (line2El) line2El.textContent = '享受美好音乐 🎵';
           }
         } else {
-          if (textEl) textEl.textContent = `《${track.title || '当前曲目'}》 享受美好音乐`;
+          if (line1El) line1El.textContent = `《${track.title || '当前曲目'}》`;
+          if (line2El) line2El.textContent = '享受美好音乐 🎵';
         }
       } catch (e) {
-        if (textEl) textEl.textContent = `《${track.title || '当前曲目'}》 享受美好音乐`;
+        if (line1El) line1El.textContent = `《${track.title || '当前曲目'}》`;
+        if (line2El) line2El.textContent = '享受美好音乐 🎵';
       }
     }
 
     function updateLyricDisplay(currentTime) {
       if (!currentLyrics || currentLyrics.length === 0) return;
-      const textEl = document.getElementById('headerLyricText');
-      if (!textEl) return;
+      const line1El = document.getElementById('headerLyricLine1');
+      const line2El = document.getElementById('headerLyricLine2');
+      if (!line1El || !line2El) return;
 
       let activeIndex = -1;
       for (let i = 0; i < currentLyrics.length; i++) {
@@ -1905,12 +1950,48 @@
 
       if (activeIndex !== -1 && activeIndex !== currentLyricIndex) {
         currentLyricIndex = activeIndex;
-        const lineText = currentLyrics[activeIndex].text || '';
-        textEl.classList.add('switching');
-        setTimeout(() => {
-          textEl.textContent = lineText;
-          textEl.classList.remove('switching');
-        }, 120);
+        const currentText = currentLyrics[activeIndex].text || '';
+        const nextText = (activeIndex + 1 < currentLyrics.length) ? (currentLyrics[activeIndex + 1].text || '') : '🎵';
+
+        if (activeIndex % 2 === 0) {
+          // 偶数行: 上行(左对齐)为当前句，下行(右对齐)为下一句预备
+          if (line1El.textContent !== currentText) {
+            line1El.classList.add('switching');
+            setTimeout(() => {
+              line1El.textContent = currentText;
+              line1El.classList.remove('switching');
+            }, 100);
+          }
+          line1El.className = 'lyric-line line-left active';
+
+          if (line2El.textContent !== nextText) {
+            line2El.classList.add('switching');
+            setTimeout(() => {
+              line2El.textContent = nextText;
+              line2El.classList.remove('switching');
+            }, 100);
+          }
+          line2El.className = 'lyric-line line-right inactive';
+        } else {
+          // 奇数行: 下行(右对齐)为当前句，上行(左对齐)为下一句预备
+          if (line2El.textContent !== currentText) {
+            line2El.classList.add('switching');
+            setTimeout(() => {
+              line2El.textContent = currentText;
+              line2El.classList.remove('switching');
+            }, 100);
+          }
+          line2El.className = 'lyric-line line-right active';
+
+          if (line1El.textContent !== nextText) {
+            line1El.classList.add('switching');
+            setTimeout(() => {
+              line1El.textContent = nextText;
+              line1El.classList.remove('switching');
+            }, 100);
+          }
+          line1El.className = 'lyric-line line-left inactive';
+        }
       }
     }
 
