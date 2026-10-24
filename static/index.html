@@ -1164,6 +1164,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
               <span style="font-size:12px;color:var(--text-muted)">点击任意歌单即可立即播放</span>
               <div style="display:flex;gap:6px">
+                <button class="admin-btn admin-btn-secondary" style="font-size:12px;padding:3px 9px" id="btnQuickReconnectFnos" title="强制刷新凭证并重新连接飞牛音乐服务">⚡ 重连服务</button>
                 <button class="admin-btn admin-btn-secondary" style="font-size:12px;padding:3px 9px" id="btnShuffleAllLibrary" title="加载全部本地曲库并随机播放">🔀 随机播放曲库</button>
                 <button class="admin-btn admin-btn-secondary" style="font-size:12px;padding:3px 10px" id="btnRefreshPlaylists">🔄 刷新歌单</button>
               </div>
@@ -1213,6 +1214,7 @@
               </div>
               <div style="display:flex;gap:10px;margin-top:14px">
                 <button class="admin-btn admin-btn-primary" style="flex:1;padding:9px" id="btnSaveFnosMusicConfig">💾 保存并测试登录</button>
+                <button class="admin-btn admin-btn-secondary" style="flex:1;padding:9px" id="btnReconnectFnosMusic" title="强制刷新 Token 并测试 5888 接口连通性">🔄 一键诊断重连</button>
               </div>
               <div id="fnCfgStatus" style="margin-top:10px;font-size:12px;text-align:center;color:var(--text-muted)"></div>
             </div>
@@ -1968,6 +1970,55 @@
       }
     });
 
+    async function triggerFnosReconnect(btnElement) {
+      const statusEl = document.getElementById('fnCfgStatus');
+      const origText = btnElement ? btnElement.textContent : '';
+      if (btnElement) {
+        btnElement.disabled = true;
+        btnElement.textContent = '⏳ 重连诊断中...';
+      }
+      if (statusEl) {
+        statusEl.textContent = '正在强制刷新 Token 并诊断飞牛 5888 接口...';
+        statusEl.style.color = 'var(--accent-blue)';
+      }
+      try {
+        const res = await fetch('/api/music/fnos/reconnect', { method: 'POST' });
+        const d = await res.json();
+        if (d.ok) {
+          toast(d.message || '飞牛音乐重连成功！', 'success');
+          if (statusEl) {
+            statusEl.textContent = '✅ ' + d.message;
+            statusEl.style.color = 'var(--accent-green)';
+          }
+          await loadFnosPlaylists();
+        } else {
+          toast('重连失败: ' + (d.message || d.error || '未知错误'), 'error');
+          if (statusEl) {
+            statusEl.textContent = '❌ 重连失败: ' + (d.message || d.error || '未知错误');
+            statusEl.style.color = 'var(--accent-red)';
+          }
+        }
+      } catch (e) {
+        toast('请求失败: ' + e.message, 'error');
+        if (statusEl) {
+          statusEl.textContent = '❌ 网络异常: ' + e.message;
+          statusEl.style.color = 'var(--accent-red)';
+        }
+      } finally {
+        if (btnElement) {
+          btnElement.disabled = false;
+          btnElement.textContent = origText;
+        }
+      }
+    }
+
+    document.getElementById('btnReconnectFnosMusic')?.addEventListener('click', (e) => {
+      triggerFnosReconnect(e.currentTarget);
+    });
+    document.getElementById('btnQuickReconnectFnos')?.addEventListener('click', (e) => {
+      triggerFnosReconnect(e.currentTarget);
+    });
+
     function loadMusicTrack(index, autoplay = false) {
       clearTimeout(trackEndTimeout);
       isSwitchingTrack = false;
@@ -2362,13 +2413,30 @@
       }
     });
 
+    let trackRetryCounts = {};
     audio?.addEventListener('error', (e) => {
       console.warn('Audio tag error event:', e, audio.error);
       if (isSwitchingTrack) return;
       const track = musicPlaylist[currentMusicIndex];
       const title = track ? track.title : '当前歌曲';
+      const trackKey = track ? (track.src || track.url || currentMusicIndex) : currentMusicIndex;
+
+      // 如果遇到上游会话瞬时失效或重新鉴权，自动就地重试 1 次（等待 1.2s 让后端完成静默鉴权）
+      if (!trackRetryCounts[trackKey]) {
+        trackRetryCounts[trackKey] = 1;
+        toast(`曲目《${title}》上游音频流握手中，正在自动恢复重试...`, 'info');
+        setTimeout(() => {
+          if (audio && audio.src) {
+            audio.load();
+            audio.play().catch(() => {});
+          }
+        }, 1200);
+        return;
+      }
+
+      delete trackRetryCounts[trackKey];
       setPlayingState(false);
-      toast(`曲目《${title}》加载遇到问题，正在尝试切换下一首...`, 'warning');
+      toast(`曲目《${title}》上游暂时不可用，正在尝试切换下一首...`, 'warning');
       isSwitchingTrack = true;
       setTimeout(() => {
         if (musicPlaylist && musicPlaylist.length > 1) {

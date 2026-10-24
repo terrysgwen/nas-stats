@@ -718,101 +718,165 @@ async def reset_music_songs(_auth: dict = Depends(require_auth)):
 
 @app.get("/api/music/fnos/stream")
 async def fnos_music_stream(guid: str, request: Request):
-    """Stream audio directly from fnOS Music backend with Range support."""
+    """Stream audio directly from fnOS Music backend with Range support and auto-recovery."""
     if not guid:
         return JSONResponse({"error": "missing guid"}, status_code=400)
 
     await fnmusic_client.ensure_token()
-    token = fnmusic_client.token
 
     target_path = "/music/api/v1/track/stream"
     params = {"guid": guid}
-    authx = fnmusic_client._sign_authx("GET", target_path, params=params)
     url = f"{fnmusic_client.base_url}{target_path}"
 
     rng = request.headers.get("range", "none")
     music_logger.log_info(f"🎧 收到音频流请求: guid={guid[:12]}..., Range={rng}")
 
-    req_headers = {
-        "authx": authx,
-        "Cookie": f"music-token={token}",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-    }
-    if "range" in request.headers:
-        req_headers["range"] = request.headers["range"]
+    stream_timeout = httpx.Timeout(connect=15.0, read=None, write=30.0, pool=None)
 
-    try:
-        stream_timeout = httpx.Timeout(connect=15.0, read=None, write=30.0, pool=None)
-        client = httpx.AsyncClient(timeout=stream_timeout, trust_env=False)
-        upstream_req = client.build_request("GET", url, params=params, headers=req_headers)
-        resp = await client.send(upstream_req, stream=True)
+    # Perform request with auto-retry if upstream returns 100001 unknown error / session invalid
+    for attempt in range(2):
+        token = fnmusic_client.token
+        authx = fnmusic_client._sign_authx("GET", target_path, params=params)
+        req_headers = {
+            "authx": authx,
+            "Cookie": f"music-token={token}",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        }
+        if "range" in request.headers:
+            req_headers["range"] = request.headers["range"]
 
-        ct = resp.headers.get("content-type", "")
-        # If upstream returned JSON or error status (e.g. 100004 forbidden / missing track file)
-        if "application/json" in ct or resp.status_code >= 400:
-            content = await resp.aread()
-            await resp.aclose()
-            await client.aclose()
-            music_logger.log_warn(f"⚠️ 音频流请求异常: guid={guid[:12]}..., HTTP {resp.status_code}, 内容: {content.decode('utf-8', errors='ignore')[:100]}")
-            return Response(content=content, status_code=403 if resp.status_code == 200 else resp.status_code, media_type="application/json")
+        try:
+            client = httpx.AsyncClient(timeout=stream_timeout, trust_env=False)
+            upstream_req = client.build_request("GET", url, params=params, headers=req_headers)
+            resp = await client.send(upstream_req, stream=True)
 
-        cl = resp.headers.get("content-length", "未知")
-        music_logger.log_info(f"▶️ 开始传输音频流: guid={guid[:12]}..., HTTP {resp.status_code}, 格式: {ct}, 大小: {cl}")
+            ct = resp.headers.get("content-type", "")
 
-        resp_headers = {"accept-ranges": "bytes"}
-        for h in ("content-length", "content-range", "content-disposition"):
-            if h in resp.headers:
-                resp_headers[h] = resp.headers[h]
-
-        async def stream_generator():
-            try:
-                async for chunk in resp.aiter_bytes(chunk_size=65536):
-                    yield chunk
-            finally:
+            # If upstream returned JSON or error status (e.g. 100001 unknown error, 100004 forbidden, 401 unauthorized)
+            if "application/json" in ct or resp.status_code >= 400:
+                content = await resp.aread()
                 await resp.aclose()
                 await client.aclose()
 
-        return StreamingResponse(
-            stream_generator(),
-            status_code=resp.status_code,
-            headers=resp_headers,
-            media_type=ct or "audio/mpeg"
-        )
-    except Exception as e:
-        music_logger.log_error(f"❌ 音频流传输异常: guid={guid[:12]}..., 错误: {e}")
-        logger.error("fnos stream proxy error: %s", e)
-        return JSONResponse({"error": str(e)}, status_code=502)
+                # Check if this error is recoverable by re-authenticating (e.g. code 100001, 100004, 401, 403)
+                is_recoverable = False
+                err_code = None
+                try:
+                    err_json = json.loads(content)
+                    err_code = err_json.get("code")
+                    if err_code in (100001, 100002, 100004) or resp.status_code in (401, 403):
+                        is_recoverable = True
+                except Exception:
+                    if resp.status_code in (401, 403):
+                        is_recoverable = True
+
+                if is_recoverable and attempt == 0:
+                    music_logger.log_warn(
+                        f"⚠️ 音频流触发上游错误 (code={err_code or resp.status_code})，检测到会话失效或 100001 异常，正在自动重新鉴权恢复..."
+                    )
+                    login_ok = await fnmusic_client.force_relogin()
+                    if login_ok:
+                        music_logger.log_info(f"🔄 飞牛音乐鉴权恢复成功，正在重试拉取音频流: guid={guid[:12]}...")
+                        continue
+
+                music_logger.log_warn(
+                    f"⚠️ 音频流请求异常: guid={guid[:12]}..., HTTP {resp.status_code}, 内容: {content.decode('utf-8', errors='ignore')[:100]}"
+                )
+                return Response(
+                    content=content,
+                    status_code=403 if resp.status_code == 200 else resp.status_code,
+                    media_type="application/json"
+                )
+
+            cl = resp.headers.get("content-length", "未知")
+            music_logger.log_info(f"▶️ 开始传输音频流: guid={guid[:12]}..., HTTP {resp.status_code}, 格式: {ct}, 大小: {cl}")
+
+            resp_headers = {"accept-ranges": "bytes"}
+            for h in ("content-length", "content-range", "content-disposition"):
+                if h in resp.headers:
+                    resp_headers[h] = resp.headers[h]
+
+            async def stream_generator():
+                try:
+                    async for chunk in resp.aiter_bytes(chunk_size=65536):
+                        yield chunk
+                finally:
+                    await resp.aclose()
+                    await client.aclose()
+
+            return StreamingResponse(
+                stream_generator(),
+                status_code=resp.status_code,
+                headers=resp_headers,
+                media_type=ct or "audio/mpeg"
+            )
+        except Exception as e:
+            if attempt == 0:
+                music_logger.log_warn(f"⚠️ 音频流连接波动: {e}，尝试重新连通...")
+                await fnmusic_client.force_relogin()
+                continue
+            music_logger.log_error(f"❌ 音频流传输异常: guid={guid[:12]}..., 错误: {e}")
+            logger.error("fnos stream proxy error: %s", e)
+            return JSONResponse({"error": str(e)}, status_code=502)
 
 
 @app.get("/api/music/fnos/cover")
 async def fnos_music_cover(coverId: str):
-    """Proxy cover images from fnOS Music."""
+    """Proxy cover images from fnOS Music with auto-relogin retry."""
     if not coverId:
         return JSONResponse({"error": "missing coverId"}, status_code=400)
 
     await fnmusic_client.ensure_token()
-    token = fnmusic_client.token
 
     target_path = "/music/api/v1/static/cover"
     params = {"coverId": coverId}
-    authx = fnmusic_client._sign_authx("GET", target_path, params=params)
     url = f"{fnmusic_client.base_url}{target_path}"
 
-    req_headers = {
-        "authx": authx,
-        "Cookie": f"music-token={token}",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-    }
+    for attempt in range(2):
+        token = fnmusic_client.token
+        authx = fnmusic_client._sign_authx("GET", target_path, params=params)
+        req_headers = {
+            "authx": authx,
+            "Cookie": f"music-token={token}",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        }
 
-    try:
-        async with httpx.AsyncClient(timeout=10.0, trust_env=False) as cov_client:
-            resp = await cov_client.get(url, params=params, headers=req_headers, follow_redirects=True)
-            if resp.status_code == 200:
-                ct = resp.headers.get("content-type", "image/webp")
-                return Response(content=resp.content, media_type=ct)
-            return JSONResponse({"error": "cover not found"}, status_code=resp.status_code)
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=502)
+        try:
+            async with httpx.AsyncClient(timeout=10.0, trust_env=False) as cov_client:
+                resp = await cov_client.get(url, params=params, headers=req_headers, follow_redirects=True)
+                ct = resp.headers.get("content-type", "")
+                if resp.status_code == 200 and not ct.startswith("application/json"):
+                    return Response(content=resp.content, media_type=ct or "image/webp")
+                if (resp.status_code in (401, 403) or "application/json" in ct) and attempt == 0:
+                    if await fnmusic_client.force_relogin():
+                        continue
+                return JSONResponse({"error": "cover not found"}, status_code=resp.status_code if resp.status_code >= 400 else 404)
+        except Exception as e:
+            if attempt == 0:
+                continue
+            return JSONResponse({"error": str(e)}, status_code=502)
+
+
+@app.post("/api/music/fnos/reconnect")
+async def fnos_music_reconnect(_auth: dict = Depends(require_auth)):
+    """Force re-authenticate with fnOS Music service and perform diagnostic health check."""
+    music_logger.log_info("🔄 收到飞牛音乐手动重新连接与诊断请求...")
+    fnmusic_client.invalidate_token()
+    load_fnmusic_config()
+    login_ok = await fnmusic_client.login()
+    if not login_ok:
+        err = fnmusic_client.last_error or "连接失败，无法通过 5888 端口验证飞牛账号"
+        music_logger.log_error(f"❌ 飞牛音乐手动重新连接失败: {err}")
+        return JSONResponse({"ok": False, "message": err}, status_code=500)
+
+    # Perform lightweight probe to verify 5888 API is responsive
+    tracks = await fnmusic_client.get_tracks(page=1, page_size=5)
+    music_logger.log_info(f"✅ 飞牛音乐诊断正常，成功连通服务并读取到 {len(tracks)} 首歌曲")
+    return {
+        "ok": True,
+        "message": f"飞牛音乐服务连接正常！已成功刷新 Token 并连通曲库（发现 {len(tracks)} 首歌曲）。",
+        "sample_count": len(tracks)
+    }
 
 
 # ── Music Logs API ──────────────────────────────────────────────────

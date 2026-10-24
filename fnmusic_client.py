@@ -97,10 +97,11 @@ class FnMusicClient:
                 resp = await client.post(url, json=payload, headers=headers)
                 if resp.status_code == 200:
                     data = resp.json()
-                    if data.get("code") == 0 and data.get("data", {}).get("userToken"):
-                        self.token = data["data"]["userToken"]
-                        # Token valid for 7 days
-                        self.token_expiry = time.time() + 7 * 86400
+                    user_token = (data.get("data") or {}).get("userToken")
+                    if data.get("code") == 0 and user_token:
+                        self.token = user_token
+                        # Token cached for 24 hours (proactive refresh rather than stale 7-day token)
+                        self.token_expiry = time.time() + 86400
                         self.last_error = ""
                         logger.info("✅ 飞牛音乐登录成功！Token 已获取")
                         return True
@@ -122,156 +123,117 @@ class FnMusicClient:
                 logger.error("❌ 连接飞牛音乐服务异常: %r", e)
         return False
 
+    def invalidate_token(self):
+        """Force invalidate cached token to trigger re-authentication."""
+        self.token = None
+        self.token_expiry = 0.0
+
+    async def force_relogin(self) -> bool:
+        """Force clear token and perform fresh login."""
+        self.invalidate_token()
+        return await self.login()
+
     async def ensure_token(self) -> bool:
         if not self.token or time.time() >= self.token_expiry:
             logger.info("当前凭据已过期或未获取，正在自动重新鉴权...")
             return await self.login()
         return True
 
+    async def _get_json(self, path: str, params: Optional[Dict[str, Any]] = None, timeout: float = 12.0) -> Optional[Dict[str, Any]]:
+        """Perform authenticated GET request with auto-recovery on token expiration or 100001 session errors."""
+        if not await self.ensure_token():
+            return None
+
+        for attempt in range(2):
+            token = self.token
+            authx = self._sign_authx("GET", path, params=params)
+            url = f"{self.base_url}{path}"
+            headers = {
+                "authx": authx,
+                "Cookie": f"music-token={token}",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            }
+            try:
+                async with httpx.AsyncClient(timeout=timeout, trust_env=False) as client:
+                    resp = await client.get(url, params=params, headers=headers)
+                    if resp.status_code == 401 and attempt == 0:
+                        logger.warning("飞牛音乐返回 HTTP 401 Unauthorized，尝试自动重新登录...")
+                        if await self.force_relogin():
+                            continue
+                        return None
+
+                    if resp.status_code == 200:
+                        d = resp.json()
+                        code = d.get("code")
+                        if code == 0:
+                            return d
+                        # 100001: generic/session invalid, 100002/100004: unauthorized
+                        if code in (100001, 100002, 100004) and attempt == 0:
+                            logger.warning("⚠️ 飞牛音乐接口返回错误码 %s (%s)，尝试重新登录恢复会话...", code, d.get("msg"))
+                            if await self.force_relogin():
+                                continue
+                        logger.error("飞牛音乐接口返回非零业务代码: %s, 消息: %s", code, d.get("msg"))
+                        return None
+                    else:
+                        logger.error("飞牛音乐接口返回 HTTP %s: %s", resp.status_code, resp.text[:100])
+                        return None
+            except Exception as e:
+                logger.error("请求飞牛音乐接口 [%s] 异常: %s", path, e)
+                if attempt == 0:
+                    await self.force_relogin()
+                    continue
+                return None
+        return None
+
     async def get_tracks(self, page: int = 1, page_size: int = 50) -> List[Dict[str, Any]]:
         """Fetch list of tracks from fnOS Music."""
-        if not await self.ensure_token():
-            logger.warning("拉取本地曲库失败: 飞牛音乐鉴权未通过")
-            return []
-
         path = "/music/api/v1/track/list"
         params = {"page": str(page), "pageSize": str(page_size)}
-        authx = self._sign_authx("GET", path, params=params)
-        url = f"{self.base_url}{path}"
-
-        headers = {
-            "authx": authx,
-            "Cookie": f"music-token={self.token}",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        }
-
         logger.info("正在拉取本地曲库歌曲列表 (页码: %s, 数量: %s)...", page, page_size)
-        async with httpx.AsyncClient(timeout=10.0, trust_env=False) as client:
-            try:
-                resp = await client.get(url, params=params, headers=headers)
-                if resp.status_code == 401:
-                    logger.warning("获取曲库返回 401 Unauthorized，尝试重新登录...")
-                    if await self.login():
-                        headers["Cookie"] = f"music-token={self.token}"
-                        headers["authx"] = self._sign_authx("GET", path, params=params)
-                        resp = await client.get(url, params=params, headers=headers)
-                if resp.status_code == 200:
-                    d = resp.json()
-                    track_list = d.get("data", {}).get("list", [])
-                    logger.info("✅ 成功拉取本地曲库，获取到 %d 首歌曲", len(track_list))
-                    return track_list
-                else:
-                    logger.error("拉取本地曲库 HTTP 错误: %s", resp.status_code)
-            except Exception as e:
-                logger.error("拉取本地曲库异常: %s", e)
+        d = await self._get_json(path, params=params)
+        if d:
+            track_list = (d.get("data") or {}).get("list", [])
+            logger.info("✅ 成功拉取本地曲库，获取到 %d 首歌曲", len(track_list))
+            return track_list
         return []
 
     async def search_tracks(self, query: str, page: int = 1, page_size: int = 30) -> List[Dict[str, Any]]:
         """Search tracks in fnOS Music library."""
-        if not await self.ensure_token():
-            return []
-
         path = "/music/api/v1/search/track"
         params = {"q": query, "page": str(page), "pageSize": str(page_size)}
-        authx = self._sign_authx("GET", path, params=params)
-        url = f"{self.base_url}{path}"
-
-        headers = {
-            "authx": authx,
-            "Cookie": f"music-token={self.token}",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        }
-
         logger.info("正在搜索飞牛音乐: 关键词='%s'", query)
-        async with httpx.AsyncClient(timeout=10.0, trust_env=False) as client:
-            try:
-                resp = await client.get(url, params=params, headers=headers)
-                if resp.status_code == 200:
-                    d = resp.json()
-                    res_list = d.get("data", {}).get("list", [])
-                    logger.info("✅ 搜索完成，找到 %d 首匹配歌曲", len(res_list))
-                    return res_list
-            except Exception as e:
-                logger.error("搜索飞牛音乐异常: %s", e)
+        d = await self._get_json(path, params=params)
+        if d:
+            res_list = (d.get("data") or {}).get("list", [])
+            logger.info("✅ 搜索完成，找到 %d 首匹配歌曲", len(res_list))
+            return res_list
         return []
 
     async def get_playlists(self) -> List[Dict[str, Any]]:
         """Retrieve user playlists from fnOS Music."""
-        if not await self.ensure_token():
-            logger.warning("获取歌单失败: 鉴权未通过")
-            return []
-
         path = "/music/api/v1/playlist/list"
-        authx = self._sign_authx("GET", path)
-        url = f"{self.base_url}{path}"
-
-        headers = {
-            "authx": authx,
-            "Cookie": f"music-token={self.token}",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        }
-
         logger.info("正在请求飞牛音乐歌单列表...")
-        async with httpx.AsyncClient(timeout=10.0, trust_env=False) as client:
-            try:
-                resp = await client.get(url, headers=headers)
-                if resp.status_code == 401:
-                    logger.warning("获取歌单返回 401，重新鉴权...")
-                    if await self.login():
-                        headers["Cookie"] = f"music-token={self.token}"
-                        headers["authx"] = self._sign_authx("GET", path)
-                        resp = await client.get(url, headers=headers)
-                if resp.status_code == 200:
-                    d = resp.json()
-                    pl_list = d.get("data", {}).get("list", [])
-                    logger.info("✅ 成功获取飞牛歌单列表，共 %d 个歌单", len(pl_list))
-                    return pl_list
-                else:
-                    logger.error("获取歌单列表返回 HTTP %s: %s", resp.status_code, resp.text[:100])
-            except Exception as e:
-                logger.error("获取飞牛歌单列表异常: %s", e)
+        d = await self._get_json(path)
+        if d:
+            pl_list = (d.get("data") or {}).get("list", [])
+            logger.info("✅ 成功获取飞牛歌单列表，共 %d 个歌单", len(pl_list))
+            return pl_list
         return []
 
     async def get_playlist_tracks(self, playlist_id: str, page: int = 1, size: int = 200) -> List[Dict[str, Any]]:
         """Retrieve tracks for a given playlist from fnOS Music."""
-        if not await self.ensure_token():
-            logger.warning("获取歌单曲目失败: 鉴权未通过")
-            return []
-
         path = "/music/api/v1/track/playlist-detail/list"
         params = {
             "page": str(page),
             "playlistGUID": playlist_id,
             "size": str(size)
         }
-        authx = self._sign_authx("GET", path, params=params)
-        url = f"{self.base_url}{path}"
-
-        headers = {
-            "authx": authx,
-            "Cookie": f"music-token={self.token}",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        }
-
         logger.info("正在获取歌单 [%s] 的曲目 (size: %s)...", playlist_id, size)
-        async with httpx.AsyncClient(timeout=15.0, trust_env=False) as client:
-            try:
-                resp = await client.get(url, params=params, headers=headers)
-                if resp.status_code == 401:
-                    logger.warning("获取歌单曲目返回 401，重新鉴权...")
-                    if await self.login():
-                        headers["Cookie"] = f"music-token={self.token}"
-                        headers["authx"] = self._sign_authx("GET", path, params=params)
-                        resp = await client.get(url, params=params, headers=headers)
-                if resp.status_code == 200:
-                    d = resp.json()
-                    tracks = d.get("data", {}).get("list", [])
-                    logger.info("✅ 成功获取歌单 [%s] 曲目，共 %d 首歌曲", playlist_id, len(tracks))
-                    return tracks
-                else:
-                    logger.error("获取歌单 [%s] 曲目返回 HTTP %s: %s", playlist_id, resp.status_code, resp.text[:100])
-            except Exception as e:
-                logger.error("获取歌单 [%s] 曲目异常: %s", playlist_id, e)
+        d = await self._get_json(path, params=params, timeout=15.0)
+        if d:
+            tracks = (d.get("data") or {}).get("list", [])
+            logger.info("✅ 成功获取歌单 [%s] 曲目，共 %d 首歌曲", playlist_id, len(tracks))
+            return tracks
         return []
 
     async def get_all_tracks(self, max_tracks: int = 3000) -> List[Dict[str, Any]]:
