@@ -514,11 +514,17 @@ async def update_music_config_endpoint(request: Request, _auth: dict = Depends(r
 
 
 @app.get("/api/music/songs")
-async def get_music_songs():
+async def get_music_songs(request: Request):
     """Discover and return playable music tracks from music_db and fnOS."""
     host = music_db.get_music_config("fnmusic_host", db.get_config("nas_ip", "127.0.0.1"))
     port = music_db.get_music_config("fnmusic_port", 5888)
     songs = music_db.get_playlist()
+
+    req_host = request.headers.get("x-forwarded-host") or request.headers.get("host", "")
+    req_domain = req_host.split(":")[0] if req_host else ""
+    target_host = host
+    if req_domain and req_domain not in ("127.0.0.1", "localhost", "0.0.0.0"):
+        target_host = req_domain
 
     # If local playlist is empty, auto-sync from fnOS Music
     if not songs:
@@ -537,7 +543,7 @@ async def get_music_songs():
     return {
         "ok": True,
         "songs": songs,
-        "fnos_music_url": f"http://{host}:{port}/music/"
+        "fnos_music_url": f"http://{target_host}:{port}/music/"
     }
 
 

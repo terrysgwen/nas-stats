@@ -1062,6 +1062,25 @@
               </button>
             </div>
           </div>
+
+          <div class="setting-item">
+            <div>
+              <div class="setting-label">🌐 外网访问域名替换 (局域网 IP 自动替换)</div>
+              <div class="setting-desc">当通过公网域名访问控制台时，自动将卡片及音乐链接中的局域网 IP (如 192.168.x.x) 替换为当前访问域名或指定外网域名，保持端口不变</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="settingEnableWanReplace" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item" id="wanDomainRow">
+            <div>
+              <div class="setting-label">自定义外网访问域名 (可选)</div>
+              <div class="setting-desc">留空时自动识别当前浏览器访问的主机域名 (推荐，如 terrysg.cn)；如有多层反代可在此指定</div>
+            </div>
+            <input type="text" id="settingWanDomain" placeholder="例如: terrysg.cn (留空自动)" style="width:200px;padding:6px 10px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:12px;outline:none">
+          </div>
         </div>
 
         <!-- 独立安全的访问密码修改卡片 -->
@@ -1256,7 +1275,7 @@
       <button class="music-link-btn" id="musicExpandModalBtn" title="展开弹窗卡片播放器" style="cursor:pointer">
         <span>💽 展开播放器</span>
       </button>
-      <a href="javascript:void(0)" onclick="window.open(`http://${location.hostname}:5888/music/`, '_blank')" class="music-link-btn" id="musicAppBtn">
+      <a href="javascript:void(0)" onclick="openFnosMusicWeb()" class="music-link-btn" id="musicAppBtn">
         <span>🎧 飞牛音乐完整版</span>
       </a>
     </div>
@@ -1273,7 +1292,7 @@
           <span class="music-badge" id="cardPlayingBadge">已暂停</span>
         </div>
         <div class="music-card-actions">
-          <a href="javascript:void(0)" onclick="window.open(`http://${location.hostname}:5888/music/`, '_blank')" class="music-card-web-btn" title="在新窗口打开飞牛音乐 Web 版">
+          <a href="javascript:void(0)" onclick="openFnosMusicWeb()" class="music-card-web-btn" title="在新窗口打开飞牛音乐 Web 版">
             <span>🌐 飞牛音乐 Web 版</span>
           </a>
           <button class="music-card-close" id="musicCardCloseBtn" title="关闭弹窗">✕</button>
@@ -1582,6 +1601,69 @@
       return response;
     };
 
+    let currentUI = {};
+    let configuredNasIp = '';
+    let rawFnosMusicUrl = '';
+
+    function isLocalOrPrivateHost(host) {
+      if (!host) return false;
+      const h = host.toLowerCase().trim();
+      if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h === '::1') return true;
+      if (h.endsWith('.local') || h.endsWith('.lan') || h.endsWith('.internal')) return true;
+      if (configuredNasIp && h === configuredNasIp.toLowerCase().trim()) return true;
+      const parts = h.split('.');
+      if (parts.length === 4 && parts.every(p => /^\d+$/.test(p) && +p >= 0 && +p <= 255)) {
+        const b0 = +parts[0], b1 = +parts[1];
+        if (b0 === 10) return true;
+        if (b0 === 192 && b1 === 168) return true;
+        if (b0 === 172 && b1 >= 16 && b1 <= 31) return true;
+        if (b0 === 169 && b1 === 254) return true;
+      }
+      return false;
+    }
+
+    function getTargetWanHost() {
+      if (currentUI && currentUI.enable_wan_replace === false) return '';
+      if (currentUI && currentUI.wan_domain && currentUI.wan_domain.trim()) {
+        return currentUI.wan_domain.trim();
+      }
+      const cur = location.hostname;
+      if (cur && !isLocalOrPrivateHost(cur)) {
+        return cur;
+      }
+      return '';
+    }
+
+    function adaptServiceUrl(rawUrl) {
+      if (!rawUrl || typeof rawUrl !== 'string') return rawUrl || '';
+      const trimmed = rawUrl.trim();
+      if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+        return trimmed;
+      }
+      const wanHost = getTargetWanHost();
+      if (!wanHost) return trimmed;
+
+      try {
+        const u = new URL(trimmed);
+        if (isLocalOrPrivateHost(u.hostname)) {
+          u.hostname = wanHost;
+          return u.toString();
+        }
+      } catch (e) {
+        const m = trimmed.match(/^(https?:\/\/)([^:/]+)(.*)$/i);
+        if (m && isLocalOrPrivateHost(m[2])) {
+          return `${m[1]}${wanHost}${m[3]}`;
+        }
+      }
+      return trimmed;
+    }
+
+    function openFnosMusicWeb() {
+      const candidate = rawFnosMusicUrl || `http://${location.hostname}:5888/music/`;
+      const targetUrl = adaptServiceUrl(candidate);
+      window.open(targetUrl, '_blank');
+    }
+
     function sanitizeUrl(rawUrl) {
       if (!rawUrl || typeof rawUrl !== 'string') return '';
       const trimmed = rawUrl.trim();
@@ -1656,6 +1738,7 @@
 
     // ─── 主题与外观 ───
     function applyUI(ui) {
+      currentUI = ui || {};
       document.body.className = `theme-${ui.theme || 'dark'}`;
       const grid = document.getElementById('servicesGrid');
       grid.className = `services-grid style-${ui.card_style || 'default'}`;
@@ -1684,6 +1767,11 @@
       if (elColorMode) elColorMode.value = colorMode;
       document.getElementById('settingShowSearch').checked = ui.show_search !== false;
       document.getElementById('settingEnableMusic').checked = enableMusic;
+
+      const elWanReplace = document.getElementById('settingEnableWanReplace');
+      if (elWanReplace) elWanReplace.checked = ui.enable_wan_replace !== false;
+      const elWanDomain = document.getElementById('settingWanDomain');
+      if (elWanDomain) elWanDomain.value = ui.wan_domain || '';
     }
 
     // ─── 飞牛系统音乐播放器核心控制器 ───
@@ -1857,8 +1945,9 @@
         const data = await res.json();
         musicPlaylist = data.songs || [];
         if (data.fnos_music_url) {
+          rawFnosMusicUrl = data.fnos_music_url;
           const appBtn = document.getElementById('musicAppBtn');
-          if (appBtn) appBtn.href = data.fnos_music_url;
+          if (appBtn) appBtn.href = adaptServiceUrl(data.fnos_music_url);
         }
 
         // 2. 加载飞牛现存歌单列表
@@ -3447,7 +3536,8 @@
           `<div class="card-icon-wrapper"><span class="card-icon">${escapeHtml(s.icon || '🔧')}</span></div>`;
 
         const isFnosMusic = (s.name && s.name.includes('飞牛音乐')) || (s.name && s.name.toLowerCase() === 'fnos music');
-        const validUrl = sanitizeUrl(s.url);
+        const effectiveUrl = s.url || (isFnosMusic ? (rawFnosMusicUrl || `http://${location.hostname}:5888/music/`) : '');
+        const validUrl = sanitizeUrl(adaptServiceUrl(effectiveUrl));
         let href = validUrl ? `href="${escapeHtml(validUrl)}" target="_blank"` : 'href="javascript:void(0)"';
         let clickAttr = '';
         let extBadge = '';
@@ -3455,8 +3545,9 @@
         if (isFnosMusic) {
           href = 'href="javascript:void(0)"';
           clickAttr = `onclick="openMusicCardModal(true)"`;
-          if (validUrl) {
-            extBadge = `<a href="${escapeHtml(validUrl)}" target="_blank" onclick="event.stopPropagation()" class="card-external-badge" title="在新窗口打开飞牛音乐 Web 版">↗</a>`;
+          const musicWebUrl = validUrl || sanitizeUrl(adaptServiceUrl(rawFnosMusicUrl || `http://${location.hostname}:5888/music/`));
+          if (musicWebUrl) {
+            extBadge = `<a href="${escapeHtml(musicWebUrl)}" target="_blank" onclick="event.stopPropagation()" class="card-external-badge" title="在新窗口打开飞牛音乐 Web 版">↗</a>`;
           }
         }
 
@@ -4217,6 +4308,8 @@
         card_color_mode: document.getElementById('settingCardColorMode')?.value || 'ambient',
         show_search: document.getElementById('settingShowSearch').checked,
         enable_music: document.getElementById('settingEnableMusic').checked,
+        enable_wan_replace: document.getElementById('settingEnableWanReplace')?.checked !== false,
+        wan_domain: document.getElementById('settingWanDomain')?.value.trim() || '',
       };
       await fetch('/api/config', {
         method: 'POST',
@@ -4224,6 +4317,7 @@
         body: JSON.stringify({ ui })
       });
       applyUI(ui);
+      renderServices();
       toast('界面外观设置已保存', 'success');
     };
 
@@ -4354,6 +4448,7 @@
       try {
         const res = await fetch('/api/config');
         const cfg = await res.json();
+        configuredNasIp = cfg.nas_ip || '';
         applyUI(cfg.ui || {});
         const savedIp = cfg.nas_ip;
         const currentHost = (location.hostname && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') ? location.hostname : '';
