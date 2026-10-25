@@ -252,15 +252,15 @@
     .music-card-close:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
 
     .music-card-body {
-      display: flex; flex-wrap: wrap; gap: 20px; padding: 20px; overflow-y: auto; overflow-x: hidden; flex: 1;
+      display: flex; flex-direction: row; flex-wrap: nowrap; gap: 20px; padding: 20px; overflow: hidden; flex: 1;
       width: 100%; min-width: 0; box-sizing: border-box;
     }
 
     /* 左侧黑胶转盘与主控区 */
     .music-card-player-panel {
-      flex: 1 1 290px; min-width: 0; max-width: 100%; display: flex; flex-direction: column; align-items: center;
+      flex: 0 0 310px; width: 310px; min-width: 310px; max-width: 310px; display: flex; flex-direction: column; align-items: center;
       background: rgba(255,255,255,0.02); border-radius: 16px; padding: 18px; border: 1px solid var(--border);
-      box-sizing: border-box;
+      box-sizing: border-box; overflow-y: auto; overflow-x: hidden;
     }
     .vinyl-wrapper { position: relative; margin: 10px auto 16px; width: 170px; height: 170px; }
     .vinyl-disc {
@@ -320,11 +320,11 @@
 
     /* 右侧歌单与管理区 */
     .music-card-playlist-panel {
-      flex: 1.2 1 310px; min-width: 0; max-width: 100%; display: flex; flex-direction: column;
+      flex: 1 1 0; min-width: 0; width: 0; display: flex; flex-direction: column;
       background: rgba(255,255,255,0.02); border-radius: 16px; padding: 18px; border: 1px solid var(--border);
-      box-sizing: border-box;
+      box-sizing: border-box; overflow: hidden;
     }
-    .music-card-tabs { display: flex; gap: 6px; margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    .music-card-tabs { display: flex; gap: 6px; margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 8px; flex-shrink: 0; }
     .music-tab-btn {
       padding: 6px 12px; background: none; border: none; color: var(--text-muted);
       font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 6px; transition: all 0.2s;
@@ -332,10 +332,18 @@
     .music-tab-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.05); }
     .music-tab-btn.active { color: var(--accent-blue); background: rgba(59, 130, 246, 0.1); }
 
-    .music-tab-content { display: none; flex-direction: column; flex: 1; min-height: 280px; }
+    .music-tab-content { display: none; flex-direction: column; flex: 1; min-height: 0; min-width: 0; overflow: hidden; }
     .music-tab-content.active { display: flex; }
 
-    .card-playlist-list { flex: 1; overflow-y: auto; max-height: 290px; display: flex; flex-direction: column; gap: 6px; padding-right: 4px; }
+    .music-tab-header-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      margin-bottom: 10px; width: 100%; min-width: 0; flex-shrink: 0; box-sizing: border-box;
+    }
+    .music-tab-header-actions {
+      display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+    }
+
+    .card-playlist-list { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 6px; padding-right: 4px; }
 
     /* 运行日志控制台样式 */
     .music-log-toolbar {
@@ -406,6 +414,7 @@
     .playlist-item {
       display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px;
       cursor: pointer; transition: all 0.2s; border: 1px solid transparent;
+      width: 100%; min-width: 0; box-sizing: border-box;
     }
     .playlist-item:hover { background: rgba(255,255,255,0.04); border-color: var(--border); }
     .playlist-item.active { background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.3); }
