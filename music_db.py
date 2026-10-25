@@ -87,24 +87,43 @@ def init_music_db():
         conn.execute("ALTER TABLE playlist ADD COLUMN guid TEXT DEFAULT ''")
     if "duration" not in cols:
         conn.execute("ALTER TABLE playlist ADD COLUMN duration INTEGER DEFAULT 0")
+    # Clean up any legacy absolute LAN URLs in playlist
+    conn.execute("UPDATE playlist SET url = '/api/music/fnos/stream?guid=' || guid WHERE guid != '' AND guid IS NOT NULL AND url LIKE 'http%5888%'")
     conn.commit()
 
 
 def get_playlist() -> List[Dict[str, Any]]:
-    """Retrieve full playlist ordered by sort_order."""
+    """Retrieve full playlist ordered by sort_order with guaranteed proxy URLs."""
     conn = get_conn()
     rows = conn.execute("""
         SELECT id, title, artist, album, url, cover, source, guid, duration, sort_order 
         FROM playlist 
         ORDER BY sort_order ASC, created_at ASC
     """).fetchall()
-    return [dict(r) for r in rows]
+    res = []
+    for r in rows:
+        d = dict(r)
+        guid = d.get("guid") or ""
+        # If guid exists or url points to 5888/stream, normalize to local proxy url
+        if guid:
+            d["url"] = f"/api/music/fnos/stream?guid={guid}"
+        elif ":5888" in d.get("url", "") and "guid=" in d.get("url", ""):
+            import re
+            m = re.search(r"guid=([^&]+)", d["url"])
+            if m:
+                d["guid"] = m.group(1)
+                d["url"] = f"/api/music/fnos/stream?guid={d['guid']}"
+        d["src"] = d.get("url", "")
+        res.append(d)
+    return res
 
 
 def add_song(title: str, artist: str = "", album: str = "", url: str = "", cover: str = "", source: str = "custom", guid: str = "", duration: int = 0) -> str:
     """Add a new song to the playlist."""
     conn = get_conn()
     song_id = f"fn_{guid}" if guid else f"song_{str(uuid.uuid4())[:8]}"
+    if guid and not url.startswith("/api/music/"):
+        url = f"/api/music/fnos/stream?guid={guid}"
     max_order = conn.execute("SELECT MAX(sort_order) as m FROM playlist").fetchone()["m"] or 0
     conn.execute("""
         INSERT OR REPLACE INTO playlist (id, title, artist, album, url, cover, source, guid, duration, sort_order)

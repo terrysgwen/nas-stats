@@ -746,11 +746,23 @@ async def reset_music_songs(_auth: dict = Depends(require_auth)):
     return {"ok": True}
 
 
-@app.get("/api/music/fnos/stream")
+@app.api_route("/api/music/fnos/stream", methods=["GET", "HEAD", "OPTIONS"])
 async def fnos_music_stream(guid: str, request: Request):
-    """Stream audio directly from fnOS Music backend with Range support and auto-recovery."""
+    """Stream audio directly from fnOS Music backend with Range, HEAD, and CORS support."""
+    cors_headers = {
+        "access-control-allow-origin": "*",
+        "access-control-allow-methods": "GET, HEAD, OPTIONS",
+        "access-control-allow-headers": "Range, Content-Type, Accept, Authorization",
+        "access-control-expose-headers": "Content-Length, Content-Range, Accept-Ranges",
+        "x-accel-buffering": "no",
+        "cache-control": "no-cache, no-transform",
+    }
+
+    if request.method == "OPTIONS":
+        return Response(status_code=204, headers=cors_headers)
+
     if not guid:
-        return JSONResponse({"error": "missing guid"}, status_code=400)
+        return JSONResponse({"error": "missing guid"}, status_code=400, headers=cors_headers)
 
     await fnmusic_client.ensure_token()
 
@@ -759,7 +771,7 @@ async def fnos_music_stream(guid: str, request: Request):
     url = f"{fnmusic_client.base_url}{target_path}"
 
     rng = request.headers.get("range", "none")
-    music_logger.log_info(f"🎧 收到音频流请求: guid={guid[:12]}..., Range={rng}")
+    music_logger.log_info(f"🎧 收到音频流请求 ({request.method}): guid={guid[:12]}..., Range={rng}")
 
     stream_timeout = httpx.Timeout(connect=15.0, read=None, write=30.0, pool=None)
 
@@ -776,7 +788,7 @@ async def fnos_music_stream(guid: str, request: Request):
             req_headers["range"] = request.headers["range"]
 
         try:
-            client = httpx.AsyncClient(timeout=stream_timeout, trust_env=False)
+            client = httpx.AsyncClient(timeout=stream_timeout, trust_env=False, follow_redirects=True)
             upstream_req = client.build_request("GET", url, params=params, headers=req_headers)
             resp = await client.send(upstream_req, stream=True)
 
@@ -802,7 +814,7 @@ async def fnos_music_stream(guid: str, request: Request):
 
                 if is_recoverable and attempt == 0:
                     music_logger.log_warn(
-                        f"⚠️ 音频流触发上游错误 (code={err_code or resp.status_code})，检测到会话失效或 100001 异常，正在自动重新鉴权恢复..."
+                        f"⚠️ 音频流触发上游错误 (code={err_code or resp.status_code})，检测到会话失效，正在自动重新鉴权恢复..."
                     )
                     login_ok = await fnmusic_client.force_relogin()
                     if login_ok:
@@ -815,21 +827,40 @@ async def fnos_music_stream(guid: str, request: Request):
                 return Response(
                     content=content,
                     status_code=403 if resp.status_code == 200 else resp.status_code,
-                    media_type="application/json"
+                    media_type="application/json",
+                    headers=cors_headers
                 )
 
-            cl = resp.headers.get("content-length", "未知")
-            music_logger.log_info(f"▶️ 开始传输音频流: guid={guid[:12]}..., HTTP {resp.status_code}, 格式: {ct}, 大小: {cl}")
-
-            resp_headers = {"accept-ranges": "bytes"}
+            resp_headers = dict(cors_headers)
+            resp_headers["accept-ranges"] = "bytes"
             for h in ("content-length", "content-range", "content-disposition"):
                 if h in resp.headers:
                     resp_headers[h] = resp.headers[h]
+
+            media_type = ct if (ct and "octet-stream" not in ct) else "audio/mpeg"
+
+            # Handle HEAD request probe from iOS Safari / mobile browsers
+            if request.method == "HEAD":
+                await resp.aclose()
+                await client.aclose()
+                return Response(
+                    content=b"",
+                    status_code=resp.status_code,
+                    headers=resp_headers,
+                    media_type=media_type
+                )
+
+            cl = resp.headers.get("content-length", "未知")
+            music_logger.log_info(f"▶️ 开始传输音频流: guid={guid[:12]}..., HTTP {resp.status_code}, 格式: {media_type}, 大小: {cl}")
 
             async def stream_generator():
                 try:
                     async for chunk in resp.aiter_bytes(chunk_size=65536):
                         yield chunk
+                except (asyncio.CancelledError, GeneratorExit):
+                    pass
+                except Exception as e:
+                    logger.debug("fnos stream proxy client disconnected: %s", e)
                 finally:
                     await resp.aclose()
                     await client.aclose()
@@ -838,7 +869,7 @@ async def fnos_music_stream(guid: str, request: Request):
                 stream_generator(),
                 status_code=resp.status_code,
                 headers=resp_headers,
-                media_type=ct or "audio/mpeg"
+                media_type=media_type
             )
         except Exception as e:
             if attempt == 0:
@@ -847,14 +878,21 @@ async def fnos_music_stream(guid: str, request: Request):
                 continue
             music_logger.log_error(f"❌ 音频流传输异常: guid={guid[:12]}..., 错误: {e}")
             logger.error("fnos stream proxy error: %s", e)
-            return JSONResponse({"error": str(e)}, status_code=502)
+            return JSONResponse({"error": str(e)}, status_code=502, headers=cors_headers)
 
 
-@app.get("/api/music/fnos/cover")
-async def fnos_music_cover(coverId: str):
-    """Proxy cover images from fnOS Music with auto-relogin retry."""
+@app.api_route("/api/music/fnos/cover", methods=["GET", "HEAD", "OPTIONS"])
+async def fnos_music_cover(coverId: str, request: Request):
+    """Proxy cover images from fnOS Music with auto-relogin retry and CORS."""
+    cors_headers = {
+        "access-control-allow-origin": "*",
+        "access-control-allow-methods": "GET, HEAD, OPTIONS",
+        "cache-control": "public, max-age=86400",
+    }
+    if request.method == "OPTIONS":
+        return Response(status_code=204, headers=cors_headers)
     if not coverId:
-        return JSONResponse({"error": "missing coverId"}, status_code=400)
+        return JSONResponse({"error": "missing coverId"}, status_code=400, headers=cors_headers)
 
     await fnmusic_client.ensure_token()
 
@@ -876,30 +914,37 @@ async def fnos_music_cover(coverId: str):
                 resp = await cov_client.get(url, params=params, headers=req_headers, follow_redirects=True)
                 ct = resp.headers.get("content-type", "")
                 if resp.status_code == 200 and not ct.startswith("application/json"):
-                    return Response(content=resp.content, media_type=ct or "image/webp")
+                    content = b"" if request.method == "HEAD" else resp.content
+                    return Response(content=content, media_type=ct or "image/webp", headers=cors_headers)
                 if (resp.status_code in (401, 403) or "application/json" in ct) and attempt == 0:
                     if await fnmusic_client.force_relogin():
                         continue
-                return JSONResponse({"error": "cover not found"}, status_code=resp.status_code if resp.status_code >= 400 else 404)
+                return JSONResponse({"error": "cover not found"}, status_code=resp.status_code if resp.status_code >= 400 else 404, headers=cors_headers)
         except Exception as e:
             if attempt == 0:
                 continue
-            return JSONResponse({"error": str(e)}, status_code=502)
+            return JSONResponse({"error": str(e)}, status_code=502, headers=cors_headers)
 
 
-@app.get("/api/music/fnos/lyric")
-async def fnos_music_lyric(guid: str = ""):
+@app.api_route("/api/music/fnos/lyric", methods=["GET", "OPTIONS"])
+async def fnos_music_lyric(guid: str = "", request: Request = None):
     """Retrieve lyric content for a track from fnOS Music."""
+    cors_headers = {
+        "access-control-allow-origin": "*",
+        "access-control-allow-methods": "GET, OPTIONS",
+    }
+    if request and request.method == "OPTIONS":
+        return Response(status_code=204, headers=cors_headers)
     if not guid:
-        return JSONResponse({"ok": False, "error": "missing guid"}, status_code=400)
+        return JSONResponse({"ok": False, "error": "missing guid"}, status_code=400, headers=cors_headers)
     try:
         data = await fnmusic_client.get_lyrics(guid)
         if data:
-            return {"ok": True, "guid": guid, "data": data}
-        return JSONResponse({"ok": False, "error": "lyric not found"}, status_code=404)
+            return JSONResponse({"ok": True, "guid": guid, "data": data}, headers=cors_headers)
+        return JSONResponse({"ok": False, "error": "lyric not found"}, status_code=404, headers=cors_headers)
     except Exception as e:
         logger.error("fnos lyric proxy error: %s", e)
-        return JSONResponse({"ok": False, "error": str(e)}, status_code=502)
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=502, headers=cors_headers)
 
 
 @app.post("/api/music/fnos/reconnect")

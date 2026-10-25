@@ -2732,6 +2732,13 @@
       const titleEl = document.getElementById('currentPlaylistTitle');
       if (titleEl) titleEl.textContent = `歌单：${playlistName} (加载中...)`;
 
+      // 移动端手势解锁：在用户触发点击的同步上下文中先激活 audio 元素，防止后续异步播放被移动端拦截
+      if (autoPlay && audio) {
+        try {
+          audio.load();
+        } catch(e) {}
+      }
+
       if (autoPlay) toast(`正在加载歌单「${playlistName}」...`, 'info');
 
       try {
@@ -3187,7 +3194,23 @@
         if (cDur) cDur.textContent = durStr;
       }
 
-      const streamUrl = track.src || track.url;
+      let streamUrl = track.src || track.url || '';
+      // 无论何种来源，只要包含飞牛 guid 或指向 5888 端口，外网环境下必须统一走 nas-stats 本地代理 /api/music/fnos/stream
+      if (track.guid) {
+        streamUrl = `/api/music/fnos/stream?guid=${encodeURIComponent(track.guid)}`;
+      } else if (streamUrl.includes('guid=')) {
+        const m = streamUrl.match(/guid=([^&]+)/);
+        if (m) streamUrl = `/api/music/fnos/stream?guid=${encodeURIComponent(m[1])}`;
+      } else if (streamUrl.startsWith('http://') || streamUrl.startsWith('https://')) {
+        try {
+          const u = new URL(streamUrl);
+          if (isLocalOrPrivateHost(u.hostname) && (u.port === '5888' || u.pathname.includes('/stream'))) {
+            const m = streamUrl.match(/guid=([^&]+)/);
+            if (m) streamUrl = `/api/music/fnos/stream?guid=${encodeURIComponent(m[1])}`;
+          }
+        } catch(e) {}
+      }
+
       if (streamUrl) {
         try { audio.pause(); } catch(e) {}
         audio.currentTime = 0;
@@ -3204,17 +3227,17 @@
         loadLyricsForTrack(track);
 
         if (autoplay) {
-          setTimeout(() => {
-            const p = audio.play();
-            if (p !== undefined) {
-              p.then(() => {
-                setPlayingState(true);
-              }).catch(err => {
-                console.warn('Autoplay error:', err);
-                setPlayingState(false);
-              });
-            }
-          }, 60);
+          // 移动端手势兼容：直接同步触发 play()，避免 setTimeout 导致用户手势令牌失效
+          const p = audio.play();
+          if (p !== undefined) {
+            p.then(() => {
+              setPlayingState(true);
+            }).catch(err => {
+              console.warn('Playback autoplay notice:', err);
+              // 如果因某些移动端浏览器策略暂时未开启自动播放，静默保持暂停待用户点击，不弹误报
+              setPlayingState(false);
+            });
+          }
         } else {
           setPlayingState(false);
         }
