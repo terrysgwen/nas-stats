@@ -1,0 +1,95 @@
+name: 🐛 缺陷反馈 (Bug Report)
+description: 提交 NAS-Stats 运行中的报错、功能异常或界面显示问题
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您协助改进 NAS-Stats！
+        **请注意：本项目所有 Issues 与讨论交流请全程使用中文。**
+        提交前请尽量提供详细信息，以便开发者快速定位并修复问题。
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题详细描述
+      description: 请清晰、简明地描述发生了什么问题。
+      placeholder: 例如：在点击飞牛音乐歌单切歌时，控制台提示网络异常...
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 请列出复现该问题的具体操作步骤。
+      placeholder: |
+        1. 进入主页 '...'
+        2. 点击 '...'
+        3. 观察到异常现象 '...'
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为与实际现象
+      placeholder: 预期正常表现应该是...，实际却表现为...
+    validations:
+      required: false
+  - type: dropdown
+    id: deploy_type
+    attributes:
+      label: 部署方式
+      options:
+        - Docker Compose (推荐)
+        - Docker Run 单命令
+        - 本地 Python 直接运行
+        - 其他方式
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 运行平台与架构
+      options:
+        - Linux x86_64 (amd64)
+        - Linux aarch64 (arm64)
+        - 飞牛 fnOS
+        - 群晖 Synology DSM
+        - PVE (Proxmox VE)
+        - iStoreOS / OpenWrt
+        - Windows
+        - macOS
+        - 其他
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 镜像版本或 Commit ID
+      placeholder: 例如：latest / v1.0.0 / 8df0836
+    validations:
+      required: false
+  - type: input
+    id: browser
+    attributes:
+      label: 访问浏览器与设备
+      placeholder: 例如：Chrome 125 (Windows 11) / Safari (iPhone 15) / Edge (macOS)
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: 错误日志或截图
+      description: 请附上 Docker 容器日志、浏览器 F12 控制台输出或截图。
+      placeholder: 粘贴代码块格式日志 ```log ... ``` 或直接拖拽图片上传
+    validations:
+      required: false
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 提交确认
+      options:
+        - label: 我已在已关闭与已开启的 Issues 中搜索过，确认此前没有重复提出该问题。
+          required: true
+        - label: 我确认本 Issue 内容全程使用中文描述。
+          required: true

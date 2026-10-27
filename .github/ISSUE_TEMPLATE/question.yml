@@ -1,0 +1,44 @@
+name: 💬 使用咨询与答疑 (Question)
+description: 咨询关于 NAS-Stats 的使用配置、服务集成、网络反代或飞牛音乐对接等疑问
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        遇到使用或配置上的疑问？欢迎在此提出交流！
+        **请注意：本项目所有 Issues 与交流请全程使用中文。**
+        提问前请先查阅 README 中的常见说明。
+  - type: textarea
+    id: question
+    attributes:
+      label: 咨询问题详情
+      description: 请详细描述您遇到的疑问或配置困惑。
+      placeholder: 例如：如何在群晖反向代理中配置 WebSocket 才能使系统状态保持实时长连接？
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 当前网络与部署环境
+      description: 包括设备类型、NAS 系统、网络拓扑（内网/公网/反代）等相关信息。
+      placeholder: 例如：飞牛 fnOS 0.8.x + 局域网 192.168.1.x + Docker Compose 部署
+    validations:
+      required: false
+  - type: textarea
+    id: tried
+    attributes:
+      label: 已经尝试过的排查步骤
+      description: 您已经做过哪些尝试或参考过哪些配置？
+      placeholder: 例如：检查了端口放行，尝试修改了 config 文件...
+    validations:
+      required: false
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 提交确认
+      options:
+        - label: 我已查阅过项目 README 与过往 Issues，未找到对应解答。
+          required: true
+        - label: 我确认本 Issue 内容全程使用中文描述。
+          required: true

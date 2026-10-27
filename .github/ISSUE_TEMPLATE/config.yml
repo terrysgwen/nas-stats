@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 查阅项目使用文档与部署指引
+    url: https://github.com/terrysgwen/nas-stats#readme
+    about: 遇到部署或配置疑问时，请先阅读项目文档以快速解决。
