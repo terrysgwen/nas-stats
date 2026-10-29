@@ -87,6 +87,110 @@
     }
     body.theme-rose .bg-layer::after { background: rgba(28, 16, 23, 0.85); }
 
+    
+    /* ─── 🍎 Apple TV 液体毛玻璃主题 (tvOS Liquid Glass) ─── */
+    body.theme-appletv {
+      --bg-primary: #08090d;
+      --bg-secondary: rgba(255, 255, 255, 0.05);
+      --bg-card: rgba(255, 255, 255, 0.06);
+      --bg-card-hover: rgba(255, 255, 255, 0.12);
+      --text-primary: #ffffff;
+      --text-secondary: rgba(255, 255, 255, 0.75);
+      --text-muted: rgba(255, 255, 255, 0.48);
+      --accent-blue: #2997ff;
+      --accent-cyan: #30d158;
+      --accent-green: #30d158;
+      --accent-purple: #bf5af2;
+      --accent-orange: #ff9f0a;
+      --accent-red: #ff453a;
+      --border: rgba(255, 255, 255, 0.14);
+      --shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+      --radius: 18px;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
+    }
+
+    /* 类似 tvOS 的深空极光背景光晕 */
+    body.theme-appletv .bg-layer::after {
+      background:
+        radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.18) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
+        radial-gradient(at 50% 100%, rgba(14, 165, 233, 0.14) 0px, transparent 60%),
+        radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+        #08090e;
+    }
+
+    /* Apple TV 核心卡片毛玻璃透润材质 */
+    body.theme-appletv .service-card {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.02) 100%) !important;
+      backdrop-filter: blur(28px) saturate(190%);
+      -webkit-backdrop-filter: blur(28px) saturate(190%);
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      border-radius: 18px !important;
+      box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.28), 0 12px 32px 0 rgba(0, 0, 0, 0.35) !important;
+      transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.22s ease !important;
+    }
+
+    /* tvOS 标志性聚焦微放大悬浮与边缘高光反射 */
+    body.theme-appletv .service-card:hover {
+      transform: scale(1.04) translateY(-3px) !important;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 100%) !important;
+      border-color: rgba(255, 255, 255, 0.45) !important;
+      box-shadow:
+        inset 0 1px 2px 0 rgba(255, 255, 255, 0.6),
+        0 20px 48px 0 rgba(0, 0, 0, 0.55),
+        0 0 24px 0 rgba(41, 151, 255, 0.25) !important;
+    }
+
+    /* 顶栏工具条与状态栏药丸毛玻璃 */
+    body.theme-appletv .toolbar-btn,
+    body.theme-appletv .toolbar-lyric-bar,
+    body.theme-appletv .live-banner,
+    body.theme-appletv .search-bar input,
+    body.theme-appletv .toolbar-theme-selector {
+      background: rgba(255, 255, 255, 0.06) !important;
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.16) !important;
+      border-radius: 14px !important;
+      box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.2), 0 8px 24px rgba(0, 0, 0, 0.25);
+    }
+
+    body.theme-appletv .toolbar-btn:hover {
+      background: rgba(255, 255, 255, 0.14) !important;
+      border-color: rgba(255, 255, 255, 0.4) !important;
+      transform: scale(1.03);
+    }
+
+    /* 悬浮胶囊毛玻璃音乐播放条 (Floating Glass Island) */
+    body.theme-appletv .music-player-bar.active {
+      display: flex;
+      margin: 0 16px 14px 16px;
+      width: calc(100% - 32px);
+      border-radius: 20px !important;
+      background: rgba(20, 23, 31, 0.72) !important;
+      backdrop-filter: blur(36px) saturate(200%) !important;
+      -webkit-backdrop-filter: blur(36px) saturate(200%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.18) !important;
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.25), 0 20px 50px rgba(0, 0, 0, 0.55) !important;
+    }
+
+    /* 弹窗卡片播放器 Apple TV 质感 */
+    body.theme-appletv .music-card-dialog {
+      border-radius: 26px !important;
+      background: rgba(18, 20, 28, 0.82) !important;
+      backdrop-filter: blur(40px) saturate(200%) !important;
+      -webkit-backdrop-filter: blur(40px) saturate(200%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.2) !important;
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3), 0 28px 70px rgba(0, 0, 0, 0.65) !important;
+    }
+
+    body.theme-appletv .music-card-player-panel,
+    body.theme-appletv .music-card-playlist-panel {
+      border-radius: 20px !important;
+      background: rgba(255, 255, 255, 0.03) !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    }
+
     /* ─── Hallmark 精选版本主题 ─── */
     /* 1. 极客终端 (Terminal / Phosphor Green) */
     body.theme-terminal {
@@ -1908,7 +2012,8 @@
         <div class="toolbar-theme-selector" style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.06);border:1px solid var(--accent-blue);border-radius:6px;padding:3px 8px;font-size:12px;margin-right:4px">
           <span style="color:var(--accent-blue);font-weight:700">🎨 主题:</span>
           <select id="quickThemeSelect" style="background:var(--bg-secondary);border:none;color:var(--text-primary);font-size:12px;outline:none;cursor:pointer;font-weight:600;padding:2px 4px;border-radius:4px">
-            <optgroup label="✨ Hallmark 新质感主题">
+            <optgroup label="✨ 灵动毛玻璃新主题">
+              <option value="appletv" selected>🍎 Apple TV 毛玻璃 (tvOS Liquid Glass)</option>
               <option value="darkroom">🎞️ 暗房胶片 (Darkroom Amber)</option>
               <option value="midnight">🌌 午夜冷蓝 (Cinematic Midnight)</option>
               <option value="terminal">📟 极客终端 (Terminal Green)</option>
@@ -1977,6 +2082,7 @@
                 <option value="forest">🌲 苍翠森林绿</option>
                 <option value="rose">🌸 优雅玫瑰金</option>
                 <option disabled>──────────</option>
+                <option value="appletv">🍎 Apple TV 毛玻璃 (tvOS Liquid Glass)</option>
                 <option value="terminal">📟 极客终端 (Terminal Green)</option>
                 <option value="midnight">🌌 午夜冷蓝 (Cinematic Midnight)</option>
                 <option value="blueprint">📐 工程蓝图 (Prussian Blueprint)</option>
@@ -2766,7 +2872,7 @@
     function applyUI(ui) {
       currentUI = ui || {};
       const savedLocalTheme = localStorage.getItem('nas_stats_theme');
-      const activeTheme = ui.theme || savedLocalTheme || 'dark';
+      const activeTheme = ui.theme || savedLocalTheme || 'appletv';
       document.body.className = `theme-${activeTheme}`;
       const grid = document.getElementById('servicesGrid');
       grid.className = `services-grid style-${ui.card_style || 'default'}`;
