@@ -1,10 +1,10 @@
-"""FastAPI backend application for NAS Stats 2.4.
+"""FastAPI backend application for NAS Stats 2.5.
 
 All configuration and services are persisted in SQLite (database.py).
 Monitors are dynamically discovered and instantiated from monitors package.
 """
 
-__version__ = "2.4.2"
+__version__ = "2.5.0"
 
 import asyncio
 import base64
@@ -174,7 +174,7 @@ def get_http_client(timeout: float = 10.0) -> httpx.AsyncClient:
     return httpx.AsyncClient(timeout=timeout, verify=False, follow_redirects=True)
 
 
-app = FastAPI(title="NAS Stats 2.4.2 API", lifespan=lifespan)
+app = FastAPI(title="NAS Stats 2.5.0 API", lifespan=lifespan)
 
 @app.middleware("http")
 async def add_no_cache_for_html(request: Request, call_next):
@@ -203,6 +203,16 @@ if cors_origins:
 @app.get("/index.html")
 async def index():
     resp = FileResponse(STATIC_DIR / "index.html", media_type="text/html")
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
+
+
+@app.get("/tv")
+@app.get("/tvos")
+async def tv_page():
+    resp = FileResponse(STATIC_DIR / "tv.html", media_type="text/html")
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     resp.headers["Pragma"] = "no-cache"
     resp.headers["Expires"] = "0"
