@@ -1999,30 +1999,6 @@
       </div>
 
       <div class="toolbar-actions">
-        <!-- Hallmark 快速主题体验器 (保留所有原版，随时秒切) -->
-        <div class="toolbar-theme-selector" style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.06);border:1px solid var(--accent-blue);border-radius:6px;padding:3px 8px;font-size:12px;margin-right:4px">
-          <span style="color:var(--accent-blue);font-weight:700">🎨 主题:</span>
-          <select id="quickThemeSelect" style="background:var(--bg-secondary);border:none;color:var(--text-primary);font-size:12px;outline:none;cursor:pointer;font-weight:600;padding:2px 4px;border-radius:4px">
-            <optgroup label="✨ 灵动毛玻璃新主题">
-              <option value="appletv" selected>🍎 Apple TV 毛玻璃 (tvOS Liquid Glass)</option>
-              <option value="darkroom">🎞️ 暗房胶片 (Darkroom Amber)</option>
-              <option value="midnight">🌌 午夜冷蓝 (Cinematic Midnight)</option>
-              <option value="terminal">📟 极客终端 (Terminal Green)</option>
-              <option value="blueprint">📐 工程蓝图 (Prussian Blueprint)</option>
-              <option value="atelier">📜 纸本工坊 (Warm Atelier)</option>
-              <option value="cobalt">🔷 深海钴蓝 (Deep Cobalt)</option>
-              <option value="werkstatt">📐 包豪斯工坊 (Werkstatt)</option>
-              <option value="arcade">👾 复古街机 (Arcade)</option>
-            </optgroup>
-            <optgroup label="🏛️ 原有经典主题 (原汁原味)">
-              <option value="dark">🌙 暗夜深色 (原版默认)</option>
-              <option value="light">☀️ 纯净浅色</option>
-              <option value="ocean">🌊 深邃海洋蓝</option>
-              <option value="forest">🌲 苍翠森林绿</option>
-              <option value="rose">🌸 优雅玫瑰金</option>
-            </optgroup>
-          </select>
-        </div>
         <button class="toolbar-btn" id="musicCardToggle" title="打开弹窗音乐播放器">🎵 飞牛音乐</button>
         <a href="/nvr" class="toolbar-btn" title="查看 EasyNVR 实时摄像头">📹 NVR 监控</a>
         <button class="toolbar-btn" id="toolbarLogsBtn" title="查看运行与排查日志">📋 运行日志</button>
@@ -2067,21 +2043,24 @@
             </div>
             <div class="setting-control">
               <select id="settingTheme">
-                <option value="dark">🌙 暗夜深色 (默认)</option>
-                <option value="light">☀️ 纯净浅色</option>
-                <option value="ocean">🌊 深邃海洋蓝</option>
-                <option value="forest">🌲 苍翠森林绿</option>
-                <option value="rose">🌸 优雅玫瑰金</option>
-                <option disabled>──────────</option>
-                <option value="appletv">🍎 Apple TV 毛玻璃 (tvOS Liquid Glass)</option>
-                <option value="terminal">📟 极客终端 (Terminal Green)</option>
-                <option value="midnight">🌌 午夜冷蓝 (Cinematic Midnight)</option>
-                <option value="blueprint">📐 工程蓝图 (Prussian Blueprint)</option>
-                <option value="atelier">📜 纸本工坊 (Warm Atelier)</option>
-                <option value="darkroom">🎞️ 暗房胶片 (Darkroom Amber)</option>
-                <option value="cobalt">🔷 深海钴蓝 (Deep Cobalt)</option>
-                <option value="werkstatt">📐 包豪斯工坊 (Werkstatt Bauhaus)</option>
-                <option value="arcade">👾 复古街机 (Arcade Aubergine)</option>
+                <optgroup label="🏛️ 原有经典主题">
+                  <option value="dark">🌙 暗夜深色 (原版默认)</option>
+                  <option value="light">☀️ 纯净浅色</option>
+                  <option value="ocean">🌊 深邃海洋蓝</option>
+                  <option value="forest">🌲 苍翠森林绿</option>
+                  <option value="rose">🌸 优雅玫瑰金</option>
+                </optgroup>
+                <optgroup label="✨ Hallmark 新质感主题">
+                  <option value="appletv">🍎 Apple TV 熏黑毛玻璃 (tvOS)</option>
+                  <option value="darkroom">🎞️ 暗房胶片 (Darkroom Amber)</option>
+                  <option value="midnight">🌌 午夜冷蓝 (Cinematic Midnight)</option>
+                  <option value="terminal">📟 极客终端 (Terminal Green)</option>
+                  <option value="blueprint">📐 工程蓝图 (Prussian Blueprint)</option>
+                  <option value="atelier">📜 纸本工坊 (Warm Atelier)</option>
+                  <option value="cobalt">🔷 深海钴蓝 (Deep Cobalt)</option>
+                  <option value="werkstatt">📐 包豪斯工坊 (Werkstatt)</option>
+                  <option value="arcade">👾 复古街机 (Arcade)</option>
+                </optgroup>
               </select>
             </div>
           </div>
