@@ -1,10 +1,10 @@
 """FastAPI backend application for NAS Stats 2.4.
 
-__version__ = "2.4.0"
-
 All configuration and services are persisted in SQLite (database.py).
 Monitors are dynamically discovered and instantiated from monitors package.
 """
+
+__version__ = "2.4.1"
 
 import asyncio
 import base64
