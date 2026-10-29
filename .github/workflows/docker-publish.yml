@@ -3,6 +3,7 @@ name: 构建并推送到 Docker Hub
 on:
   push:
     branches: [main, master]
+    tags: ['v*']
   workflow_dispatch:
 
 jobs:
@@ -13,6 +14,21 @@ jobs:
       - name: 检出代码仓库
         uses: actions/checkout@v4
 
+      - name: 提取项目语义化版本号
+        id: meta
+        run: |
+          # 1. 优先从 git tag 读取，若非 tag 则从 main.py 中提取 __version__
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            RAW_VER="${GITHUB_REF#refs/tags/}"
+          else
+            RAW_VER=$(python3 -c "import re; m = re.search(r'__version__\s*=\s*[\"\\']([^\"\\']+)[\"\\']', open('main.py').read()); print(m.group(1) if m else '2.3.0')")
+          fi
+          CLEAN_VER="${RAW_VER#v}"
+          echo "version=v${CLEAN_VER}" >> $GITHUB_OUTPUT
+          echo "num_version=${CLEAN_VER}" >> $GITHUB_OUTPUT
+          echo "short_version=${CLEAN_VER%.*}" >> $GITHUB_OUTPUT
+          echo "📌 本次构建的版本标签: v${CLEAN_VER} / ${CLEAN_VER} (大版本: ${CLEAN_VER%.*})"
+
       - name: 配置 Docker Buildx 跨平台构建环境
         uses: docker/setup-buildx-action@v3
 
@@ -22,11 +38,13 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: 构建并推送 Docker 镜像
+      - name: 构建并推送 Docker 镜像 (最新版 latest + 语义化版本号)
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
           tags: |
             terryhellwen/nas-stats:latest
-            terryhellwen/nas-stats:${{ github.sha }}
+            terryhellwen/nas-stats:v${{ steps.meta.outputs.num_version }}
+            terryhellwen/nas-stats:${{ steps.meta.outputs.num_version }}
+            terryhellwen/nas-stats:${{ steps.meta.outputs.short_version }}

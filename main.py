@@ -1,4 +1,6 @@
-"""FastAPI backend application for NAS Stats 2.0.
+"""FastAPI backend application for NAS Stats 2.3.
+
+__version__ = "2.3.0"
 
 All configuration and services are persisted in SQLite (database.py).
 Monitors are dynamically discovered and instantiated from monitors package.
@@ -218,7 +220,7 @@ async def nvr_page():
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "version": "2.3.0"}
+    return {"status": "ok", "version": __version__}
 
 
 @app.get("/api/stats")
