@@ -48,6 +48,8 @@ data/*.json
 .vscode/
 .idea/
 *.swp
+*.bak
+*.backup.*
 *.swo
 .DS_Store
 Thumbs.db

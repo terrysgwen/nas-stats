@@ -87,6 +87,341 @@
     }
     body.theme-rose .bg-layer::after { background: rgba(28, 16, 23, 0.85); }
 
+    /* ─── Hallmark 精选版本主题 ─── */
+    /* 1. 极客终端 (Terminal / Phosphor Green) */
+    body.theme-terminal {
+      --bg-primary: #080c0a;
+      --bg-secondary: #0d1510;
+      --bg-card: #121c16;
+      --bg-card-hover: #18271e;
+      --text-primary: #ecfdf5;
+      --text-secondary: #6ee7b7;
+      --text-muted: #34d399;
+      --accent-blue: #10b981;
+      --accent-cyan: #059669;
+      --accent-green: #34d399;
+      --accent-purple: #10b981;
+      --accent-orange: #f59e0b;
+      --border: rgba(16, 185, 129, 0.22);
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+      --radius: 6px;
+      font-family: ui-monospace, 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace;
+    }
+    body.theme-terminal .bg-layer::after { background: rgba(8, 12, 10, 0.90); }
+    body.theme-terminal .service-card {
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      box-shadow: inset 0 0 12px rgba(16, 185, 129, 0.03);
+    }
+    body.theme-terminal .service-card:hover {
+      border-color: rgba(52, 211, 153, 0.6);
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.15);
+    }
+
+    /* 2. 午夜冷蓝 (Cinematic Midnight) */
+    body.theme-midnight {
+      --bg-primary: #070a12;
+      --bg-secondary: #0c111d;
+      --bg-card: #121826;
+      --bg-card-hover: #1a2236;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-blue: #38bdf8;
+      --accent-cyan: #0284c7;
+      --accent-green: #34d399;
+      --accent-purple: #818cf8;
+      --border: rgba(56, 189, 248, 0.12);
+      --shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
+      --radius: 14px;
+    }
+    body.theme-midnight .bg-layer::after { background: rgba(7, 10, 18, 0.88); }
+    body.theme-midnight .service-card {
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(8px);
+    }
+    body.theme-midnight .service-card:hover {
+      border-color: rgba(56, 189, 248, 0.35);
+      box-shadow: 0 8px 24px rgba(56, 189, 248, 0.1);
+    }
+
+    /* 3. 工程蓝图 (Prussian Blueprint) */
+    body.theme-blueprint {
+      --bg-primary: #0b192c;
+      --bg-secondary: #12253e;
+      --bg-card: #193152;
+      --bg-card-hover: #223f66;
+      --text-primary: #f0f7ff;
+      --text-secondary: #90e0ef;
+      --text-muted: #48cae4;
+      --accent-blue: #00b4d8;
+      --accent-cyan: #0077b6;
+      --accent-green: #06d6a0;
+      --border: rgba(144, 224, 239, 0.25);
+      --shadow: 0 6px 24px rgba(3, 4, 94, 0.4);
+      --radius: 4px;
+    }
+    body.theme-blueprint .bg-layer::after {
+      background: radial-gradient(circle at 50% 50%, rgba(11, 25, 44, 0.86) 0%, rgba(8, 18, 32, 0.94) 100%);
+    }
+    body.theme-blueprint .service-card {
+      border: 1px solid rgba(144, 224, 239, 0.28);
+      position: relative;
+    }
+    body.theme-blueprint .service-card::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 5px;
+      height: 5px;
+      border-top: 1px solid var(--accent-blue);
+      border-right: 1px solid var(--accent-blue);
+      opacity: 0.6;
+    }
+    body.theme-blueprint .service-card:hover {
+      border-color: rgba(144, 224, 239, 0.65);
+      box-shadow: 0 0 14px rgba(0, 180, 216, 0.2);
+    }
+
+    /* 4. 纸本工坊 (Warm Atelier / Vellum) */
+    body.theme-atelier {
+      --bg-primary: #f5f2eb;
+      --bg-secondary: #eae5d9;
+      --bg-card: #ffffff;
+      --bg-card-hover: #faf8f5;
+      --text-primary: #262320;
+      --text-secondary: #59534c;
+      --text-muted: #8c827a;
+      --accent-blue: #c25e2e;
+      --accent-cyan: #2a7f62;
+      --accent-green: #15803d;
+      --accent-purple: #7c2d12;
+      --accent-orange: #ea580c;
+      --accent-red: #b91c1c;
+      --border: rgba(68, 64, 60, 0.12);
+      --shadow: 0 4px 18px rgba(68, 64, 60, 0.08);
+      --radius: 10px;
+    }
+    body.theme-atelier .bg-layer::after { background: rgba(245, 242, 235, 0.92); }
+    body.theme-atelier .service-card {
+      border: 1px solid rgba(68, 64, 60, 0.12);
+      box-shadow: 0 2px 8px rgba(68, 64, 60, 0.04);
+    }
+    body.theme-atelier .service-card:hover {
+      border-color: rgba(194, 94, 46, 0.4);
+      box-shadow: 0 6px 16px rgba(194, 94, 46, 0.1);
+    }
+    body.theme-atelier .music-player-bar {
+      background: rgba(255, 255, 255, 0.96);
+      border-top: 1px solid rgba(68, 64, 60, 0.12);
+      box-shadow: 0 -4px 20px rgba(68, 64, 60, 0.08);
+    }
+    body.theme-atelier .fn-search-input {
+      background: #eae5d9;
+      color: #262320;
+      border: 1px solid rgba(68, 64, 60, 0.15);
+    }
+
+    /* 5. 暗房胶片 (Darkroom / Amber Safelight) */
+    body.theme-darkroom {
+      --bg-primary: #0a0808;
+      --bg-secondary: #120e0e;
+      --bg-card: #181313;
+      --bg-card-hover: #221a1a;
+      --text-primary: #f5ebe6;
+      --text-secondary: #d1b8af;
+      --text-muted: #997d74;
+      --accent-blue: #ea580c;
+      --accent-cyan: #d97706;
+      --accent-green: #b45309;
+      --accent-orange: #f97316;
+      --border: rgba(249, 115, 22, 0.18);
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.7);
+      --radius: 0px;
+    }
+    body.theme-darkroom .bg-layer::after { background: rgba(10, 8, 8, 0.94); }
+    body.theme-darkroom .service-card {
+      border: 1px solid rgba(249, 115, 22, 0.16);
+      border-radius: 0px;
+    }
+    body.theme-darkroom .service-card:hover {
+      border-color: rgba(249, 115, 22, 0.65);
+      box-shadow: 0 0 16px rgba(234, 88, 12, 0.15);
+    }
+    body.theme-darkroom .music-player-bar {
+      border-top: 1px solid rgba(249, 115, 22, 0.25);
+    }
+
+    /* 6. 深海钴蓝 (Cobalt / Deep Oceanic) */
+    body.theme-cobalt {
+      --bg-primary: #040812;
+      --bg-secondary: #081124;
+      --bg-card: #0d1b38;
+      --bg-card-hover: #142750;
+      --text-primary: #f0f6fc;
+      --text-secondary: #93c5fd;
+      --text-muted: #60a5fa;
+      --accent-blue: #2563eb;
+      --accent-cyan: #38bdf8;
+      --accent-green: #06b6d4;
+      --accent-purple: #4f46e5;
+      --border: rgba(59, 130, 246, 0.22);
+      --shadow: 0 8px 30px rgba(4, 8, 18, 0.65);
+      --radius: 8px;
+    }
+    body.theme-cobalt .bg-layer::after { background: rgba(4, 8, 18, 0.90); }
+    body.theme-cobalt .service-card {
+      border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+    body.theme-cobalt .service-card:hover {
+      border-color: rgba(56, 189, 248, 0.7);
+      box-shadow: 0 4px 20px rgba(37, 99, 235, 0.25);
+    }
+
+    /* 7. 包豪斯工坊 (Werkstatt / Bauhaus Blackboard) */
+    body.theme-werkstatt {
+      --bg-primary: #141414;
+      --bg-secondary: #1a1a1a;
+      --bg-card: #202020;
+      --bg-card-hover: #2b2b2b;
+      --text-primary: #f5f5f5;
+      --text-secondary: #d4d4d4;
+      --text-muted: #8c8c8c;
+      --accent-blue: #2563eb;
+      --accent-red: #dc2626;
+      --accent-orange: #f59e0b;
+      --accent-green: #16a34a;
+      --border: rgba(255, 255, 255, 0.16);
+      --shadow: none;
+      --radius: 0px;
+    }
+    body.theme-werkstatt .bg-layer::after { background: rgba(20, 20, 20, 0.94); }
+    body.theme-werkstatt .service-card {
+      border: 2px solid rgba(255, 255, 255, 0.18);
+      border-radius: 0px;
+    }
+    body.theme-werkstatt .service-card:hover {
+      border-color: #2563eb;
+    }
+    body.theme-werkstatt .music-player-bar {
+      border-top: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 0px;
+    }
+
+    /* 8. 复古街机 (Arcade / CRT Aubergine) */
+    body.theme-arcade {
+      --bg-primary: #0e0717;
+      --bg-secondary: #160c24;
+      --bg-card: #1f1233;
+      --bg-card-hover: #2c1a47;
+      --text-primary: #fdf4ff;
+      --text-secondary: #f0abfc;
+      --text-muted: #c084fc;
+      --accent-blue: #ec4899;
+      --accent-purple: #a855f7;
+      --accent-orange: #fbbf24;
+      --accent-cyan: #22d3ee;
+      --border: rgba(236, 72, 153, 0.24);
+      --shadow: 4px 4px 0px rgba(251, 191, 36, 0.35);
+      --radius: 4px;
+    }
+    body.theme-arcade .bg-layer::after { background: rgba(14, 7, 23, 0.90); }
+    body.theme-arcade .service-card {
+      border: 1px solid rgba(236, 72, 153, 0.28);
+      box-shadow: 3px 3px 0px rgba(236, 72, 153, 0.2);
+    }
+    body.theme-arcade .service-card:hover {
+      border-color: #fbbf24;
+      box-shadow: 4px 4px 0px #fbbf24;
+    }
+
+    /* ─── Hallmark 真实功能深度适配与细节抛光 ─── */
+    .toolbar-btn {
+      transition: all 0.15s ease;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+    }
+    .toolbar-btn:hover {
+      border-color: var(--accent-blue);
+      transform: translateY(-1px);
+    }
+    .live-banner {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .search-bar input {
+      border-radius: var(--radius);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .search-bar input:focus {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+    .music-player-bar {
+      border-top: 1px solid var(--border);
+      box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4);
+    }
+    .music-progress:hover {
+      height: 6px;
+    }
+    .music-progress {
+      transition: height 0.15s ease;
+    }
+
+    /* 各主题特定深度材质 */
+    body.theme-terminal .toolbar-btn,
+    body.theme-terminal .search-bar input,
+    body.theme-terminal .admin-panel {
+      font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace;
+      border-radius: 4px;
+    }
+    body.theme-terminal .toolbar-lyric-bar {
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      background: #0d1510;
+    }
+    body.theme-terminal .lyric-track-tag {
+      background: #10b981;
+      color: #000;
+      font-weight: 800;
+    }
+
+    body.theme-darkroom .toolbar-btn,
+    body.theme-darkroom .service-card,
+    body.theme-darkroom .search-bar input,
+    body.theme-darkroom .music-card-dialog,
+    body.theme-darkroom .music-card-player-panel,
+    body.theme-darkroom .music-card-playlist-panel {
+      border-radius: 0px !important;
+      box-shadow: none !important;
+    }
+    body.theme-darkroom .toolbar-lyric-bar {
+      background: #120e0e;
+      border: 1px solid rgba(249, 115, 22, 0.25);
+    }
+    body.theme-darkroom .lyric-track-tag {
+      background: #f97316;
+      color: #000;
+      font-weight: 700;
+    }
+
+    body.theme-midnight .music-card-dialog {
+      border-radius: 20px;
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(56, 189, 248, 0.18);
+    }
+
+    body.theme-arcade .toolbar-btn:hover {
+      border-color: #fbbf24;
+      box-shadow: 2px 2px 0px #fbbf24;
+    }
+    body.theme-arcade .lyric-track-tag {
+      background: #ec4899;
+      color: #fff;
+    }
+
     /* ─── 卡片样式形态变体 (Card Styles) ─── */
     .services-grid.style-default .service-card {
       border-radius: var(--radius);
@@ -1569,6 +1904,29 @@
       </div>
 
       <div class="toolbar-actions">
+        <!-- Hallmark 快速主题体验器 (保留所有原版，随时秒切) -->
+        <div class="toolbar-theme-selector" style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.06);border:1px solid var(--accent-blue);border-radius:6px;padding:3px 8px;font-size:12px;margin-right:4px">
+          <span style="color:var(--accent-blue);font-weight:700">🎨 主题:</span>
+          <select id="quickThemeSelect" style="background:var(--bg-secondary);border:none;color:var(--text-primary);font-size:12px;outline:none;cursor:pointer;font-weight:600;padding:2px 4px;border-radius:4px">
+            <optgroup label="✨ Hallmark 新质感主题">
+              <option value="darkroom">🎞️ 暗房胶片 (Darkroom Amber)</option>
+              <option value="midnight">🌌 午夜冷蓝 (Cinematic Midnight)</option>
+              <option value="terminal">📟 极客终端 (Terminal Green)</option>
+              <option value="blueprint">📐 工程蓝图 (Prussian Blueprint)</option>
+              <option value="atelier">📜 纸本工坊 (Warm Atelier)</option>
+              <option value="cobalt">🔷 深海钴蓝 (Deep Cobalt)</option>
+              <option value="werkstatt">📐 包豪斯工坊 (Werkstatt)</option>
+              <option value="arcade">👾 复古街机 (Arcade)</option>
+            </optgroup>
+            <optgroup label="🏛️ 原有经典主题 (原汁原味)">
+              <option value="dark">🌙 暗夜深色 (原版默认)</option>
+              <option value="light">☀️ 纯净浅色</option>
+              <option value="ocean">🌊 深邃海洋蓝</option>
+              <option value="forest">🌲 苍翠森林绿</option>
+              <option value="rose">🌸 优雅玫瑰金</option>
+            </optgroup>
+          </select>
+        </div>
         <button class="toolbar-btn" id="musicCardToggle" title="打开弹窗音乐播放器">🎵 飞牛音乐</button>
         <a href="/nvr" class="toolbar-btn" title="查看 EasyNVR 实时摄像头">📹 NVR 监控</a>
         <button class="toolbar-btn" id="toolbarLogsBtn" title="查看运行与排查日志">📋 运行日志</button>
@@ -1618,6 +1976,15 @@
                 <option value="ocean">🌊 深邃海洋蓝</option>
                 <option value="forest">🌲 苍翠森林绿</option>
                 <option value="rose">🌸 优雅玫瑰金</option>
+                <option disabled>──────────</option>
+                <option value="terminal">📟 极客终端 (Terminal Green)</option>
+                <option value="midnight">🌌 午夜冷蓝 (Cinematic Midnight)</option>
+                <option value="blueprint">📐 工程蓝图 (Prussian Blueprint)</option>
+                <option value="atelier">📜 纸本工坊 (Warm Atelier)</option>
+                <option value="darkroom">🎞️ 暗房胶片 (Darkroom Amber)</option>
+                <option value="cobalt">🔷 深海钴蓝 (Deep Cobalt)</option>
+                <option value="werkstatt">📐 包豪斯工坊 (Werkstatt Bauhaus)</option>
+                <option value="arcade">👾 复古街机 (Arcade Aubergine)</option>
               </select>
             </div>
           </div>
@@ -2398,7 +2765,9 @@
     // ─── 主题与外观 ───
     function applyUI(ui) {
       currentUI = ui || {};
-      document.body.className = `theme-${ui.theme || 'dark'}`;
+      const savedLocalTheme = localStorage.getItem('nas_stats_theme');
+      const activeTheme = ui.theme || savedLocalTheme || 'dark';
+      document.body.className = `theme-${activeTheme}`;
       const grid = document.getElementById('servicesGrid');
       grid.className = `services-grid style-${ui.card_style || 'default'}`;
       
@@ -2421,6 +2790,8 @@
       }
 
       document.getElementById('settingTheme').value = ui.theme || 'dark';
+      const elQuickTheme = document.getElementById('quickThemeSelect');
+      if (elQuickTheme) elQuickTheme.value = ui.theme || 'dark';
       document.getElementById('settingCardStyle').value = ui.card_style || 'default';
       const elColorMode = document.getElementById('settingCardColorMode');
       if (elColorMode) elColorMode.value = colorMode;
@@ -5049,6 +5420,25 @@
       }
     };
     document.getElementById('settingCardColorMode')?.addEventListener('change', updateLiveColorMode);
+
+    // 顶栏快速切换新主题与原有主题
+    const elQuick = document.getElementById('quickThemeSelect');
+    if (elQuick) {
+      elQuick.onchange = async (e) => {
+        const val = e.target.value;
+        document.body.className = 'theme-' + val;
+        document.getElementById('settingTheme').value = val;
+        if (currentUI) currentUI.theme = val;
+        localStorage.setItem('nas_stats_theme', val);
+        try {
+          await fetch('/api/config', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ ui: { ...(currentUI || {}), theme: val } })
+          });
+        } catch (err) { /* silent */ }
+      };
+    }
 
     document.getElementById('btnSaveUISettings').onclick = async () => {
       const ui = {
