@@ -88,100 +88,7 @@
     body.theme-rose .bg-layer::after { background: rgba(28, 16, 23, 0.85); }
 
     
-    /* ─── 🍎 Apple TV 液体毛玻璃主题 (tvOS Dark Frosted Acrylic) ─── */
-    body.theme-appletv {
-      --bg-primary: #0a0c12;
-      --bg-secondary: rgba(22, 26, 38, 0.7);
-      --bg-card: rgba(18, 22, 32, 0.75);
-      --bg-card-hover: rgba(28, 34, 50, 0.82);
-      --text-primary: #f8fafc;
-      --text-secondary: #94a3b8;
-      --text-muted: #64748b;
-      --accent-blue: #2997ff;
-      --accent-cyan: #30d158;
-      --accent-green: #30d158;
-      --accent-purple: #bf5af2;
-      --accent-orange: #ff9f0a;
-      --accent-red: #ff453a;
-      --border: rgba(255, 255, 255, 0.10);
-      --shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
-      --radius: 14px;
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Segoe UI", sans-serif;
-    }
-
-    /* 沉静深邃的暗夜微光背景，绝不浑浊 */
-    body.theme-appletv .bg-layer::after {
-      background:
-        radial-gradient(ellipse at 50% 0%, rgba(30, 41, 59, 0.4) 0%, transparent 70%),
-        radial-gradient(ellipse at 80% 100%, rgba(15, 23, 42, 0.6) 0%, transparent 60%),
-        #0a0c12;
-    }
-
-    /* 真正高级的 Apple TV 深色熏黑亚克力卡片：深底高对比、字迹极其锐利清晰 */
-    body.theme-appletv .service-card {
-      background: rgba(16, 20, 30, 0.78) !important;
-      backdrop-filter: blur(20px) saturate(160%) !important;
-      -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
-      border: 1px solid rgba(255, 255, 255, 0.10) !important;
-      border-radius: 14px !important;
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
-      transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease !important;
-    }
-
-    /* 去掉夸张抖动的 scale(1.04)，改为优雅平稳的微升与蓝色顶光高亮 */
-    body.theme-appletv .service-card:hover {
-      transform: translateY(-2px) !important;
-      background: rgba(22, 28, 42, 0.85) !important;
-      border-color: rgba(41, 151, 255, 0.45) !important;
-      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
-    }
-
-    /* 顶栏工具按钮、状态横条与搜索框 */
-    body.theme-appletv .toolbar-btn,
-    body.theme-appletv .toolbar-lyric-bar,
-    body.theme-appletv .live-banner,
-    body.theme-appletv .search-bar input,
-    body.theme-appletv .toolbar-theme-selector {
-      background: rgba(16, 20, 30, 0.75) !important;
-      backdrop-filter: blur(18px) saturate(150%) !important;
-      -webkit-backdrop-filter: blur(18px) saturate(150%) !important;
-      border: 1px solid rgba(255, 255, 255, 0.10) !important;
-      border-radius: 10px !important;
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    }
-
-    body.theme-appletv .toolbar-btn:hover {
-      background: rgba(30, 41, 59, 0.8) !important;
-      border-color: rgba(41, 151, 255, 0.4) !important;
-    }
-
-    /* 底部飞牛音乐播放条：贴底满宽自然平整，深色熏黑磨砂，绝不遮挡留白缝 */
-    body.theme-appletv .music-player-bar.active {
-      display: flex;
-      background: rgba(12, 15, 22, 0.92) !important;
-      backdrop-filter: blur(24px) saturate(180%) !important;
-      -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
-      border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
-      box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.5) !important;
-    }
-
-    /* 弹窗播放器 */
-    body.theme-appletv .music-card-dialog {
-      border-radius: 20px !important;
-      background: rgba(14, 17, 25, 0.94) !important;
-      backdrop-filter: blur(28px) saturate(180%) !important;
-      -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
-      border: 1px solid rgba(255, 255, 255, 0.12) !important;
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7) !important;
-    }
-
-    body.theme-appletv .music-card-player-panel,
-    body.theme-appletv .music-card-playlist-panel {
-      border-radius: 14px !important;
-      background: rgba(255, 255, 255, 0.03) !important;
-      border: 1px solid rgba(255, 255, 255, 0.06) !important;
-    }
-
+    /* Apple tvOS 整体效果已移入卡片与大屏整体形态模式 (.style-tvos / .tvos-mode) */
     /* ─── Hallmark 精选版本主题 ─── */
     /* 1. 极客终端 (Terminal / Phosphor Green) */
     body.theme-terminal {
@@ -566,6 +473,298 @@
       border: 1px solid rgba(255, 255, 255, 0.12);
       box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
     }
+
+    /* ========================================================
+       Apple tvOS 风格导航样式表 (去分类纯网格纯享版)
+       ======================================================== */
+    :root {
+      --tvos-bg: #0b0d12;
+      --tvos-card-bg: rgba(255, 255, 255, 0.08);
+      --tvos-card-border: rgba(255, 255, 255, 0.16);
+      --tvos-card-radius: 24px;
+      --tvos-focus-scale: 1.12;
+      --tvos-glow-color: rgba(255, 255, 255, 0.28);
+    }
+
+    /* 页面深色高质感背景（带苹果微光晕渐变） */
+    body.tvos-mode {
+      background: radial-gradient(circle at 50% 20%, #1c2333 0%, #0a0d14 100%) !important;
+      color: #fff !important;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif !important;
+    }
+    body.tvos-mode .bg-layer {
+      background: radial-gradient(circle at 50% 20%, #1c2333 0%, #0a0d14 100%) !important;
+      opacity: 1 !important;
+    }
+    body.tvos-mode .bg-layer::after {
+      display: none !important;
+    }
+
+    /* 应用网格容器（自适应大屏九宫格） */
+    .services-grid.style-tvos,
+    .app-grid, 
+    .grid, 
+    .items-container, 
+    #app-list {
+      display: grid !important;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important;
+      gap: 32px 24px !important;
+      max-width: 1440px !important;
+      margin: 0 auto !important;
+      padding: 24px 10px 40px !important;
+    }
+
+    /* tvOS 风格单项卡片：去卡片外壳，聚焦于 Squircle 图标主体 */
+    .services-grid.style-tvos .service-card,
+    .app-item, 
+    .grid-item, 
+    .card, 
+    .nav-item {
+      position: relative !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      text-decoration: none !important;
+      cursor: pointer !important;
+      outline: none !important;
+      user-select: none !important;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      overflow: visible !important;
+    }
+
+    .services-grid.style-tvos .card-top {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      width: 100% !important;
+    }
+
+    /* 图标容器主体：亚克力高透毛玻璃 + Squircle 大圆角 */
+    .services-grid.style-tvos .card-icon-wrapper,
+    .app-icon-wrapper, 
+    .app-icon, 
+    .icon-box, 
+    .card-icon {
+      position: relative !important;
+      width: 96px !important;
+      height: 96px !important;
+      border-radius: var(--tvos-card-radius) !important;
+      background: var(--tvos-card-bg) !important;
+      backdrop-filter: blur(24px) saturate(190%) !important;
+      -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+      border: 1px solid var(--tvos-card-border) !important;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45), 
+                  inset 0 1px 1px rgba(255, 255, 255, 0.35) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      overflow: hidden !important;
+      transition: transform 0.28s cubic-bezier(0.25, 1, 0.5, 1),
+                  box-shadow 0.28s cubic-bezier(0.25, 1, 0.5, 1),
+                  border-color 0.28s ease,
+                  background-color 0.28s ease !important;
+      will-change: transform, box-shadow !important;
+    }
+
+    /* 图标内部图片自适应 */
+    .services-grid.style-tvos .card-icon-img,
+    .app-icon-wrapper img, 
+    .app-icon img, 
+    .card-icon img,
+    .icon-box img {
+      width: 54px !important;
+      height: 54px !important;
+      border-radius: 12px !important;
+      object-fit: contain !important;
+      filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35)) !important;
+      transition: transform 0.28s ease !important;
+    }
+
+    .services-grid.style-tvos .card-icon {
+      font-size: 46px !important;
+      line-height: 1 !important;
+      filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35)) !important;
+      transition: transform 0.28s ease !important;
+    }
+
+    /* tvOS 镜面高光反射层（斜切扫光 135deg） */
+    .services-grid.style-tvos .card-icon-wrapper::after,
+    .app-icon-wrapper::after, 
+    .app-icon::after, 
+    .icon-box::after {
+      content: "" !important;
+      position: absolute !important;
+      inset: 0 !important;
+      background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.4) 0%,
+        rgba(255, 255, 255, 0.08) 40%,
+        transparent 60%
+      ) !important;
+      border-radius: inherit !important;
+      pointer-events: none !important;
+      opacity: 0.8 !important;
+      transition: opacity 0.25s ease !important;
+    }
+
+    /* tvOS 悬停与聚焦状态 (Focus Engine 效果) */
+    .services-grid.style-tvos .service-card:hover .card-icon-wrapper,
+    .services-grid.style-tvos .service-card:focus .card-icon-wrapper,
+    .app-item:hover .app-icon-wrapper,
+    .app-item:focus .app-icon-wrapper,
+    .grid-item:hover .app-icon,
+    .card:hover .card-icon {
+      transform: scale(var(--tvos-focus-scale)) translateY(-4px) !important;
+      background-color: rgba(255, 255, 255, 0.18) !important;
+      border-color: rgba(255, 255, 255, 0.65) !important;
+      box-shadow: 0 24px 45px rgba(0, 0, 0, 0.65), 
+                  0 0 28px var(--tvos-glow-color),
+                  inset 0 1px 2px rgba(255, 255, 255, 0.8) !important;
+      z-index: 10 !important;
+    }
+
+    .services-grid.style-tvos .service-card:hover .card-icon-img,
+    .services-grid.style-tvos .service-card:hover .card-icon,
+    .app-item:hover .app-icon-wrapper img,
+    .grid-item:hover img {
+      transform: scale(1.06) !important;
+    }
+
+    .services-grid.style-tvos .service-card:hover .card-icon-wrapper::after,
+    .grid-item:hover .app-icon::after {
+      opacity: 1 !important;
+    }
+
+    /* 点击反馈（微压效果） */
+    .services-grid.style-tvos .service-card:active .card-icon-wrapper,
+    .app-item:active .app-icon-wrapper,
+    .grid-item:active .app-icon {
+      transform: scale(1.05) translateY(-1px) !important;
+      transition-duration: 0.08s !important;
+    }
+
+    /* 应用名称文本（tvOS 字体微阴影与浮雕感） */
+    .services-grid.style-tvos .card-info {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      width: 100% !important;
+    }
+
+    .services-grid.style-tvos .card-name,
+    .app-title, 
+    .app-name, 
+    .item-title, 
+    .card-text {
+      margin-top: 12px !important;
+      font-size: 13.5px !important;
+      font-weight: 500 !important;
+      color: rgba(255, 255, 255, 0.78) !important;
+      text-align: center !important;
+      letter-spacing: 0.3px !important;
+      max-width: 100% !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      text-shadow: 0 2px 5px rgba(0, 0, 0, 0.75) !important;
+      transition: color 0.25s ease, transform 0.25s ease !important;
+    }
+
+    .services-grid.style-tvos .service-card:hover .card-name,
+    .app-item:hover .app-title,
+    .app-item:hover .app-name,
+    .grid-item:hover .item-title {
+      color: #ffffff !important;
+      transform: translateY(2px) !important;
+    }
+
+    /* 去分类纯享：隐藏副标题描述 */
+    .services-grid.style-tvos .card-desc {
+      display: none !important;
+    }
+
+    /* tvOS 外部跳转小圆角标 */
+    .services-grid.style-tvos .card-external-badge {
+      position: absolute !important;
+      top: -2px !important;
+      right: 12px !important;
+      width: 22px !important;
+      height: 22px !important;
+      border-radius: 50% !important;
+      background: rgba(0, 0, 0, 0.65) !important;
+      backdrop-filter: blur(8px) !important;
+      border: 1px solid rgba(255, 255, 255, 0.25) !important;
+      color: #fff !important;
+      font-size: 11px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      z-index: 5 !important;
+    }
+
+    /* 顶部与控制组件在 tvOS 整体大屏模式下的融合 */
+    body.tvos-mode .toolbar-btn,
+    body.tvos-mode .toolbar-lyric-bar,
+    body.tvos-mode .live-banner,
+    body.tvos-mode .search-bar input {
+      background: rgba(255, 255, 255, 0.08) !important;
+      backdrop-filter: blur(24px) saturate(190%) !important;
+      -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.16) !important;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35) !important;
+      border-radius: 14px !important;
+      color: #fff !important;
+    }
+
+    body.tvos-mode .toolbar-btn:hover {
+      background: rgba(255, 255, 255, 0.18) !important;
+      border-color: rgba(255, 255, 255, 0.5) !important;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.25) !important;
+    }
+
+    body.tvos-mode .music-player-bar.active {
+      background: rgba(11, 13, 18, 0.92) !important;
+      backdrop-filter: blur(24px) saturate(190%) !important;
+      -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+      border-top: 1px solid rgba(255, 255, 255, 0.16) !important;
+      box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5) !important;
+    }
+
+    body.tvos-mode .music-card-dialog {
+      border-radius: 24px !important;
+      background: rgba(15, 18, 26, 0.94) !important;
+      backdrop-filter: blur(28px) saturate(190%) !important;
+      -webkit-backdrop-filter: blur(28px) saturate(190%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.18) !important;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75) !important;
+    }
+
+    @media (max-width: 480px) {
+      .services-grid.style-tvos {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 16px 8px !important;
+        padding: 10px 4px !important;
+      }
+      .services-grid.style-tvos .card-icon-wrapper {
+        width: 76px !important;
+        height: 76px !important;
+        border-radius: 20px !important;
+      }
+      .services-grid.style-tvos .card-icon-img {
+        width: 42px !important;
+        height: 42px !important;
+      }
+      .services-grid.style-tvos .card-icon {
+        font-size: 36px !important;
+      }
+      .services-grid.style-tvos .card-name {
+        font-size: 11.5px !important;
+      }
+    }
+
 
     html, body {
       overflow-x: hidden;
@@ -2051,7 +2250,6 @@
                   <option value="rose">🌸 优雅玫瑰金</option>
                 </optgroup>
                 <optgroup label="✨ Hallmark 新质感主题">
-                  <option value="appletv">🍎 Apple TV 熏黑毛玻璃 (tvOS)</option>
                   <option value="darkroom">🎞️ 暗房胶片 (Darkroom Amber)</option>
                   <option value="midnight">🌌 午夜冷蓝 (Cinematic Midnight)</option>
                   <option value="terminal">📟 极客终端 (Terminal Green)</option>
@@ -2067,12 +2265,13 @@
 
           <div class="setting-item">
             <div>
-              <div class="setting-label">卡片外观形态</div>
-              <div class="setting-desc">网格、紧凑药丸、横向列表、毛玻璃</div>
+              <div class="setting-label">卡片外观与整体形态</div>
+              <div class="setting-desc">网格、tvOS 苹果纯网格整体效果、紧凑药丸、横向列表</div>
             </div>
             <div class="setting-control">
               <select id="settingCardStyle">
-                <option value="default">标准网格卡片</option>
+                <option value="default">标准网格卡片 (原有经典)</option>
+                <option value="tvos">🍎 Apple tvOS 纯网格 (去分类纯享整体效果)</option>
                 <option value="compact">紧凑药丸圆角</option>
                 <option value="horizontal">水平横向列表</option>
                 <option value="glass">毛玻璃高级质感</option>
@@ -2841,11 +3040,23 @@
     // ─── 主题与外观 ───
     function applyUI(ui) {
       currentUI = ui || {};
-      const savedLocalTheme = localStorage.getItem('nas_stats_theme');
-      const activeTheme = ui.theme || savedLocalTheme || 'dark';
+      let activeTheme = ui.theme || localStorage.getItem('nas_stats_theme') || 'dark';
+      // 若曾存过 appletv 主题，自动平滑迁移为 dark 配色 + tvos 大屏纯网格整体效果
+      if (activeTheme === 'appletv') {
+        activeTheme = 'dark';
+        if (!ui.card_style || ui.card_style === 'default') {
+          ui.card_style = 'tvos';
+        }
+      }
       document.body.className = `theme-${activeTheme}`;
+      const cardStyle = ui.card_style || 'default';
       const grid = document.getElementById('servicesGrid');
-      grid.className = `services-grid style-${ui.card_style || 'default'}`;
+      grid.className = `services-grid style-${cardStyle}`;
+      if (cardStyle === 'tvos') {
+        document.body.classList.add('tvos-mode');
+      } else {
+        document.body.classList.remove('tvos-mode');
+      }
       
       const colorMode = ui.card_color_mode || 'ambient';
       if (colorMode !== 'none') {
@@ -5513,6 +5724,31 @@
             body: JSON.stringify({ ui: { ...(currentUI || {}), theme: val } })
           });
         } catch (err) { /* silent */ }
+      };
+    }
+
+    // 实时联动预览：卡片与导航形态切换
+    const elSettingCardStyle = document.getElementById('settingCardStyle');
+    if (elSettingCardStyle) {
+      elSettingCardStyle.onchange = (e) => {
+        const val = e.target.value;
+        const grid = document.getElementById('servicesGrid');
+        grid.className = `services-grid style-${val}`;
+        if (val === 'tvos') {
+          document.body.classList.add('tvos-mode');
+        } else {
+          document.body.classList.remove('tvos-mode');
+        }
+      };
+    }
+    const elSettingTheme = document.getElementById('settingTheme');
+    if (elSettingTheme) {
+      elSettingTheme.onchange = (e) => {
+        const val = e.target.value;
+        document.body.className = `theme-${val}`;
+        if (document.getElementById('settingCardStyle')?.value === 'tvos') {
+          document.body.classList.add('tvos-mode');
+        }
       };
     }
 
