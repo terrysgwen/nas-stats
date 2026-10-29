@@ -1,6 +1,6 @@
-"""FastAPI backend application for NAS Stats 2.3.
+"""FastAPI backend application for NAS Stats 2.4.
 
-__version__ = "2.3.0"
+__version__ = "2.4.0"
 
 All configuration and services are persisted in SQLite (database.py).
 Monitors are dynamically discovered and instantiated from monitors package.
@@ -174,7 +174,7 @@ def get_http_client(timeout: float = 10.0) -> httpx.AsyncClient:
     return httpx.AsyncClient(timeout=timeout, verify=False, follow_redirects=True)
 
 
-app = FastAPI(title="NAS Stats 2.3 API", lifespan=lifespan)
+app = FastAPI(title="NAS Stats 2.4 API", lifespan=lifespan)
 
 @app.middleware("http")
 async def add_no_cache_for_html(request: Request, call_next):
