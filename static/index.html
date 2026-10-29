@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NAS 服务导航 v2.4.1</title>
+  <title>NAS 服务导航 v2.4.2</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -705,24 +705,14 @@
       z-index: 5 !important;
     }
 
-    /* 顶部与控制组件在 tvOS 整体大屏模式下的融合 */
+    /* 顶部与控制组件在 tvOS 纯网格模式下的自然融合 (不暴力覆盖主题配色) */
     body.tvos-mode .toolbar-btn,
     body.tvos-mode .toolbar-lyric-bar,
     body.tvos-mode .live-banner,
     body.tvos-mode .search-bar input {
-      background: rgba(255, 255, 255, 0.08) !important;
+      border-radius: 14px !important;
       backdrop-filter: blur(24px) saturate(190%) !important;
       -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
-      border: 1px solid rgba(255, 255, 255, 0.16) !important;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35) !important;
-      border-radius: 14px !important;
-      color: #fff !important;
-    }
-
-    body.tvos-mode .toolbar-btn:hover {
-      background: rgba(255, 255, 255, 0.18) !important;
-      border-color: rgba(255, 255, 255, 0.5) !important;
-      box-shadow: 0 0 20px rgba(255, 255, 255, 0.25) !important;
     }
 
     body.tvos-mode .music-player-bar.active {
@@ -1373,16 +1363,74 @@
     .admin-btn-secondary { background: var(--bg-card); color: var(--text-secondary); }
     .admin-btn-secondary:hover { color: var(--text-primary); }
 
-    .settings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
-    .setting-item {
-      display: flex; align-items: center; justify-content: space-between; padding: 12px 14px;
-      background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
     }
-    .setting-label { font-size: 13px; font-weight: 500; }
-    .setting-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-    .setting-control select, .setting-control input {
-      padding: 6px 10px; background: var(--bg-secondary); border: 1px solid var(--border);
-      border-radius: 6px; color: var(--text-primary); font-size: 13px; outline: none;
+    .setting-item {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      min-height: 114px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      box-sizing: border-box;
+    }
+    .setting-item:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .setting-item-header {
+      width: 100%;
+    }
+    .setting-label {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.4;
+      white-space: normal;
+    }
+    .setting-desc {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      line-height: 1.45;
+      white-space: normal;
+    }
+    .setting-control {
+      margin-top: 12px;
+      width: 100%;
+    }
+    .setting-control select,
+    .setting-control input {
+      width: 100% !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+      padding: 8px 12px !important;
+      background: var(--bg-secondary) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 8px !important;
+      color: var(--text-primary) !important;
+      font-size: 13px !important;
+      outline: none !important;
+      cursor: pointer !important;
+    }
+    .setting-item.setting-row-item {
+      flex-direction: row !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      min-height: 84px !important;
+    }
+    .setting-item.setting-row-item .setting-control {
+      margin-top: 0 !important;
+      width: auto !important;
+    }
+    .setting-item.setting-row-item .toggle-switch {
+      flex-shrink: 0 !important;
     }
 
     /* 监控模块配置卡片 */
@@ -2142,6 +2190,213 @@
         max-width: 80px;
       }
     }
+  
+    /* ========================================================
+       图 2 位置深度跟随主题配色风格 (顶栏按钮 / 歌词条 / 实时状态条)
+       ======================================================== */
+    /* 1. 工程蓝图 (Prussian Blueprint) */
+    body.theme-blueprint .toolbar-btn,
+    body.theme-blueprint .toolbar-lyric-bar,
+    body.theme-blueprint .live-banner,
+    body.theme-blueprint .search-bar input {
+      background: rgba(25, 49, 82, 0.90) !important;
+      border: 1px solid rgba(144, 224, 239, 0.35) !important;
+      color: #e0f2fe !important;
+      box-shadow: 0 6px 20px rgba(3, 4, 94, 0.4) !important;
+    }
+    body.theme-blueprint .toolbar-btn:hover {
+      background: rgba(30, 58, 99, 0.98) !important;
+      border-color: #38bdf8 !important;
+      color: #fff !important;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.35) !important;
+    }
+    body.theme-blueprint .toolbar-lyric-bar .lyric-track-tag {
+      background: #0284c7 !important;
+      color: #fff !important;
+    }
+
+    /* 2. 极客终端 (Terminal Green) */
+    body.theme-terminal .toolbar-btn,
+    body.theme-terminal .toolbar-lyric-bar,
+    body.theme-terminal .live-banner,
+    body.theme-terminal .search-bar input {
+      background: rgba(8, 14, 10, 0.92) !important;
+      border: 1px solid rgba(34, 197, 94, 0.35) !important;
+      color: #4ade80 !important;
+      box-shadow: 0 0 12px rgba(34, 197, 94, 0.15) !important;
+    }
+    body.theme-terminal .toolbar-btn:hover {
+      background: rgba(15, 26, 18, 0.98) !important;
+      border-color: #22c55e !important;
+      box-shadow: 0 0 16px rgba(34, 197, 94, 0.45) !important;
+      color: #fff !important;
+    }
+    body.theme-terminal .toolbar-lyric-bar .lyric-track-tag {
+      background: #22c55e !important;
+      color: #000 !important;
+      font-weight: 700 !important;
+    }
+
+    /* 3. 暗房胶片 (Darkroom Amber) */
+    body.theme-darkroom .toolbar-btn,
+    body.theme-darkroom .toolbar-lyric-bar,
+    body.theme-darkroom .live-banner,
+    body.theme-darkroom .search-bar input {
+      background: rgba(24, 19, 19, 0.94) !important;
+      border: 1px solid rgba(249, 115, 22, 0.35) !important;
+      color: #fed7aa !important;
+      border-radius: 4px !important;
+    }
+    body.theme-darkroom .toolbar-btn:hover {
+      border-color: #f97316 !important;
+      box-shadow: 0 0 14px rgba(249, 115, 22, 0.3) !important;
+      color: #fff !important;
+    }
+    body.theme-darkroom .toolbar-lyric-bar .lyric-track-tag {
+      background: #ea580c !important;
+      color: #fff !important;
+    }
+
+    /* 4. 午夜冷蓝 (Cinematic Midnight) */
+    body.theme-midnight .toolbar-btn,
+    body.theme-midnight .toolbar-lyric-bar,
+    body.theme-midnight .live-banner,
+    body.theme-midnight .search-bar input {
+      background: rgba(13, 20, 36, 0.90) !important;
+      border: 1px solid rgba(56, 189, 248, 0.28) !important;
+      color: #f0f9ff !important;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5) !important;
+    }
+    body.theme-midnight .toolbar-btn:hover {
+      border-color: #38bdf8 !important;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.3) !important;
+      color: #fff !important;
+    }
+
+    /* 5. 深邃海洋蓝 (Ocean Blue) */
+    body.theme-ocean .toolbar-btn,
+    body.theme-ocean .toolbar-lyric-bar,
+    body.theme-ocean .live-banner,
+    body.theme-ocean .search-bar input {
+      background: rgba(20, 49, 92, 0.90) !important;
+      border: 1px solid rgba(56, 189, 248, 0.30) !important;
+      color: #e0f2fe !important;
+      box-shadow: 0 4px 20px rgba(2, 132, 199, 0.25) !important;
+    }
+    body.theme-ocean .toolbar-btn:hover {
+      border-color: #38bdf8 !important;
+      box-shadow: 0 0 14px rgba(2, 132, 199, 0.4) !important;
+      color: #fff !important;
+    }
+
+    /* 6. 苍翠森林绿 (Forest Green) */
+    body.theme-forest .toolbar-btn,
+    body.theme-forest .toolbar-lyric-bar,
+    body.theme-forest .live-banner,
+    body.theme-forest .search-bar input {
+      background: rgba(24, 69, 55, 0.90) !important;
+      border: 1px solid rgba(52, 211, 153, 0.30) !important;
+      color: #ecfdf5 !important;
+      box-shadow: 0 4px 20px rgba(16, 185, 129, 0.25) !important;
+    }
+    body.theme-forest .toolbar-btn:hover {
+      border-color: #10b981 !important;
+      box-shadow: 0 0 14px rgba(16, 185, 129, 0.4) !important;
+      color: #fff !important;
+    }
+
+    /* 7. 优雅玫瑰金 (Rose Gold) */
+    body.theme-rose .toolbar-btn,
+    body.theme-rose .toolbar-lyric-bar,
+    body.theme-rose .live-banner,
+    body.theme-rose .search-bar input {
+      background: rgba(59, 32, 50, 0.90) !important;
+      border: 1px solid rgba(251, 113, 133, 0.30) !important;
+      color: #fff1f2 !important;
+      box-shadow: 0 4px 20px rgba(244, 63, 94, 0.25) !important;
+    }
+    body.theme-rose .toolbar-btn:hover {
+      border-color: #f43f5e !important;
+      box-shadow: 0 0 14px rgba(244, 63, 94, 0.4) !important;
+      color: #fff !important;
+    }
+
+    /* 8. 经典暗夜深色 (Dark Default) */
+    body.theme-dark .toolbar-btn,
+    body.theme-dark .toolbar-lyric-bar,
+    body.theme-dark .live-banner,
+    body.theme-dark .search-bar input {
+      background: rgba(22, 27, 34, 0.90) !important;
+      border: 1px solid rgba(255, 255, 255, 0.14) !important;
+      color: #e6edf3 !important;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
+    }
+    body.theme-dark .toolbar-btn:hover {
+      background: rgba(33, 38, 45, 0.98) !important;
+      border-color: #58a6ff !important;
+      color: #fff !important;
+    }
+
+    /* 9. 纯净浅色 (Light) */
+    body.theme-light .toolbar-btn,
+    body.theme-light .toolbar-lyric-bar,
+    body.theme-light .live-banner,
+    body.theme-light .search-bar input {
+      background: rgba(255, 255, 255, 0.95) !important;
+      border: 1px solid rgba(0, 0, 0, 0.12) !important;
+      color: #1e293b !important;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+    }
+    body.theme-light .toolbar-btn:hover {
+      background: #f1f5f9 !important;
+      border-color: #3b82f6 !important;
+    }
+
+    /* 10. 纸本工坊 (Warm Atelier) */
+    body.theme-atelier .toolbar-btn,
+    body.theme-atelier .toolbar-lyric-bar,
+    body.theme-atelier .live-banner,
+    body.theme-atelier .search-bar input {
+      background: rgba(245, 242, 235, 0.95) !important;
+      border: 1px solid rgba(68, 64, 60, 0.18) !important;
+      color: #262320 !important;
+      box-shadow: 0 2px 10px rgba(68, 64, 60, 0.06) !important;
+    }
+
+    /* 11. 深海钴蓝 (Deep Cobalt) */
+    body.theme-cobalt .toolbar-btn,
+    body.theme-cobalt .toolbar-lyric-bar,
+    body.theme-cobalt .live-banner,
+    body.theme-cobalt .search-bar input {
+      background: rgba(14, 28, 54, 0.90) !important;
+      border: 1px solid rgba(96, 165, 250, 0.32) !important;
+      color: #eff6ff !important;
+    }
+
+    /* 12. 包豪斯工坊 (Werkstatt) */
+    body.theme-werkstatt .toolbar-btn,
+    body.theme-werkstatt .toolbar-lyric-bar,
+    body.theme-werkstatt .live-banner,
+    body.theme-werkstatt .search-bar input {
+      background: rgba(28, 28, 28, 0.92) !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      color: #f5f5f5 !important;
+    }
+
+    /* 13. 复古街机 (Arcade) */
+    body.theme-arcade .toolbar-btn,
+    body.theme-arcade .toolbar-lyric-bar,
+    body.theme-arcade .live-banner,
+    body.theme-arcade .search-bar input {
+      background: rgba(26, 12, 42, 0.92) !important;
+      border: 1px solid rgba(236, 72, 153, 0.35) !important;
+      color: #fdf2f8 !important;
+    }
+    body.theme-arcade .toolbar-btn:hover {
+      border-color: #fbbf24 !important;
+      box-shadow: 2px 2px 0px #fbbf24 !important;
+    }
+
   </style>
 </head>
 <body class="theme-dark">
@@ -2236,36 +2491,36 @@
       <div class="admin-tab-content active" id="tab-ui">
         <div class="settings-grid">
           <div class="setting-item">
-            <div>
-              <div class="setting-label">主题配色风格</div>
-              <div class="setting-desc">深色、浅色、海洋蓝、森林绿、玫瑰金</div>
+            <div class="setting-item-header">
+              <div class="setting-label">🎨 主题配色风格</div>
+              <div class="setting-desc">控制全站整体色彩：深色、浅色、工程蓝图、极客终端等</div>
             </div>
             <div class="setting-control">
               <select id="settingTheme">
-                <optgroup label="🏛️ 原有经典主题">
+                <optgroup label="🏛️ 原有经典配色">
                   <option value="dark">🌙 暗夜深色 (原版默认)</option>
                   <option value="light">☀️ 纯净浅色</option>
                   <option value="ocean">🌊 深邃海洋蓝</option>
                   <option value="forest">🌲 苍翠森林绿</option>
                   <option value="rose">🌸 优雅玫瑰金</option>
                 </optgroup>
-                <optgroup label="✨ Hallmark 新质感主题">
-                  <option value="darkroom">🎞️ 暗房胶片 (Darkroom Amber)</option>
-                  <option value="midnight">🌌 午夜冷蓝 (Cinematic Midnight)</option>
-                  <option value="terminal">📟 极客终端 (Terminal Green)</option>
+                <optgroup label="✨ 质感与特色配色">
                   <option value="blueprint">📐 工程蓝图 (Prussian Blueprint)</option>
-                  <option value="atelier">📜 纸本工坊 (Warm Atelier)</option>
+                  <option value="terminal">📟 极客终端 (Terminal Green)</option>
+                  <option value="midnight">🌌 午夜冷蓝 (Cinematic Midnight)</option>
+                  <option value="darkroom">🎞️ 暗房胶片 (Darkroom Amber)</option>
                   <option value="cobalt">🔷 深海钴蓝 (Deep Cobalt)</option>
                   <option value="werkstatt">📐 包豪斯工坊 (Werkstatt)</option>
                   <option value="arcade">👾 复古街机 (Arcade)</option>
+                  <option value="atelier">📜 纸本工坊 (Warm Atelier)</option>
                 </optgroup>
               </select>
             </div>
           </div>
 
           <div class="setting-item">
-            <div>
-              <div class="setting-label">卡片外观与整体形态</div>
+            <div class="setting-item-header">
+              <div class="setting-label">🖥️ 卡片与导航形态</div>
               <div class="setting-desc">网格、tvOS 苹果纯网格整体效果、紧凑药丸、横向列表</div>
             </div>
             <div class="setting-control">
@@ -2280,8 +2535,8 @@
           </div>
 
           <div class="setting-item">
-            <div>
-              <div class="setting-label">图标主色自适应</div>
+            <div class="setting-item-header">
+              <div class="setting-label">🌈 图标主色自适应</div>
               <div class="setting-desc">提取 Logo 主色实时生成氛围光晕与高光边框</div>
             </div>
             <div class="setting-control">
@@ -2294,9 +2549,9 @@
             </div>
           </div>
 
-          <div class="setting-item">
-            <div>
-              <div class="setting-label">显示主页搜索框</div>
+          <div class="setting-item setting-row-item">
+            <div class="setting-item-header">
+              <div class="setting-label">🔍 显示主页搜索框</div>
               <div class="setting-desc">在快捷卡片上方呈现即时搜索过滤</div>
             </div>
             <label class="toggle-switch">
@@ -2305,8 +2560,8 @@
             </label>
           </div>
 
-          <div class="setting-item">
-            <div>
+          <div class="setting-item setting-row-item">
+            <div class="setting-item-header">
               <div class="setting-label">🎵 飞牛音乐播放器</div>
               <div class="setting-desc">在页面底部接入飞牛系统音乐播放器与控制条</div>
             </div>
@@ -2316,25 +2571,25 @@
             </label>
           </div>
 
-          <div class="setting-item">
-            <div>
+          <div class="setting-item setting-row-item">
+            <div class="setting-item-header">
               <div class="setting-label">🔐 飞牛音乐账户与日志</div>
-              <div class="setting-desc">对接 5888 端口飞牛音乐平台账号密码，或查看排查日志</div>
+              <div class="setting-desc">对接 5888 端口飞牛音乐账号，或查看排查日志</div>
             </div>
             <div style="display:flex;gap:6px">
-              <button class="admin-btn admin-btn-secondary" style="font-size:12px;padding:4px 10px" onclick="openMusicCardModal(false); switchMusicTab('fnos_config');">
+              <button class="admin-btn admin-btn-secondary" style="font-size:12px;padding:6px 12px;white-space:nowrap" onclick="openMusicCardModal(false); switchMusicTab('fnos_config');">
                 ⚙️ 账号配置
               </button>
-              <button class="admin-btn admin-btn-secondary" style="font-size:12px;padding:4px 10px" onclick="openMusicCardModal(false); switchMusicTab('logs');">
+              <button class="admin-btn admin-btn-secondary" style="font-size:12px;padding:6px 12px;white-space:nowrap" onclick="openMusicCardModal(false); switchMusicTab('logs');">
                 📋 音乐日志
               </button>
             </div>
           </div>
 
-          <div class="setting-item">
-            <div>
-              <div class="setting-label">🌐 外网访问域名替换 (局域网 IP 自动替换)</div>
-              <div class="setting-desc">当通过公网域名访问控制台时，自动将卡片及音乐链接中的局域网 IP (如 192.168.x.x) 替换为当前访问域名或指定外网域名，保持端口不变</div>
+          <div class="setting-item setting-row-item">
+            <div class="setting-item-header">
+              <div class="setting-label">🌐 外网访问域名替换</div>
+              <div class="setting-desc">公网访问时自动将卡片及音乐的局域网 IP 替换为外网域名</div>
             </div>
             <label class="toggle-switch">
               <input type="checkbox" id="settingEnableWanReplace" checked>
@@ -2343,11 +2598,13 @@
           </div>
 
           <div class="setting-item" id="wanDomainRow">
-            <div>
-              <div class="setting-label">自定义外网访问域名 (可选)</div>
-              <div class="setting-desc">留空时自动识别当前浏览器访问的主机域名 (推荐，如 terrysg.cn)；如有多层反代可在此指定</div>
+            <div class="setting-item-header">
+              <div class="setting-label">🌐 自定义外网访问域名 (可选)</div>
+              <div class="setting-desc">留空自动识别当前访问的主机名 (如 terrysg.cn)；有多层反代可在此指定</div>
             </div>
-            <input type="text" id="settingWanDomain" placeholder="例如: terrysg.cn (留空自动)" style="width:200px;padding:6px 10px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:12px;outline:none">
+            <div class="setting-control">
+              <input type="text" id="settingWanDomain" placeholder="例如: terrysg.cn (留空自动)">
+            </div>
           </div>
         </div>
 
@@ -2456,7 +2713,7 @@
       <!-- Tab 5: 关于 -->
       <div class="admin-tab-content" id="tab-about">
         <div style="font-size:13px;color:var(--text-secondary);line-height:1.8">
-          <p><strong>NAS Stats v2.4.1</strong> — 飞牛 fnOS 与家庭数据中心聚合仪表盘</p>
+          <p><strong>NAS Stats v2.4.2</strong> — 飞牛 fnOS 与家庭数据中心聚合仪表盘</p>
           <p>• 数据驱动: 全面集成 SQLite 数据库持久化，去中心化管理</p>
           <p>• 扩展监控: 支持 qBittorrent, Transmission, iKuai, PVE, MoviePilot, iStoreOS, Emby, Plex, Jellyfin, Home Assistant, EasyNVR</p>
           <p>• 图标支持: 支持一键联网探测网页 Favicon、本地上传图片转 Base64、外链图标加载以及标准 Emoji 表情。</p>
@@ -2511,7 +2768,7 @@
     <main id="servicesGrid" class="services-grid style-default"></main>
     <div id="noResults" style="text-align:center;padding:40px 0;color:var(--text-muted);display:none">没有找到匹配的服务</div>
 
-    <footer>NAS Stats v2.4.1 • 飞牛 fnOS 监控</footer>
+    <footer>NAS Stats v2.4.2 • 飞牛 fnOS 监控</footer>
   </div>
 
   <!-- 飞牛系统音乐播放控制条 -->
