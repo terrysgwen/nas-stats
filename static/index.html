@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NAS 服务导航 2.0</title>
+  <title>NAS 服务导航 v2.3.0</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -88,107 +88,98 @@
     body.theme-rose .bg-layer::after { background: rgba(28, 16, 23, 0.85); }
 
     
-    /* ─── 🍎 Apple TV 液体毛玻璃主题 (tvOS Liquid Glass) ─── */
+    /* ─── 🍎 Apple TV 液体毛玻璃主题 (tvOS Dark Frosted Acrylic) ─── */
     body.theme-appletv {
-      --bg-primary: #08090d;
-      --bg-secondary: rgba(255, 255, 255, 0.05);
-      --bg-card: rgba(255, 255, 255, 0.06);
-      --bg-card-hover: rgba(255, 255, 255, 0.12);
-      --text-primary: #ffffff;
-      --text-secondary: rgba(255, 255, 255, 0.75);
-      --text-muted: rgba(255, 255, 255, 0.48);
+      --bg-primary: #0a0c12;
+      --bg-secondary: rgba(22, 26, 38, 0.7);
+      --bg-card: rgba(18, 22, 32, 0.75);
+      --bg-card-hover: rgba(28, 34, 50, 0.82);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
       --accent-blue: #2997ff;
       --accent-cyan: #30d158;
       --accent-green: #30d158;
       --accent-purple: #bf5af2;
       --accent-orange: #ff9f0a;
       --accent-red: #ff453a;
-      --border: rgba(255, 255, 255, 0.14);
-      --shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
-      --radius: 18px;
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
+      --border: rgba(255, 255, 255, 0.10);
+      --shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+      --radius: 14px;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Segoe UI", sans-serif;
     }
 
-    /* 类似 tvOS 的深空极光背景光晕 */
+    /* 沉静深邃的暗夜微光背景，绝不浑浊 */
     body.theme-appletv .bg-layer::after {
       background:
-        radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.18) 0px, transparent 50%),
-        radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
-        radial-gradient(at 50% 100%, rgba(14, 165, 233, 0.14) 0px, transparent 60%),
-        radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
-        #08090e;
+        radial-gradient(ellipse at 50% 0%, rgba(30, 41, 59, 0.4) 0%, transparent 70%),
+        radial-gradient(ellipse at 80% 100%, rgba(15, 23, 42, 0.6) 0%, transparent 60%),
+        #0a0c12;
     }
 
-    /* Apple TV 核心卡片毛玻璃透润材质 */
+    /* 真正高级的 Apple TV 深色熏黑亚克力卡片：深底高对比、字迹极其锐利清晰 */
     body.theme-appletv .service-card {
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.02) 100%) !important;
-      backdrop-filter: blur(28px) saturate(190%);
-      -webkit-backdrop-filter: blur(28px) saturate(190%);
-      border: 1px solid rgba(255, 255, 255, 0.15) !important;
-      border-radius: 18px !important;
-      box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.28), 0 12px 32px 0 rgba(0, 0, 0, 0.35) !important;
-      transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.22s ease !important;
+      background: rgba(16, 20, 30, 0.78) !important;
+      backdrop-filter: blur(20px) saturate(160%) !important;
+      -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.10) !important;
+      border-radius: 14px !important;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+      transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease !important;
     }
 
-    /* tvOS 标志性聚焦微放大悬浮与边缘高光反射 */
+    /* 去掉夸张抖动的 scale(1.04)，改为优雅平稳的微升与蓝色顶光高亮 */
     body.theme-appletv .service-card:hover {
-      transform: scale(1.04) translateY(-3px) !important;
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 100%) !important;
-      border-color: rgba(255, 255, 255, 0.45) !important;
-      box-shadow:
-        inset 0 1px 2px 0 rgba(255, 255, 255, 0.6),
-        0 20px 48px 0 rgba(0, 0, 0, 0.55),
-        0 0 24px 0 rgba(41, 151, 255, 0.25) !important;
+      transform: translateY(-2px) !important;
+      background: rgba(22, 28, 42, 0.85) !important;
+      border-color: rgba(41, 151, 255, 0.45) !important;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
     }
 
-    /* 顶栏工具条与状态栏药丸毛玻璃 */
+    /* 顶栏工具按钮、状态横条与搜索框 */
     body.theme-appletv .toolbar-btn,
     body.theme-appletv .toolbar-lyric-bar,
     body.theme-appletv .live-banner,
     body.theme-appletv .search-bar input,
     body.theme-appletv .toolbar-theme-selector {
-      background: rgba(255, 255, 255, 0.06) !important;
-      backdrop-filter: blur(24px) saturate(180%);
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
-      border: 1px solid rgba(255, 255, 255, 0.16) !important;
-      border-radius: 14px !important;
-      box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.2), 0 8px 24px rgba(0, 0, 0, 0.25);
+      background: rgba(16, 20, 30, 0.75) !important;
+      backdrop-filter: blur(18px) saturate(150%) !important;
+      -webkit-backdrop-filter: blur(18px) saturate(150%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.10) !important;
+      border-radius: 10px !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
     }
 
     body.theme-appletv .toolbar-btn:hover {
-      background: rgba(255, 255, 255, 0.14) !important;
-      border-color: rgba(255, 255, 255, 0.4) !important;
-      transform: scale(1.03);
+      background: rgba(30, 41, 59, 0.8) !important;
+      border-color: rgba(41, 151, 255, 0.4) !important;
     }
 
-    /* 悬浮胶囊毛玻璃音乐播放条 (Floating Glass Island) */
+    /* 底部飞牛音乐播放条：贴底满宽自然平整，深色熏黑磨砂，绝不遮挡留白缝 */
     body.theme-appletv .music-player-bar.active {
       display: flex;
-      margin: 0 16px 14px 16px;
-      width: calc(100% - 32px);
-      border-radius: 20px !important;
-      background: rgba(20, 23, 31, 0.72) !important;
-      backdrop-filter: blur(36px) saturate(200%) !important;
-      -webkit-backdrop-filter: blur(36px) saturate(200%) !important;
-      border: 1px solid rgba(255, 255, 255, 0.18) !important;
-      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.25), 0 20px 50px rgba(0, 0, 0, 0.55) !important;
+      background: rgba(12, 15, 22, 0.92) !important;
+      backdrop-filter: blur(24px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+      border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+      box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.5) !important;
     }
 
-    /* 弹窗卡片播放器 Apple TV 质感 */
+    /* 弹窗播放器 */
     body.theme-appletv .music-card-dialog {
-      border-radius: 26px !important;
-      background: rgba(18, 20, 28, 0.82) !important;
-      backdrop-filter: blur(40px) saturate(200%) !important;
-      -webkit-backdrop-filter: blur(40px) saturate(200%) !important;
-      border: 1px solid rgba(255, 255, 255, 0.2) !important;
-      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3), 0 28px 70px rgba(0, 0, 0, 0.65) !important;
+      border-radius: 20px !important;
+      background: rgba(14, 17, 25, 0.94) !important;
+      backdrop-filter: blur(28px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7) !important;
     }
 
     body.theme-appletv .music-card-player-panel,
     body.theme-appletv .music-card-playlist-panel {
-      border-radius: 20px !important;
+      border-radius: 14px !important;
       background: rgba(255, 255, 255, 0.03) !important;
-      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      border: 1px solid rgba(255, 255, 255, 0.06) !important;
     }
 
     /* ─── Hallmark 精选版本主题 ─── */
@@ -2287,7 +2278,7 @@
       <!-- Tab 5: 关于 -->
       <div class="admin-tab-content" id="tab-about">
         <div style="font-size:13px;color:var(--text-secondary);line-height:1.8">
-          <p><strong>NAS Stats 2.0</strong> — 飞牛 fnOS 与家庭数据中心聚合仪表盘</p>
+          <p><strong>NAS Stats v2.3.0</strong> — 飞牛 fnOS 与家庭数据中心聚合仪表盘</p>
           <p>• 数据驱动: 全面集成 SQLite 数据库持久化，去中心化管理</p>
           <p>• 扩展监控: 支持 qBittorrent, Transmission, iKuai, PVE, MoviePilot, iStoreOS, Emby, Plex, Jellyfin, Home Assistant, EasyNVR</p>
           <p>• 图标支持: 支持一键联网探测网页 Favicon、本地上传图片转 Base64、外链图标加载以及标准 Emoji 表情。</p>
@@ -2342,7 +2333,7 @@
     <main id="servicesGrid" class="services-grid style-default"></main>
     <div id="noResults" style="text-align:center;padding:40px 0;color:var(--text-muted);display:none">没有找到匹配的服务</div>
 
-    <footer>NAS Stats 2.0 • 飞牛 fnOS 监控</footer>
+    <footer>NAS Stats v2.3.0 • 飞牛 fnOS 监控</footer>
   </div>
 
   <!-- 飞牛系统音乐播放控制条 -->
@@ -2872,7 +2863,7 @@
     function applyUI(ui) {
       currentUI = ui || {};
       const savedLocalTheme = localStorage.getItem('nas_stats_theme');
-      const activeTheme = ui.theme || savedLocalTheme || 'appletv';
+      const activeTheme = ui.theme || savedLocalTheme || 'dark';
       document.body.className = `theme-${activeTheme}`;
       const grid = document.getElementById('servicesGrid');
       grid.className = `services-grid style-${ui.card_style || 'default'}`;

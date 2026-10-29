@@ -172,7 +172,7 @@ def get_http_client(timeout: float = 10.0) -> httpx.AsyncClient:
     return httpx.AsyncClient(timeout=timeout, verify=False, follow_redirects=True)
 
 
-app = FastAPI(title="NAS Stats 2.0 API", lifespan=lifespan)
+app = FastAPI(title="NAS Stats 2.3 API", lifespan=lifespan)
 
 @app.middleware("http")
 async def add_no_cache_for_html(request: Request, call_next):
@@ -218,7 +218,7 @@ async def nvr_page():
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "version": "2.0.0"}
+    return {"status": "ok", "version": "2.3.0"}
 
 
 @app.get("/api/stats")
