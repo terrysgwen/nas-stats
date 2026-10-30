@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NAS 服务导航 v2.4.6</title>
+  <title>NAS 服务导航 v2.4.7</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1169,9 +1169,8 @@
     /* 服务卡片网格 */
     .services-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
     .service-card {
-      background: linear-gradient(145deg, rgba(59, 130, 246, 0.08) 0%, var(--bg-card) 60%);
-      border: 1.5px solid rgba(59, 130, 246, 0.32);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), inset 0 0 10px rgba(59, 130, 246, 0.05);
+      background: var(--bg-card);
+      border: 1px solid rgba(59, 130, 246, 0.35);
       transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       text-decoration: none;
       color: inherit;
@@ -1180,10 +1179,10 @@
       overflow: hidden;
     }
     .service-card:hover {
-      background: linear-gradient(145deg, rgba(59, 130, 246, 0.16) 0%, var(--bg-card-hover) 60%);
+      background: var(--bg-card-hover);
       border-color: var(--accent-blue);
       transform: translateY(-2px);
-      box-shadow: 0 0 18px rgba(59, 130, 246, 0.28), var(--shadow);
+      box-shadow: 0 0 16px rgba(59, 130, 246, 0.25), var(--shadow);
     }
     .card-icon-wrapper {
       display: inline-flex;
@@ -2469,18 +2468,15 @@
     }
 
     /* ========================================================
-       服务卡片外框与图标容器深度适配 13 套主题配色规范
+       服务卡片外框与图标容器深度适配（内圈变色，外圈给边框色）
        ======================================================== */
     /* 1. 工程蓝图 (Prussian Blueprint - theme-blueprint) */
     body.theme-blueprint .service-card {
-      border: 1.5px solid rgba(0, 180, 216, 0.48) !important;
-      background: linear-gradient(145deg, rgba(0, 180, 216, 0.15) 0%, rgba(15, 30, 52, 0.88) 100%) !important;
-      box-shadow: 0 4px 18px rgba(3, 4, 94, 0.45), inset 0 0 14px rgba(0, 180, 216, 0.10) !important;
+      border: 1.5px solid rgba(0, 180, 216, 0.45) !important;
     }
     body.theme-blueprint .service-card:hover {
       border-color: #38bdf8 !important;
-      background: linear-gradient(145deg, rgba(0, 180, 216, 0.24) 0%, rgba(20, 42, 72, 0.92) 100%) !important;
-      box-shadow: 0 0 22px rgba(0, 180, 216, 0.45), inset 0 0 16px rgba(0, 180, 216, 0.16) !important;
+      box-shadow: 0 0 16px rgba(0, 180, 216, 0.3) !important;
     }
     body.theme-blueprint .card-icon-wrapper {
       background: rgba(0, 180, 216, 0.16) !important;
@@ -2496,14 +2492,11 @@
 
     /* 2. 极客终端 (Terminal Green - theme-terminal) */
     body.theme-terminal .service-card {
-      border: 1.5px solid rgba(34, 197, 94, 0.48) !important;
-      background: linear-gradient(145deg, rgba(34, 197, 94, 0.12) 0%, rgba(10, 18, 14, 0.90) 100%) !important;
-      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5), inset 0 0 14px rgba(34, 197, 94, 0.08) !important;
+      border: 1.5px solid rgba(34, 197, 94, 0.45) !important;
     }
     body.theme-terminal .service-card:hover {
       border-color: #22c55e !important;
-      background: linear-gradient(145deg, rgba(34, 197, 94, 0.22) 0%, rgba(14, 26, 18, 0.95) 100%) !important;
-      box-shadow: 0 0 22px rgba(34, 197, 94, 0.45), inset 0 0 16px rgba(34, 197, 94, 0.15) !important;
+      box-shadow: 0 0 16px rgba(34, 197, 94, 0.35) !important;
     }
     body.theme-terminal .card-icon-wrapper {
       background: rgba(34, 197, 94, 0.15) !important;
@@ -2519,15 +2512,12 @@
 
     /* 3. 暗房胶片 (Darkroom Amber - theme-darkroom) */
     body.theme-darkroom .service-card {
-      border: 1.5px solid rgba(249, 115, 22, 0.48) !important;
-      background: linear-gradient(145deg, rgba(249, 115, 22, 0.12) 0%, rgba(22, 16, 16, 0.92) 100%) !important;
-      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6), inset 0 0 14px rgba(249, 115, 22, 0.08) !important;
+      border: 1.5px solid rgba(249, 115, 22, 0.45) !important;
       border-radius: 4px !important;
     }
     body.theme-darkroom .service-card:hover {
       border-color: #f97316 !important;
-      background: linear-gradient(145deg, rgba(249, 115, 22, 0.22) 0%, rgba(30, 20, 20, 0.95) 100%) !important;
-      box-shadow: 0 0 22px rgba(249, 115, 22, 0.45), inset 0 0 16px rgba(249, 115, 22, 0.15) !important;
+      box-shadow: 0 0 16px rgba(249, 115, 22, 0.35) !important;
     }
     body.theme-darkroom .card-icon-wrapper {
       background: rgba(249, 115, 22, 0.15) !important;
@@ -2544,14 +2534,11 @@
 
     /* 4. 午夜冷蓝 (Cinematic Midnight - theme-midnight) */
     body.theme-midnight .service-card {
-      border: 1.5px solid rgba(56, 189, 248, 0.42) !important;
-      background: linear-gradient(145deg, rgba(56, 189, 248, 0.12) 0%, rgba(14, 20, 32, 0.90) 100%) !important;
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55), inset 0 0 14px rgba(56, 189, 248, 0.08) !important;
+      border: 1.5px solid rgba(56, 189, 248, 0.40) !important;
     }
     body.theme-midnight .service-card:hover {
       border-color: #38bdf8 !important;
-      background: linear-gradient(145deg, rgba(56, 189, 248, 0.22) 0%, rgba(20, 28, 48, 0.95) 100%) !important;
-      box-shadow: 0 0 24px rgba(56, 189, 248, 0.4), inset 0 0 16px rgba(56, 189, 248, 0.14) !important;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.3) !important;
     }
     body.theme-midnight .card-icon-wrapper {
       background: rgba(56, 189, 248, 0.14) !important;
@@ -2567,14 +2554,11 @@
 
     /* 5. 深邃海洋蓝 (Ocean Blue - theme-ocean) */
     body.theme-ocean .service-card {
-      border: 1.5px solid rgba(56, 189, 248, 0.45) !important;
-      background: linear-gradient(145deg, rgba(2, 132, 199, 0.15) 0%, rgba(12, 32, 60, 0.88) 100%) !important;
-      box-shadow: 0 4px 18px rgba(2, 132, 199, 0.3), inset 0 0 14px rgba(56, 189, 248, 0.10) !important;
+      border: 1.5px solid rgba(56, 189, 248, 0.40) !important;
     }
     body.theme-ocean .service-card:hover {
       border-color: #38bdf8 !important;
-      background: linear-gradient(145deg, rgba(2, 132, 199, 0.25) 0%, rgba(16, 42, 78, 0.94) 100%) !important;
-      box-shadow: 0 0 22px rgba(2, 132, 199, 0.5), inset 0 0 16px rgba(56, 189, 248, 0.16) !important;
+      box-shadow: 0 0 16px rgba(2, 132, 199, 0.35) !important;
     }
     body.theme-ocean .card-icon-wrapper {
       background: rgba(2, 132, 199, 0.18) !important;
@@ -2590,14 +2574,11 @@
 
     /* 6. 苍翠森林绿 (Forest Green - theme-forest) */
     body.theme-forest .service-card {
-      border: 1.5px solid rgba(52, 211, 153, 0.45) !important;
-      background: linear-gradient(145deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 44, 35, 0.88) 100%) !important;
-      box-shadow: 0 4px 18px rgba(16, 185, 129, 0.3), inset 0 0 14px rgba(52, 211, 153, 0.10) !important;
+      border: 1.5px solid rgba(52, 211, 153, 0.40) !important;
     }
     body.theme-forest .service-card:hover {
       border-color: #34d399 !important;
-      background: linear-gradient(145deg, rgba(16, 185, 129, 0.25) 0%, rgba(20, 56, 44, 0.94) 100%) !important;
-      box-shadow: 0 0 22px rgba(16, 185, 129, 0.5), inset 0 0 16px rgba(52, 211, 153, 0.16) !important;
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.35) !important;
     }
     body.theme-forest .card-icon-wrapper {
       background: rgba(16, 185, 129, 0.18) !important;
@@ -2613,14 +2594,11 @@
 
     /* 7. 优雅玫瑰金 (Rose Gold - theme-rose) */
     body.theme-rose .service-card {
-      border: 1.5px solid rgba(251, 113, 133, 0.48) !important;
-      background: linear-gradient(145deg, rgba(244, 63, 94, 0.15) 0%, rgba(42, 22, 35, 0.88) 100%) !important;
-      box-shadow: 0 4px 18px rgba(244, 63, 94, 0.3), inset 0 0 14px rgba(251, 113, 133, 0.10) !important;
+      border: 1.5px solid rgba(251, 113, 133, 0.45) !important;
     }
     body.theme-rose .service-card:hover {
       border-color: #f43f5e !important;
-      background: linear-gradient(145deg, rgba(244, 63, 94, 0.25) 0%, rgba(56, 28, 46, 0.94) 100%) !important;
-      box-shadow: 0 0 22px rgba(244, 63, 94, 0.5), inset 0 0 16px rgba(251, 113, 133, 0.16) !important;
+      box-shadow: 0 0 16px rgba(244, 63, 94, 0.35) !important;
     }
     body.theme-rose .card-icon-wrapper {
       background: rgba(244, 63, 94, 0.18) !important;
@@ -2636,14 +2614,11 @@
 
     /* 8. 经典暗夜深色 (Dark Default - theme-dark) */
     body.theme-dark .service-card {
-      border: 1.5px solid rgba(59, 130, 246, 0.42) !important;
-      background: linear-gradient(145deg, rgba(59, 130, 246, 0.12) 0%, rgba(20, 25, 38, 0.88) 100%) !important;
-      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45), inset 0 0 14px rgba(59, 130, 246, 0.08) !important;
+      border: 1.5px solid rgba(59, 130, 246, 0.40) !important;
     }
     body.theme-dark .service-card:hover {
       border-color: #3b82f6 !important;
-      background: linear-gradient(145deg, rgba(59, 130, 246, 0.22) 0%, rgba(26, 32, 50, 0.94) 100%) !important;
-      box-shadow: 0 0 22px rgba(59, 130, 246, 0.45), inset 0 0 16px rgba(59, 130, 246, 0.14) !important;
+      box-shadow: 0 0 16px rgba(59, 130, 246, 0.3) !important;
     }
     body.theme-dark .card-icon-wrapper {
       background: rgba(59, 130, 246, 0.14) !important;
@@ -2659,14 +2634,11 @@
 
     /* 9. 纯净浅色 (Light - theme-light) */
     body.theme-light .service-card {
-      border: 1.5px solid rgba(59, 130, 246, 0.32) !important;
-      background: linear-gradient(145deg, #ffffff 0%, #f1f5f9 100%) !important;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), inset 0 0 12px rgba(59, 130, 246, 0.04) !important;
+      border: 1.5px solid rgba(59, 130, 246, 0.30) !important;
     }
     body.theme-light .service-card:hover {
       border-color: #3b82f6 !important;
-      background: linear-gradient(145deg, #ffffff 0%, #e2e8f0 100%) !important;
-      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.2), inset 0 0 14px rgba(59, 130, 246, 0.08) !important;
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2) !important;
     }
     body.theme-light .card-icon-wrapper {
       background: rgba(59, 130, 246, 0.10) !important;
@@ -2682,14 +2654,11 @@
 
     /* 10. 纸本工坊 (Warm Atelier - theme-atelier) */
     body.theme-atelier .service-card {
-      border: 1.5px solid rgba(194, 94, 46, 0.38) !important;
-      background: linear-gradient(145deg, rgba(255, 255, 255, 0.96) 0%, rgba(242, 238, 228, 0.96) 100%) !important;
-      box-shadow: 0 4px 16px rgba(68, 64, 60, 0.12), inset 0 0 12px rgba(194, 94, 46, 0.05) !important;
+      border: 1.5px solid rgba(194, 94, 46, 0.35) !important;
     }
     body.theme-atelier .service-card:hover {
       border-color: #c25e2e !important;
-      background: #ffffff !important;
-      box-shadow: 0 6px 20px rgba(194, 94, 46, 0.25), inset 0 0 14px rgba(194, 94, 46, 0.08) !important;
+      box-shadow: 0 4px 16px rgba(194, 94, 46, 0.2) !important;
     }
     body.theme-atelier .card-icon-wrapper {
       background: rgba(194, 94, 46, 0.12) !important;
@@ -2705,14 +2674,11 @@
 
     /* 11. 深海钴蓝 (Deep Cobalt - theme-cobalt) */
     body.theme-cobalt .service-card {
-      border: 1.5px solid rgba(96, 165, 250, 0.48) !important;
-      background: linear-gradient(145deg, rgba(37, 99, 235, 0.15) 0%, rgba(10, 22, 44, 0.88) 100%) !important;
-      box-shadow: 0 6px 20px rgba(4, 8, 18, 0.55), inset 0 0 14px rgba(96, 165, 250, 0.10) !important;
+      border: 1.5px solid rgba(96, 165, 250, 0.42) !important;
     }
     body.theme-cobalt .service-card:hover {
       border-color: #60a5fa !important;
-      background: linear-gradient(145deg, rgba(37, 99, 235, 0.25) 0%, rgba(16, 32, 64, 0.94) 100%) !important;
-      box-shadow: 0 0 24px rgba(37, 99, 235, 0.5), inset 0 0 16px rgba(96, 165, 250, 0.16) !important;
+      box-shadow: 0 0 16px rgba(37, 99, 235, 0.35) !important;
     }
     body.theme-cobalt .card-icon-wrapper {
       background: rgba(37, 99, 235, 0.18) !important;
@@ -2728,14 +2694,12 @@
 
     /* 12. 包豪斯工坊 (Werkstatt - theme-werkstatt) */
     body.theme-werkstatt .service-card {
-      border: 2px solid rgba(255, 255, 255, 0.38) !important;
-      background: #202020 !important;
+      border: 2px solid rgba(255, 255, 255, 0.35) !important;
       border-radius: 0px !important;
     }
     body.theme-werkstatt .service-card:hover {
       border-color: #2563eb !important;
-      background: #282828 !important;
-      box-shadow: 0 0 18px rgba(37, 99, 235, 0.4) !important;
+      box-shadow: 0 0 16px rgba(37, 99, 235, 0.35) !important;
     }
     body.theme-werkstatt .card-icon-wrapper {
       background: rgba(255, 255, 255, 0.08) !important;
@@ -2750,13 +2714,12 @@
 
     /* 13. 复古街机 (Arcade - theme-arcade) */
     body.theme-arcade .service-card {
-      border: 1.5px solid rgba(236, 72, 153, 0.50) !important;
-      background: linear-gradient(145deg, rgba(236, 72, 153, 0.15) 0%, rgba(22, 12, 35, 0.90) 100%) !important;
-      box-shadow: 3px 3px 0px rgba(236, 72, 153, 0.4), inset 0 0 14px rgba(236, 72, 153, 0.10) !important;
+      border: 1.5px solid rgba(236, 72, 153, 0.45) !important;
+      box-shadow: 3px 3px 0px rgba(236, 72, 153, 0.3) !important;
     }
     body.theme-arcade .service-card:hover {
       border-color: #fbbf24 !important;
-      box-shadow: 4px 4px 0px #fbbf24, 0 0 20px rgba(251, 191, 36, 0.4) !important;
+      box-shadow: 4px 4px 0px #fbbf24 !important;
     }
     body.theme-arcade .card-icon-wrapper {
       background: rgba(236, 72, 153, 0.18) !important;
