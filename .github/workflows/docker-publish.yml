@@ -21,7 +21,7 @@ jobs:
           if [[ "${{ github.ref }}" == refs/tags/* ]]; then
             RAW_VER="${GITHUB_REF#refs/tags/}"
           else
-            RAW_VER=$(python3 -c "import re; m = re.search(r'__version__\s*=\s*[\"\\']([^\"\\']+)[\"\\']', open('main.py').read()); print(m.group(1) if m else '2.4.7')")
+            RAW_VER=$(python3 -c "import re; m = re.search(r'__version__\s*=\s*[\"\\']([^\"\\']+)[\"\\']', open('main.py').read()); print(m.group(1) if m else '2.4.8')")
           fi
           CLEAN_VER="${RAW_VER#v}"
           echo "version=v${CLEAN_VER}" >> $GITHUB_OUTPUT
