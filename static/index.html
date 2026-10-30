@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NAS 服务导航 v2.4.3</title>
+  <title>NAS 服务导航 v2.4.4</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -500,12 +500,8 @@
       display: none !important;
     }
 
-    /* 应用网格容器（自适应大屏九宫格） */
-    .services-grid.style-tvos,
-    .app-grid, 
-    .grid, 
-    .items-container, 
-    #app-list {
+    /* 应用网格容器（tvOS 纯网格形态） */
+    .services-grid.style-tvos {
       display: grid !important;
       grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important;
       gap: 32px 24px !important;
@@ -515,11 +511,7 @@
     }
 
     /* tvOS 风格单项卡片：去卡片外壳，聚焦于 Squircle 图标主体 */
-    .services-grid.style-tvos .service-card,
-    .app-item, 
-    .grid-item, 
-    .card, 
-    .nav-item {
+    .services-grid.style-tvos .service-card {
       position: relative !important;
       display: flex !important;
       flex-direction: column !important;
@@ -543,11 +535,7 @@
     }
 
     /* 图标容器主体：亚克力高透毛玻璃 + Squircle 大圆角 */
-    .services-grid.style-tvos .card-icon-wrapper,
-    .app-icon-wrapper, 
-    .app-icon, 
-    .icon-box, 
-    .card-icon {
+    .services-grid.style-tvos .card-icon-wrapper {
       position: relative !important;
       width: 96px !important;
       height: 96px !important;
@@ -570,11 +558,7 @@
     }
 
     /* 图标内部图片自适应 */
-    .services-grid.style-tvos .card-icon-img,
-    .app-icon-wrapper img, 
-    .app-icon img, 
-    .card-icon img,
-    .icon-box img {
+    .services-grid.style-tvos .card-icon-img {
       width: 54px !important;
       height: 54px !important;
       border-radius: 12px !important;
@@ -591,10 +575,7 @@
     }
 
     /* tvOS 镜面高光反射层（斜切扫光 135deg） */
-    .services-grid.style-tvos .card-icon-wrapper::after,
-    .app-icon-wrapper::after, 
-    .app-icon::after, 
-    .icon-box::after {
+    .services-grid.style-tvos .card-icon-wrapper::after {
       content: "" !important;
       position: absolute !important;
       inset: 0 !important;
@@ -612,11 +593,7 @@
 
     /* tvOS 悬停与聚焦状态 (Focus Engine 效果) */
     .services-grid.style-tvos .service-card:hover .card-icon-wrapper,
-    .services-grid.style-tvos .service-card:focus .card-icon-wrapper,
-    .app-item:hover .app-icon-wrapper,
-    .app-item:focus .app-icon-wrapper,
-    .grid-item:hover .app-icon,
-    .card:hover .card-icon {
+    .services-grid.style-tvos .service-card:focus .card-icon-wrapper {
       transform: scale(var(--tvos-focus-scale)) translateY(-4px) !important;
       background-color: rgba(255, 255, 255, 0.18) !important;
       border-color: rgba(255, 255, 255, 0.65) !important;
@@ -627,21 +604,16 @@
     }
 
     .services-grid.style-tvos .service-card:hover .card-icon-img,
-    .services-grid.style-tvos .service-card:hover .card-icon,
-    .app-item:hover .app-icon-wrapper img,
-    .grid-item:hover img {
+    .services-grid.style-tvos .service-card:hover .card-icon {
       transform: scale(1.06) !important;
     }
 
-    .services-grid.style-tvos .service-card:hover .card-icon-wrapper::after,
-    .grid-item:hover .app-icon::after {
+    .services-grid.style-tvos .service-card:hover .card-icon-wrapper::after {
       opacity: 1 !important;
     }
 
     /* 点击反馈（微压效果） */
-    .services-grid.style-tvos .service-card:active .card-icon-wrapper,
-    .app-item:active .app-icon-wrapper,
-    .grid-item:active .app-icon {
+    .services-grid.style-tvos .service-card:active .card-icon-wrapper {
       transform: scale(1.05) translateY(-1px) !important;
       transition-duration: 0.08s !important;
     }
@@ -654,11 +626,7 @@
       width: 100% !important;
     }
 
-    .services-grid.style-tvos .card-name,
-    .app-title, 
-    .app-name, 
-    .item-title, 
-    .card-text {
+    .services-grid.style-tvos .card-name {
       margin-top: 12px !important;
       font-size: 13.5px !important;
       font-weight: 500 !important;
@@ -673,10 +641,7 @@
       transition: color 0.25s ease, transform 0.25s ease !important;
     }
 
-    .services-grid.style-tvos .service-card:hover .card-name,
-    .app-item:hover .app-title,
-    .app-item:hover .app-name,
-    .grid-item:hover .item-title {
+    .services-grid.style-tvos .service-card:hover .card-name {
       color: #ffffff !important;
       transform: translateY(2px) !important;
     }
@@ -730,29 +695,6 @@
       -webkit-backdrop-filter: blur(28px) saturate(190%) !important;
       border: 1px solid rgba(255, 255, 255, 0.18) !important;
       box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75) !important;
-    }
-
-    @media (max-width: 480px) {
-      .services-grid.style-tvos {
-        grid-template-columns: repeat(3, 1fr) !important;
-        gap: 16px 8px !important;
-        padding: 10px 4px !important;
-      }
-      .services-grid.style-tvos .card-icon-wrapper {
-        width: 76px !important;
-        height: 76px !important;
-        border-radius: 20px !important;
-      }
-      .services-grid.style-tvos .card-icon-img {
-        width: 42px !important;
-        height: 42px !important;
-      }
-      .services-grid.style-tvos .card-icon {
-        font-size: 36px !important;
-      }
-      .services-grid.style-tvos .card-name {
-        font-size: 11.5px !important;
-      }
     }
 
 
@@ -1244,7 +1186,8 @@
     }
     .card-icon { font-size: 32px; line-height: 1; }
     .card-icon-img { width: 32px; height: 32px; border-radius: 6px; object-fit: contain; }
-    .card-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .card-info { width: 100%; min-width: 0; max-width: 100%; overflow: hidden; text-align: center; }
+    .card-name { font-size: 13px; font-weight: 600; color: var(--text-primary); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
     .card-desc { display: none; }
 
     /* ─── 图标主色自适应卡片样式 ─── */
@@ -1615,12 +1558,11 @@
     }
 
     /* ─── 手机与移动端全屏响应式适配 (Mobile Responsive Layout) ─── */
+    /* ─── 平板与窄屏响应式适配 (Tablet Responsive Layout) ─── */
     @media (max-width: 1024px) {
       .container {
         padding: 12px 12px 85px;
       }
-
-      /* 顶部工具栏与歌词栏 */
       .toolbar {
         gap: 8px;
         margin-bottom: 12px;
@@ -1635,15 +1577,6 @@
         padding: 4px 10px;
         border-radius: 12px;
       }
-      .lyric-track-tag {
-        max-width: 85px;
-        font-size: 10.5px;
-        padding: 1px 6px;
-      }
-      .lyric-line {
-        font-size: 11.5px;
-        line-height: 1.3;
-      }
       .toolbar-actions {
         width: 100%;
         margin-left: 0;
@@ -1652,14 +1585,95 @@
         gap: 6px;
       }
       .toolbar-btn {
-        padding: 6px 8px;
-        font-size: 11.5px;
+        padding: 6px 10px;
+        font-size: 12px;
         border-radius: 8px;
-        flex: 1 1 calc(33.333% - 6px);
-        min-width: 65px;
-        justify-content: center;
-        white-space: nowrap;
-        text-align: center;
+      }
+      .live-banner,
+      #liveBanner {
+        display: none !important;
+      }
+      .search-bar {
+        max-width: 100%;
+        margin: 0 auto 14px;
+      }
+      .services-grid {
+        grid-template-columns: repeat(auto-fill, minmax(115px, 1fr)) !important;
+        gap: 10px;
+      }
+    }
+
+    /* ─── 手机与移动端全屏响应式适配 (Mobile Responsive Layout) ─── */
+    @media (max-width: 768px) {
+      html, body {
+        overflow-x: hidden !important;
+        width: 100% !important;
+        max-width: 100vw !important;
+        box-sizing: border-box !important;
+      }
+
+      .container {
+        padding: 8px 8px 75px !important;
+        width: 100% !important;
+        max-width: 100vw !important;
+        box-sizing: border-box !important;
+        overflow-x: hidden !important;
+      }
+
+      /* 顶部工具栏与歌词栏 */
+      .toolbar {
+        gap: 8px !important;
+        margin-bottom: 10px !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+      }
+
+      .toolbar-lyric-bar {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        min-height: 36px !important;
+        padding: 4px 8px !important;
+        border-radius: 12px !important;
+        box-sizing: border-box !important;
+      }
+      .lyric-track-tag {
+        max-width: 80px !important;
+        font-size: 10px !important;
+        padding: 1px 5px !important;
+      }
+      .lyric-line {
+        font-size: 11px !important;
+        line-height: 1.3 !important;
+      }
+
+      /* 顶部工具栏 5 个按钮完美对称排版：第一行 3 个 (各占 1/3)，第二行 2 个 (各占 1/2)，彻底消除不对称空洞 */
+      .toolbar-actions {
+        width: 100% !important;
+        margin-left: 0 !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 5px !important;
+        box-sizing: border-box !important;
+      }
+      .toolbar-btn {
+        box-sizing: border-box !important;
+        text-align: center !important;
+        justify-content: center !important;
+        white-space: nowrap !important;
+        font-size: 11px !important;
+        padding: 6px 4px !important;
+        border-radius: 8px !important;
+      }
+      .toolbar-actions > :nth-child(-n+3) {
+        flex: 1 1 calc(33.333% - 4px) !important;
+        min-width: 0 !important;
+      }
+      .toolbar-actions > :nth-child(n+4) {
+        flex: 1 1 calc(50% - 3px) !important;
+        min-width: 0 !important;
       }
 
       /* 顶部实时服务状态监控框架：移动端全面取消显示，彻底释放小屏纵向空间 */
@@ -1670,69 +1684,164 @@
 
       /* 搜索框 */
       .search-bar {
-        max-width: 100%;
-        margin: 0 auto 14px;
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0 auto 10px !important;
+        box-sizing: border-box !important;
       }
       .search-bar input {
-        padding: 8px 12px 8px 34px;
-        font-size: 13px;
-        border-radius: 8px;
+        padding: 8px 12px 8px 34px !important;
+        font-size: 12.5px !important;
+        border-radius: 8px !important;
+        box-sizing: border-box !important;
       }
       .search-bar .search-icon {
-        left: 10px;
-        font-size: 13px;
+        left: 10px !important;
+        font-size: 13px !important;
       }
 
-      /* 核心卡片网格自适应：手机端紧凑多列，彻底解决卡片巨大问题 */
-      .services-grid {
-        grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)) !important;
-        gap: 8px;
+      /* 核心卡片网格自适应：严格 3 等分列 (minmax(0, 1fr))，彻底根除第 3 列右侧溢出截断 */
+      .services-grid,
+      .services-grid.style-default,
+      .services-grid.style-tvos,
+      .services-grid.style-compact {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 8px 6px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 4px 0 20px !important;
+        margin: 0 !important;
       }
-      .services-grid.style-default .service-card {
-        padding: 10px 6px;
-        border-radius: 12px;
-        gap: 6px;
-      }
-      .services-grid.style-compact .service-card {
-        padding: 6px 10px;
-        border-radius: 16px;
-      }
+
       .services-grid.style-horizontal {
         grid-template-columns: 1fr !important;
-        gap: 8px;
+        gap: 8px !important;
       }
-      .services-grid.style-horizontal .service-card {
-        padding: 10px 12px;
+
+      /* 单个服务卡片：绝对受限容器宽度，弹性自适应 */
+      .service-card {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 8px 4px !important;
+        border-radius: 12px !important;
+        overflow: hidden !important;
+      }
+
+      .card-top {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+        min-width: 0 !important;
+      }
+
+      .card-icon-wrapper {
+        width: 48px !important;
+        height: 48px !important;
+        min-width: 48px !important;
+        min-height: 48px !important;
+        border-radius: 13px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-sizing: border-box !important;
+      }
+
+      .card-icon-img {
+        width: 28px !important;
+        height: 28px !important;
+        max-width: 28px !important;
+        max-height: 28px !important;
+        object-fit: contain !important;
       }
 
       .card-icon {
-        font-size: 24px;
+        font-size: 26px !important;
+        line-height: 1 !important;
+        width: auto !important;
+        height: auto !important;
       }
-      .card-icon-img {
-        width: 26px;
-        height: 26px;
+
+      /* tvOS 风格卡片在手机端专属比例微调 */
+      .services-grid.style-tvos .service-card {
+        padding: 4px 2px !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
       }
+      .services-grid.style-tvos .card-icon-wrapper {
+        width: 60px !important;
+        height: 60px !important;
+        min-width: 60px !important;
+        min-height: 60px !important;
+        border-radius: 16px !important;
+      }
+      .services-grid.style-tvos .card-icon-img {
+        width: 36px !important;
+        height: 36px !important;
+        max-width: 36px !important;
+        max-height: 36px !important;
+      }
+      .services-grid.style-tvos .card-icon {
+        font-size: 32px !important;
+      }
+
+      /* 卡片文本容器与标题：严格居中并文本超长打省略号，决不撑破列宽 */
+      .card-info {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        text-align: center !important;
+        margin-top: 5px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+      }
+
       .card-name {
-        font-size: 11.5px;
-        margin-top: 2px;
+        font-size: 11px !important;
+        font-weight: 500 !important;
+        line-height: 1.25 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        text-align: center !important;
+        display: block !important;
+        padding: 0 2px !important;
+        box-sizing: border-box !important;
+        margin-top: 2px !important;
       }
+
       .card-desc {
         display: none !important;
       }
       .card-external-badge {
-        width: 18px;
-        height: 18px;
-        font-size: 9px;
-        top: 4px;
-        right: 4px;
+        width: 16px !important;
+        height: 16px !important;
+        font-size: 8px !important;
+        top: 2px !important;
+        right: 2px !important;
       }
 
       /* 光晕适度收拢，防止在小屏溢出过强 */
       .card-color-active[data-color-mode="ambient"] .service-card[data-has-color="true"]::before {
-        width: 50px;
-        height: 50px;
-        top: -15px;
+        width: 45px !important;
+        height: 45px !important;
+        top: -10px !important;
       }
+    }
 
       /* 底部音乐播放条 */
       .music-player-bar {
@@ -2137,46 +2246,6 @@
       .auth-card {
         width: 92%;
         padding: 24px 16px;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .container {
-        padding: 8px 8px 75px;
-      }
-      /* 超小屏时卡片固定 3 列，紧凑精致像原生 App */
-      .services-grid {
-        grid-template-columns: repeat(3, 1fr) !important;
-        gap: 6px;
-      }
-      .services-grid.style-default .service-card {
-        padding: 8px 4px;
-        border-radius: 10px;
-      }
-      .card-icon {
-        font-size: 22px;
-      }
-      .card-icon-img {
-        width: 24px;
-        height: 24px;
-      }
-      .card-name {
-        font-size: 11px;
-      }
-      .toolbar-actions {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 4px;
-      }
-      .toolbar-btn {
-        font-size: 10.5px;
-        padding: 5px 2px;
-      }
-      .music-title {
-        max-width: 80px;
-      }
-      .music-artist {
-        max-width: 80px;
       }
     }
   
@@ -2702,7 +2771,7 @@
       <!-- Tab 5: 关于 -->
       <div class="admin-tab-content" id="tab-about">
         <div style="font-size:13px;color:var(--text-secondary);line-height:1.8">
-          <p><strong>NAS Stats v2.4.3</strong> — 飞牛 fnOS 与家庭数据中心聚合仪表盘</p>
+          <p><strong>NAS Stats v2.4.4</strong> — 飞牛 fnOS 与家庭数据中心聚合仪表盘</p>
           <p>• 数据驱动: 全面集成 SQLite 数据库持久化，去中心化管理</p>
           <p>• 扩展监控: 支持 qBittorrent, Transmission, iKuai, PVE, MoviePilot, iStoreOS, Emby, Plex, Jellyfin, Home Assistant, EasyNVR</p>
           <p>• 图标支持: 支持一键联网探测网页 Favicon、本地上传图片转 Base64、外链图标加载以及标准 Emoji 表情。</p>
@@ -2757,7 +2826,7 @@
     <main id="servicesGrid" class="services-grid style-default"></main>
     <div id="noResults" style="text-align:center;padding:40px 0;color:var(--text-muted);display:none">没有找到匹配的服务</div>
 
-    <footer>NAS Stats v2.4.3 • 飞牛 fnOS 监控</footer>
+    <footer>NAS Stats v2.4.4 • 飞牛 fnOS 监控</footer>
   </div>
 
   <!-- 飞牛系统音乐播放控制条 -->
