@@ -4,7 +4,7 @@ All configuration and services are persisted in SQLite (database.py).
 Monitors are dynamically discovered and instantiated from monitors package.
 """
 
-__version__ = "2.4.9"
+__version__ = "2.4.10"
 
 import asyncio
 import base64
@@ -22,6 +22,7 @@ from fastapi import Depends, FastAPI, HTTPException, Header, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 import httpx
+from lucky import LuckyClient, match_services_with_lucky
 
 logger = logging.getLogger("main")
 
@@ -176,7 +177,7 @@ def get_http_client(timeout: float = 10.0) -> httpx.AsyncClient:
     return httpx.AsyncClient(timeout=timeout, verify=False, follow_redirects=True)
 
 
-app = FastAPI(title="NAS Stats 2.4.9 API", lifespan=lifespan)
+app = FastAPI(title="NAS Stats 2.4.10 API", lifespan=lifespan)
 
 @app.middleware("http")
 async def add_no_cache_for_html(request: Request, call_next):
@@ -1183,6 +1184,169 @@ async def get_custom_background():
         media_type="image/jpeg",
         headers={"Cache-Control": "public, max-age=86400"}
     )
+
+
+# ── Lucky Integration (Web Services & Reverse Proxy) ────────────────
+
+@app.get("/api/lucky/config")
+async def get_lucky_config_endpoint(_auth: dict = Depends(require_auth)):
+    """获取 Lucky 连接与联动配置"""
+    cfg = db.get_config("lucky", {})
+    default_cfg = {
+        "enabled": False,
+        "url": "http://192.168.1.1:16601",
+        "auth_type": "login",
+        "account": "666",
+        "password": "666",
+        "open_token": "",
+        "auto_wan": True,
+        "last_sync": 0,
+    }
+    merged = {**default_cfg, **cfg}
+    return {"ok": True, "config": merged}
+
+
+@app.post("/api/lucky/config")
+async def save_lucky_config_endpoint(request: Request, _auth: dict = Depends(require_auth)):
+    """保存 Lucky 连接与联动配置"""
+    body = await request.json()
+    cfg = db.get_config("lucky", {})
+    cfg.update(body)
+    db.set_config("lucky", cfg)
+    return {"ok": True, "config": cfg}
+
+
+@app.post("/api/lucky/test")
+async def test_lucky_endpoint(request: Request, _auth: dict = Depends(require_auth)):
+    """测试 Lucky 连通性并拉取规则数量"""
+    body = await request.json()
+    cfg = db.get_config("lucky", {})
+    cfg.update(body)
+
+    client = LuckyClient(
+        url=cfg.get("url", ""),
+        auth_type=cfg.get("auth_type", "login"),
+        account=cfg.get("account", "666"),
+        password=cfg.get("password", "666"),
+        open_token=cfg.get("open_token", ""),
+    )
+    try:
+        rules = await client.fetch_rules()
+        cfg["last_sync"] = int(time.time())
+        db.set_config("lucky", cfg)
+        return {
+            "ok": True,
+            "msg": f"连接成功！成功获取到 {len(rules)} 条 Lucky Web 服务规则",
+            "count": len(rules),
+            "rules": rules[:50],
+        }
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+
+
+@app.get("/api/lucky/rules")
+async def get_lucky_rules_endpoint(_auth: dict = Depends(require_auth)):
+    """从 Lucky 获取规则并与卡片进行对比匹配"""
+    cfg = db.get_config("lucky", {})
+    if not cfg.get("url"):
+        return {"ok": False, "error": "尚未配置 Lucky 服务地址", "rules": [], "matched": []}
+
+    client = LuckyClient(
+        url=cfg.get("url", ""),
+        auth_type=cfg.get("auth_type", "login"),
+        account=cfg.get("account", "666"),
+        password=cfg.get("password", "666"),
+        open_token=cfg.get("open_token", ""),
+    )
+
+    try:
+        rules = await client.fetch_rules()
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"连接 Lucky 失败: {e}", "rules": [], "matched": []}, status_code=502)
+
+    services = db.get_all_services()
+    nas_ip = db.get_config("nas_ip", "")
+    matched = match_services_with_lucky(services, rules, nas_ip=nas_ip)
+    matched_count = sum(1 for m in matched if m.get("matched"))
+
+    return {
+        "ok": True,
+        "rules": rules,
+        "matched": matched,
+        "summary": {
+            "total_services": len(services),
+            "total_rules": len(rules),
+            "matched_count": matched_count,
+            "unmatched_count": len(services) - matched_count,
+        },
+    }
+
+
+@app.post("/api/lucky/apply")
+async def apply_lucky_endpoint(request: Request, _auth: dict = Depends(require_auth)):
+    """将 Lucky 外部地址应用到服务卡片中 (更新 wan_url)"""
+    body = await request.json()
+    apply_all = body.get("apply_all", False)
+    single_id = body.get("service_id")
+    single_url = body.get("wan_url")
+
+    services = db.get_all_services()
+
+    if single_id:
+        db.update_service(single_id, wan_url=single_url or "")
+        return {"ok": True, "msg": "已更新该卡片外网访问地址"}
+
+    if apply_all:
+        cfg = db.get_config("lucky", {})
+        client = LuckyClient(
+            url=cfg.get("url", ""),
+            auth_type=cfg.get("auth_type", "login"),
+            account=cfg.get("account", "666"),
+            password=cfg.get("password", "666"),
+            open_token=cfg.get("open_token", ""),
+        )
+        try:
+            rules = await client.fetch_rules()
+        except Exception as e:
+            return JSONResponse({"ok": False, "error": f"拉取 Lucky 规则失败: {e}"}, status_code=502)
+
+        nas_ip = db.get_config("nas_ip", "")
+        matched = match_services_with_lucky(services, rules, nas_ip=nas_ip)
+        applied_count = 0
+        for m in matched:
+            if m.get("matched") and m.get("lucky_url"):
+                db.update_service(m["id"], wan_url=m["lucky_url"])
+                applied_count += 1
+
+        return {"ok": True, "applied_count": applied_count, "msg": f"已将 {applied_count} 个服务卡片的外网地址更新为 Lucky 外部地址"}
+
+    return {"ok": False, "error": "无效的请求参数"}
+
+
+@app.get("/api/lucky/mappings")
+async def get_lucky_mappings_endpoint():
+    """轻量级提供服务卡片与 Lucky 外网映射字典 (供前端外网跳转自适应使用)"""
+    cfg = db.get_config("lucky", {})
+    if not cfg.get("enabled", False) or not cfg.get("url"):
+        return {"ok": True, "mappings": {}}
+
+    try:
+        client = LuckyClient(
+            url=cfg.get("url", ""),
+            auth_type=cfg.get("auth_type", "login"),
+            account=cfg.get("account", "666"),
+            password=cfg.get("password", "666"),
+            open_token=cfg.get("open_token", ""),
+            timeout=3.0,
+        )
+        rules = await client.fetch_rules()
+        services = db.get_all_services()
+        nas_ip = db.get_config("nas_ip", "")
+        matched = match_services_with_lucky(services, rules, nas_ip=nas_ip)
+        mappings = {m["id"]: m["lucky_url"] for m in matched if m.get("matched") and m.get("lucky_url")}
+        return {"ok": True, "mappings": mappings}
+    except Exception:
+        return {"ok": True, "mappings": {}}
 
 
 # ── Services Management (CRUD) ──────────────────────────────────────

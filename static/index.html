@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NAS 服务导航 v2.4.9</title>
+  <title>NAS 服务导航 v2.4.10</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -2820,6 +2820,7 @@
         <button class="admin-tab active" data-tab="tab-ui">🎨 界面与样式</button>
         <button class="admin-tab" data-tab="tab-monitors">📡 监控服务设置</button>
         <button class="admin-tab" data-tab="tab-services">📋 服务快捷方式</button>
+        <button class="admin-tab" data-tab="tab-lucky">🍀 Lucky 穿透联动</button>
         <button class="admin-tab" data-tab="tab-import">📥 导入与发现</button>
         <button class="admin-tab" data-tab="tab-about">ℹ️ 关于系统</button>
         <button class="admin-tab" data-tab="tab-logs">📋 运行日志</button>
@@ -3035,6 +3036,139 @@
           <button class="admin-btn admin-btn-success" id="btnOpenAddModal">➕ 新建自定义服务</button>
         </div>
         <div class="admin-list" id="adminServicesList"></div>
+      </div>
+
+      <!-- Tab: Lucky 穿透联动与 Web 服务外网映射 -->
+      <div class="admin-tab-content" id="tab-lucky">
+        <!-- 顶部介绍与说明卡片 -->
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">
+            <div>
+              <div style="font-size:15px;font-weight:600;display:flex;align-items:center;gap:6px">
+                <span>🍀 Lucky (大吉) 穿透与外网服务映射联动</span>
+                <span id="luckyStatusBadge" style="font-size:11px;padding:2px 8px;border-radius:10px;background:rgba(107,114,128,0.2);color:var(--text-muted)">⚪ 未连接</span>
+              </div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:4px;line-height:1.6">
+                连接本地或软路由运行的 Lucky (端口转发/DDNS/反向代理)，自动拉取其 Web 服务规则，并与卡片内网地址+端口智能比对。在外网访问时，卡片直接使用对应的 Lucky 外部域名直达服务！
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="admin-btn admin-btn-secondary" id="btnTestLucky">🔌 测试连接并同步</button>
+              <button class="admin-btn admin-btn-primary" id="btnSaveLuckyConfig">💾 保存 Lucky 配置</button>
+            </div>
+          </div>
+
+          <!-- 连接配置表单 -->
+          <div class="settings-grid" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+            <div class="setting-item setting-row-item">
+              <div class="setting-item-header">
+                <div class="setting-label">🔌 启用 Lucky 穿透联动</div>
+                <div class="setting-desc">开启后系统将定期探测与对比 Lucky Web 服务规则</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="luckyEnabled">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-item-header">
+                <div class="setting-label">🌐 Lucky 服务地址</div>
+                <div class="setting-desc">Lucky 管理面板访问 URL (默认端口 16601)</div>
+              </div>
+              <div class="setting-control">
+                <input type="text" id="luckyUrl" placeholder="例如: http://192.168.1.1:16601 或 http://127.0.0.1:16601">
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-item-header">
+                <div class="setting-label">🔐 认证方式</div>
+                <div class="setting-desc">支持 Lucky 账号密码登录获取 Token，或使用 OpenToken 免密</div>
+              </div>
+              <div class="setting-control">
+                <select id="luckyAuthType">
+                  <option value="login">🔑 账号密码登录 (推荐，默认 666 / 666)</option>
+                  <option value="token">🎫 OpenToken 免密调用 (在 Lucky 设置最底部开启)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="setting-item" id="luckyLoginRow">
+              <div class="setting-item-header">
+                <div class="setting-label">👤 登录账号与密码</div>
+                <div class="setting-desc">Lucky 管理员账号与密码 (初始默认均为 666)</div>
+              </div>
+              <div class="setting-control" style="display:flex;gap:8px">
+                <input type="text" id="luckyAccount" placeholder="账号 (默认 666)" style="flex:1">
+                <input type="password" id="luckyPassword" placeholder="密码 (默认 666)" style="flex:1">
+              </div>
+            </div>
+
+            <div class="setting-item" id="luckyTokenRow" style="display:none">
+              <div class="setting-item-header">
+                <div class="setting-label">🎫 OpenToken 密钥</div>
+                <div class="setting-desc">在 Lucky 面板“设置”最底部滑动开启 OpenToken 并复制填入</div>
+              </div>
+              <div class="setting-control">
+                <input type="password" id="luckyOpenToken" placeholder="填入 32位 OpenToken 字符串">
+              </div>
+            </div>
+
+            <div class="setting-item setting-row-item">
+              <div class="setting-item-header">
+                <div class="setting-label">🚀 外网访问自动匹配 Lucky 外部地址</div>
+                <div class="setting-desc">公网环境下卡片未手动设置 wan_url 时，自动优先跳转 Lucky 匹配的外部域名</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="luckyAutoWan" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- 卡片与 Lucky Web 规则比对表格 -->
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px">
+            <div>
+              <div style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px">
+                <span>📊 卡片内网地址与 Lucky Web 规则对比映射表</span>
+                <span id="luckyMatchStats" style="font-size:12px;color:var(--text-muted);font-weight:normal">（正在加载对照数据...）</span>
+              </div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px">
+                内网地址与 Lucky 反代后端目标自动比对；点击“填入”或“一键应用”即可将外部域名写入卡片外网访问地址。
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <input type="text" id="luckyFilterInput" placeholder="🔍 过滤服务名/端口/域名..." style="padding:6px 10px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:12px;outline:none;width:180px">
+              <button class="admin-btn admin-btn-secondary" id="btnRefreshLucky" style="font-size:12px;padding:6px 12px">🔄 刷新比对</button>
+              <button class="admin-btn admin-btn-success" id="btnApplyAllLucky" style="font-size:12px;padding:6px 14px">⚡ 一键应用所有 Lucky 地址到卡片</button>
+            </div>
+          </div>
+
+          <div style="overflow-x:auto;max-height:480px;border:1px solid var(--border);border-radius:6px">
+            <table style="width:100%;border-collapse:collapse;font-size:13px;text-align:left">
+              <thead>
+                <tr style="background:var(--bg-secondary);border-bottom:1px solid var(--border);color:var(--text-muted);font-size:12px">
+                  <th style="padding:10px 12px;min-width:140px">服务卡片</th>
+                  <th style="padding:10px 12px;min-width:160px">内网目标地址</th>
+                  <th style="padding:10px 12px;min-width:140px">Lucky 匹配状态</th>
+                  <th style="padding:10px 12px;min-width:200px">Lucky Web 外部地址</th>
+                  <th style="padding:10px 12px;min-width:200px">当前生效外网地址 (wan_url)</th>
+                  <th style="padding:10px 12px;min-width:100px;text-align:center">操作</th>
+                </tr>
+              </thead>
+              <tbody id="luckyCompareTbody">
+                <tr>
+                  <td colspan="6" style="padding:24px;text-align:center;color:var(--text-muted)">
+                    点击上方“🔌 测试连接并同步”以拉取 Lucky 规则并执行比对
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <!-- Tab 4: 导入与智能发现 -->
@@ -3400,6 +3534,10 @@
         <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
           💡 选填。在外网/域名环境下访问时优先使用此地址；若留空则自动按上方的局域网端口或默认域名自动替换。
         </div>
+        <div id="luckyModalHint" style="display:none;margin-top:6px;padding:6px 10px;background:rgba(16,185,129,0.08);border:1px dashed rgba(16,185,129,0.3);border-radius:6px;font-size:12px;color:var(--accent-green);align-items:center;justify-content:space-between">
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" id="luckyModalHintText">🍀 Lucky 推荐公网地址: </span>
+          <button type="button" class="admin-btn admin-btn-secondary" id="btnFillLuckyWanUrl" style="padding:2px 8px;font-size:11px;white-space:nowrap;margin-left:8px">一键填入</button>
+        </div>
       </div>
       <div class="modal-field">
         <label>端口</label>
@@ -3587,6 +3725,10 @@
       // 外网/域名环境下优先使用单独设置的外网独立访问地址（可选）
       if (isCurrentWanAccess() && s.wan_url && s.wan_url.trim()) {
         return s.wan_url.trim();
+      }
+      // 若开启了 Lucky 自动映射联动且匹配到了 Lucky 外部公网地址
+      if (isCurrentWanAccess() && luckyMatchedUrls && luckyMatchedUrls[s.id]) {
+        return luckyMatchedUrls[s.id];
       }
       // 若仅填写了外网独立地址且无局域网地址时作为通用兜底
       if (!rawUrl && s.wan_url && s.wan_url.trim()) {
@@ -5949,6 +6091,24 @@
         } else {
           fp.style.display = 'none';
         }
+
+        // 联动 Lucky 外部地址提示与一键填入
+        const luckyHint = document.getElementById('luckyModalHint');
+        const luckyText = document.getElementById('luckyModalHintText');
+        const luckyUrl = (luckyMatchedUrls && luckyMatchedUrls[id]) ? luckyMatchedUrls[id] : '';
+        if (luckyUrl) {
+          if (luckyText) luckyText.textContent = `🍀 Lucky 推荐公网地址: ${luckyUrl}`;
+          if (luckyHint) luckyHint.style.display = 'flex';
+          const btnFill = document.getElementById('btnFillLuckyWanUrl');
+          if (btnFill) {
+            btnFill.onclick = () => {
+              document.getElementById('editWanUrl').value = luckyUrl;
+              toast('已填入 Lucky 外部地址', 'info');
+            };
+          }
+        } else {
+          if (luckyHint) luckyHint.style.display = 'none';
+        }
       } else {
         document.getElementById('editName').value = '';
         document.getElementById('editIcon').value = '🌐';
@@ -5958,6 +6118,8 @@
         document.getElementById('editProtocol').value = 'http';
         document.getElementById('editDesc').value = '';
         fp.style.display = 'none';
+        const luckyHint = document.getElementById('luckyModalHint');
+        if (luckyHint) luckyHint.style.display = 'none';
       }
       modal.classList.add('visible');
     }
@@ -6395,7 +6557,350 @@
         if (tab.dataset.tab === 'tab-logs') {
           refreshMusicLogs('admin');
         }
+        if (tab.dataset.tab === 'tab-lucky') {
+          loadLuckyAdmin();
+        }
       };
+    });
+
+    // ─── Lucky (大吉) 穿透与外网服务映射联动 ───
+    let luckyMatchedList = [];
+    let luckyMatchedUrls = {}; // { service_id: lucky_external_url }
+
+    async function loadLuckyConfig() {
+      try {
+        const res = await fetch('/api/lucky/config');
+        const data = await res.json();
+        if (data.ok && data.config) {
+          const cfg = data.config;
+          const elEnabled = document.getElementById('luckyEnabled');
+          if (elEnabled) elEnabled.checked = cfg.enabled === true;
+          const elUrl = document.getElementById('luckyUrl');
+          if (elUrl) elUrl.value = cfg.url || 'http://192.168.1.1:16601';
+          const elAuth = document.getElementById('luckyAuthType');
+          if (elAuth) elAuth.value = cfg.auth_type || 'login';
+          const elAcc = document.getElementById('luckyAccount');
+          if (elAcc) elAcc.value = cfg.account || '666';
+          const elPwd = document.getElementById('luckyPassword');
+          if (elPwd) elPwd.value = cfg.password || '666';
+          const elTok = document.getElementById('luckyOpenToken');
+          if (elTok) elTok.value = cfg.open_token || '';
+          const elAuto = document.getElementById('luckyAutoWan');
+          if (elAuto) elAuto.checked = cfg.auto_wan !== false;
+
+          syncLuckyAuthDisplay(cfg.auth_type || 'login');
+
+          if (cfg.enabled) {
+            updateLuckyBadge('connected', '已启用配置');
+          } else {
+            updateLuckyBadge('disabled', '未启用');
+          }
+        }
+      } catch (e) {
+        console.warn('获取 Lucky 配置失败:', e);
+      }
+    }
+
+    function syncLuckyAuthDisplay(type) {
+      const loginRow = document.getElementById('luckyLoginRow');
+      const tokenRow = document.getElementById('luckyTokenRow');
+      if (loginRow) loginRow.style.display = type === 'login' ? 'flex' : 'none';
+      if (tokenRow) tokenRow.style.display = type === 'token' ? 'block' : 'none';
+    }
+
+    function updateLuckyBadge(status, text) {
+      const badge = document.getElementById('luckyStatusBadge');
+      if (!badge) return;
+      if (status === 'connected') {
+        badge.style.background = 'rgba(16,185,129,0.15)';
+        badge.style.color = 'var(--accent-green)';
+        badge.textContent = `🟢 ${text || '已连接'}`;
+      } else if (status === 'error') {
+        badge.style.background = 'rgba(239,68,68,0.15)';
+        badge.style.color = 'var(--accent-red)';
+        badge.textContent = `🔴 ${text || '连接异常'}`;
+      } else {
+        badge.style.background = 'rgba(107,114,128,0.2)';
+        badge.style.color = 'var(--text-muted)';
+        badge.textContent = `⚪ ${text || '未连接'}`;
+      }
+    }
+
+    async function loadLuckyRulesAndCompare(showToast = false) {
+      const tbody = document.getElementById('luckyCompareTbody');
+      const stats = document.getElementById('luckyMatchStats');
+      if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--text-muted)"><div class="spinner" style="display:inline-block;width:18px;height:18px;vertical-align:middle;margin-right:8px"></div>正在连接 Lucky 拉取 Web 服务规则并与服务卡片对比...</td></tr>`;
+      }
+      try {
+        const res = await fetch('/api/lucky/rules');
+        const data = await res.json();
+        if (data.ok) {
+          luckyMatchedList = data.matched || [];
+          luckyMatchedUrls = {};
+          luckyMatchedList.forEach(m => {
+            if (m.matched && m.lucky_url) {
+              luckyMatchedUrls[m.id] = m.lucky_url;
+            }
+          });
+
+          const total = data.summary?.total_services || luckyMatchedList.length;
+          const matchedCount = data.summary?.matched_count || 0;
+          if (stats) {
+            stats.innerHTML = `<span style="color:var(--accent-green);font-weight:600">已匹配 ${matchedCount}</span> / 共 ${total} 个卡片 (Lucky 规则库: ${data.summary?.total_rules || 0} 条)`;
+          }
+          updateLuckyBadge('connected', `已连通 (${matchedCount}/${total} 匹配)`);
+          renderLuckyCompareTable();
+          if (showToast) {
+            toast(`对比完成！共匹配 ${matchedCount} 个服务卡片`, 'success');
+          }
+        } else {
+          updateLuckyBadge('error', '连接失败');
+          if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--accent-red)">⚠️ ${escapeHtml(data.error || '获取规则失败，请检查 Lucky 面板地址与密码')}</td></tr>`;
+          }
+          if (showToast) {
+            toast('获取 Lucky 规则失败: ' + (data.error || '未知错误'), 'error');
+          }
+        }
+      } catch (e) {
+        updateLuckyBadge('error', '网络异常');
+        if (tbody) {
+          tbody.innerHTML = `<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--accent-red)">⚠️ 网络请求出错: ${escapeHtml(e.message)}</td></tr>`;
+        }
+        if (showToast) {
+          toast('请求出错: ' + e.message, 'error');
+        }
+      }
+    }
+
+    function renderLuckyCompareTable() {
+      const tbody = document.getElementById('luckyCompareTbody');
+      if (!tbody) return;
+      const kw = (document.getElementById('luckyFilterInput')?.value || '').toLowerCase().trim();
+
+      const filtered = luckyMatchedList.filter(item => {
+        if (!kw) return true;
+        const text = `${item.name} ${item.port} ${item.internal_url} ${item.lucky_url} ${item.lucky_target} ${item.wan_url}`.toLowerCase();
+        return text.includes(kw);
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--text-muted)">没有找到匹配的服务记录</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(item => {
+        const iconHtml = item.favicon ?
+          `<img src="${escapeHtml(item.favicon)}" style="width:18px;height:18px;border-radius:3px;vertical-align:middle;margin-right:6px;object-fit:contain">` :
+          `<span style="margin-right:6px">${escapeHtml(item.icon || '🔧')}</span>`;
+
+        const matchBadge = item.matched ?
+          `<span style="display:inline-block;padding:2px 8px;border-radius:10px;background:rgba(16,185,129,0.15);color:var(--accent-green);font-size:11px;font-weight:600">✓ 匹配成功</span>` :
+          `<span style="display:inline-block;padding:2px 8px;border-radius:10px;background:rgba(107,114,128,0.15);color:var(--text-muted);font-size:11px">未匹配</span>`;
+
+        const luckyUrlHtml = item.lucky_url ?
+          `<a href="${escapeHtml(item.lucky_url)}" target="_blank" style="color:var(--accent-blue);text-decoration:none;word-break:break-all;display:inline-flex;align-items:center;gap:4px">
+            <span>${escapeHtml(item.lucky_url)}</span>
+            <span style="font-size:11px">↗</span>
+          </a>` :
+          `<span style="color:var(--text-muted)">无对应规则</span>`;
+
+        const luckyTargetText = item.lucky_target ?
+          `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;font-family:monospace">后端: ${escapeHtml(item.lucky_target)}</div>` : '';
+
+        return `
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:10px 12px">
+              <div style="display:flex;align-items:center">
+                ${iconHtml}
+                <div>
+                  <strong style="color:var(--text-primary)">${escapeHtml(item.name)}</strong>
+                  <div style="font-size:11px;color:var(--text-muted)">分类: ${escapeHtml(item.category || '默认')} | 端口: ${item.port || '-'}</div>
+                </div>
+              </div>
+            </td>
+            <td style="padding:10px 12px;font-family:monospace;font-size:12px;color:var(--text-secondary);word-break:break-all">
+              ${escapeHtml(item.internal_url || '-')}
+            </td>
+            <td style="padding:10px 12px">
+              ${matchBadge}
+              ${luckyTargetText}
+            </td>
+            <td style="padding:10px 12px">
+              ${luckyUrlHtml}
+            </td>
+            <td style="padding:10px 12px">
+              <input type="text" class="lucky-wan-input" id="inputWan_${escapeHtml(item.id)}" value="${escapeHtml(item.wan_url || '')}" placeholder="空则使用 Lucky 匹配或默认" style="width:100%;padding:6px 8px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-size:12px;outline:none">
+            </td>
+            <td style="padding:10px 12px;text-align:center">
+              <div style="display:flex;gap:4px;justify-content:center">
+                ${item.lucky_url ? `<button type="button" class="admin-btn admin-btn-secondary" style="padding:4px 8px;font-size:11px;white-space:nowrap" onclick="fillLuckyToInput('${escapeHtml(item.id)}', '${escapeHtml(item.lucky_url)}')">填入</button>` : ''}
+                <button type="button" class="admin-btn admin-btn-primary" style="padding:4px 8px;font-size:11px;white-space:nowrap" onclick="saveSingleWanUrl('${escapeHtml(item.id)}')">保存</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function fillLuckyToInput(id, url) {
+      const input = document.getElementById('inputWan_' + id);
+      if (input) {
+        input.value = url;
+        saveSingleWanUrl(id);
+      }
+    }
+
+    async function saveSingleWanUrl(id) {
+      const input = document.getElementById('inputWan_' + id);
+      const val = input ? input.value.trim() : '';
+      try {
+        const res = await fetch('/api/lucky/apply', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ service_id: id, wan_url: val })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          toast('卡片外网访问地址已保存', 'success');
+          const it = luckyMatchedList.find(x => x.id === id);
+          if (it) it.wan_url = val;
+          const svc = allServices.find(x => x.id === id);
+          if (svc) svc.wan_url = val;
+        } else {
+          toast('保存失败: ' + (data.error || '未知错误'), 'error');
+        }
+      } catch (e) {
+        toast('请求失败: ' + e.message, 'error');
+      }
+    }
+
+    async function loadLuckyAdmin() {
+      await loadLuckyConfig();
+      await loadLuckyRulesAndCompare(false);
+    }
+
+    async function loadLuckyMappings() {
+      try {
+        const res = await fetch('/api/lucky/mappings');
+        const data = await res.json();
+        if (data.ok && data.mappings) {
+          luckyMatchedUrls = data.mappings;
+        }
+      } catch (e) {}
+    }
+
+    document.getElementById('luckyAuthType')?.addEventListener('change', e => {
+      syncLuckyAuthDisplay(e.target.value);
+    });
+
+    document.getElementById('btnSaveLuckyConfig')?.addEventListener('click', async () => {
+      const cfg = {
+        enabled: document.getElementById('luckyEnabled').checked,
+        url: document.getElementById('luckyUrl').value.trim(),
+        auth_type: document.getElementById('luckyAuthType').value,
+        account: document.getElementById('luckyAccount').value.trim(),
+        password: document.getElementById('luckyPassword').value.trim(),
+        open_token: document.getElementById('luckyOpenToken').value.trim(),
+        auto_wan: document.getElementById('luckyAutoWan').checked,
+      };
+      const btn = document.getElementById('btnSaveLuckyConfig');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/lucky/config', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(cfg)
+        });
+        const data = await res.json();
+        if (data.ok) {
+          toast('Lucky 配置已保存', 'success');
+          updateLuckyBadge(cfg.enabled ? 'connected' : 'disabled', cfg.enabled ? '已启用配置' : '未启用');
+        } else {
+          toast('保存失败: ' + (data.error || '未知错误'), 'error');
+        }
+      } catch (e) {
+        toast('网络错误: ' + e.message, 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('btnTestLucky')?.addEventListener('click', async () => {
+      const cfg = {
+        enabled: document.getElementById('luckyEnabled').checked,
+        url: document.getElementById('luckyUrl').value.trim(),
+        auth_type: document.getElementById('luckyAuthType').value,
+        account: document.getElementById('luckyAccount').value.trim(),
+        password: document.getElementById('luckyPassword').value.trim(),
+        open_token: document.getElementById('luckyOpenToken').value.trim(),
+        auto_wan: document.getElementById('luckyAutoWan').checked,
+      };
+      if (!cfg.url) {
+        toast('请先输入 Lucky 服务地址', 'warning');
+        return;
+      }
+      const btn = document.getElementById('btnTestLucky');
+      btn.disabled = true;
+      btn.textContent = '⏳ 测试连接中...';
+      try {
+        const res = await fetch('/api/lucky/test', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(cfg)
+        });
+        const data = await res.json();
+        if (data.ok) {
+          toast(data.msg || '连接成功！', 'success');
+          updateLuckyBadge('connected', `已连通 (${data.count} 条规则)`);
+          loadLuckyRulesAndCompare(false);
+        } else {
+          toast('连接失败: ' + (data.error || '未知错误'), 'error');
+          updateLuckyBadge('error', '连接失败');
+        }
+      } catch (e) {
+        toast('请求失败: ' + e.message, 'error');
+        updateLuckyBadge('error', '网络异常');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🔌 测试连接并同步';
+      }
+    });
+
+    document.getElementById('btnRefreshLucky')?.addEventListener('click', () => {
+      loadLuckyRulesAndCompare(true);
+    });
+
+    document.getElementById('luckyFilterInput')?.addEventListener('input', () => {
+      renderLuckyCompareTable();
+    });
+
+    document.getElementById('btnApplyAllLucky')?.addEventListener('click', async () => {
+      if (!confirm('确认将当前所有匹配的 Lucky 外部域名地址批量写入到对应卡片的外网访问地址中吗？')) return;
+      const btn = document.getElementById('btnApplyAllLucky');
+      btn.disabled = true;
+      btn.textContent = '⏳ 正在批量写入...';
+      try {
+        const res = await fetch('/api/lucky/apply', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ apply_all: true })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          toast(data.msg || `成功更新 ${data.applied_count} 个服务卡片的外网地址`, 'success');
+          loadLuckyRulesAndCompare(false);
+          loadServicesAdmin();
+        } else {
+          toast('批量应用失败: ' + (data.error || '未知错误'), 'error');
+        }
+      } catch (e) {
+        toast('请求失败: ' + e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '⚡ 一键应用所有 Lucky 地址到卡片';
+      }
     });
 
     document.getElementById('searchInput').oninput = e => renderServices(e.target.value);
@@ -6705,6 +7210,7 @@
 
       loadBg();
       loadServicesAdmin();
+      loadLuckyMappings();
       initMusicPlayer();
       refreshStats();
       setInterval(refreshStats, 5000);
