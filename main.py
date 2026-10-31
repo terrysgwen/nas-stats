@@ -4,7 +4,7 @@ All configuration and services are persisted in SQLite (database.py).
 Monitors are dynamically discovered and instantiated from monitors package.
 """
 
-__version__ = "2.4.13"
+__version__ = "2.4.14"
 
 import asyncio
 import base64
@@ -177,7 +177,7 @@ def get_http_client(timeout: float = 10.0) -> httpx.AsyncClient:
     return httpx.AsyncClient(timeout=timeout, verify=False, follow_redirects=True)
 
 
-app = FastAPI(title="NAS Stats 2.4.13 API", lifespan=lifespan)
+app = FastAPI(title="NAS Stats 2.4.14 API", lifespan=lifespan)
 
 @app.middleware("http")
 async def add_no_cache_for_html(request: Request, call_next):

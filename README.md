@@ -127,6 +127,11 @@ nas-stats/
 
 ## 📝 版本更新记录
 
+### v2.4.14
+- 🐛 **修复 Lucky 模块全局导入与子规则时间戳生成**:
+  - 在 `lucky.py` 顶部显式补齐 `time`、`json`、`copy`、`secrets`、`base64` 全局导入，根治 `add_subrule_to_main_rule` 因 `time.time()` 触发 `NameError` 的问题。
+  - 严谨校验与模拟子规则克隆写入链路，确保 Happy Path 稳定执行且 Lucky 规则配置安全无损。
+
 ### v2.4.13
 - 🐛 **修复 Lucky 子规则添加接口与数据库调用**:
   - 为 `database.py` 补充完善 `get_service(service_id)` 查询函数，并在 `main.py` 增加列表降级查错机制，彻底解决 `POST /api/lucky/subrule/add` 抛 500 的问题。

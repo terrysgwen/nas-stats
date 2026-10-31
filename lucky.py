@@ -4,8 +4,13 @@ Lucky (大吉) 穿透与反向代理联动模块
 并与本地服务卡片（内网 IP 与端口）进行智能对比匹配，赋能外网访问直达。
 """
 
+import base64
+import copy
+import json
 import logging
 import re
+import secrets
+import time
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 import httpx
@@ -334,7 +339,6 @@ class LuckyClient:
         new_sub_key = str(int(time.time() * 1000))
         if proxy_list:
             # 深度克隆该主规则下的已有子规则，实现“和其他同主规则下的子规则设置完全一致”
-            import copy
             template_sub = proxy_list[0]
             new_sub = copy.deepcopy(template_sub)
             new_sub["Key"] = new_sub_key
