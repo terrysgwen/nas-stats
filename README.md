@@ -127,6 +127,13 @@ nas-stats/
 
 ## 📝 版本更新记录
 
+### v2.4.11
+- 🍀 **Lucky (大吉) 穿透协议深度适配**:
+  - 全面支持 Lucky 3.x 全新非对称 RSA 挑战握手安全登录机制（`/api/login/challenge` + `/api/login`），向下兼容 Lucky 2.x 传统登录。
+  - 完美支持 Lucky 原生 OpenToken 鉴权与 `/api/webservice/rules` 规则检索与反代匹配。
+  - 优化 Lucky 服务地址配置引导与安全入口说明，增加精准错误提示与排查指引。
+- 📦 **依赖与稳定性强化**: 引入 `cryptography` 原生支持加解密，平稳升级。
+
 ### v2.4.10
 - 🍀 **深度集成 Lucky (大吉) 穿透与 Web 服务外网智能映射**：
   - **Lucky 服务联动**：在设置面板新增独立「🍀 Lucky 穿透联动」管理分页，支持直连本地或软路由部署的 Lucky 管理面板（支持账号密码登录获取 Token 或 OpenToken 免密调用）。

@@ -74,7 +74,58 @@ class LuckyClient:
                 raise Exception("未配置 OpenToken，请在 Lucky 设置最底部开启并填入 OpenToken")
             return self.open_token
 
-        # 账号密码登录模式
+        # 1. 尝试 Lucky 3.x RSA 挑战握手登录
+        try:
+            import secrets
+            import base64
+            from cryptography.hazmat.primitives.asymmetric import padding
+            from cryptography.hazmat.primitives import serialization
+
+            session_id = secrets.token_hex(32)
+            ch_resp = await client.get(
+                f"{self.url}/api/login/challenge",
+                headers={"Lucky-Login-Session": session_id},
+                timeout=self.timeout
+            )
+            if ch_resp.status_code == 200:
+                ch_data = ch_resp.json()
+                if ch_data.get("ret") == 0 and ch_data.get("publicKey"):
+                    pubkey = serialization.load_pem_public_key(ch_data["publicKey"].encode('utf-8'))
+                    payload_dict = {
+                        "account": self.account,
+                        "password": self.password,
+                        "twoFA": "",
+                        "challengeId": ch_data["challengeId"],
+                        "nonce": ch_data["nonce"]
+                    }
+                    payload_str = json.dumps(payload_dict, separators=(',', ':'))
+                    chunk_size = 120
+                    cipher_parts = []
+                    for i in range(0, len(payload_str), chunk_size):
+                        part = payload_str[i:i+chunk_size].encode('utf-8')
+                        enc = pubkey.encrypt(part, padding.PKCS1v15())
+                        cipher_parts.append(base64.b64encode(enc).decode('ascii'))
+                    cipher_text = ".".join(cipher_parts)
+
+                    login_resp = await client.post(
+                        f"{self.url}/api/login",
+                        json={"challengeId": ch_data["challengeId"], "cipherText": cipher_text},
+                        headers={"Lucky-Login-Session": session_id},
+                        timeout=self.timeout
+                    )
+                    if login_resp.status_code == 200:
+                        login_data = login_resp.json()
+                        if login_data.get("ret") == 0:
+                            return login_data.get("token") or ""
+                        elif login_data.get("need2FA"):
+                            raise Exception("Lucky 开启了双重验证 (2FA)，暂不支持密码自动登录，请在设置中改用「OpenToken 授权」")
+                        else:
+                            raise Exception(login_data.get("msg") or "Lucky 账号或密码错误")
+        except Exception as e:
+            if "双重验证" in str(e) or "账号或密码错误" in str(e):
+                raise
+
+        # 2. 回退到 Lucky 2.x 传统明文账号密码登录
         login_url = f"{self.url}/api/login"
         payload = {"Account": self.account, "Password": self.password}
         try:
@@ -125,18 +176,22 @@ class LuckyClient:
             if token:
                 headers["Authorization"] = token
                 headers["openToken"] = token
+                headers["Lucky-Admin-Token"] = token
+                headers["token"] = token
             if self.open_token:
                 headers["openToken"] = self.open_token
 
-            # 候选规则查询路径 (跨版本自适应探测)
+            # 候选规则查询路径 (跨版本自适应探测，Lucky 3.x 核心路径为 /api/webservice/rules)
             candidate_paths = [
+                "/api/webservice/rules",
+                "/api/webservice/rules_lite",
                 "/api/reverseproxyrule",
                 "/api/reverseproxyrule/list",
                 "/api/webrule",
                 "/api/webrule/list",
                 "/api/reverseproxy/list",
                 "/api/reverseproxy",
-                "/openapi/webseivce/list",
+                "/openapi/webservice/rules",
                 "/openapi/webservice/list",
             ]
 
@@ -175,8 +230,10 @@ class LuckyClient:
         if isinstance(raw_data, list):
             items = raw_data
         elif isinstance(raw_data, dict):
-            # 常见包装: {"data": [...]}, {"list": [...]}, {"data": {"list": [...]}}
-            if "data" in raw_data:
+            # Lucky 3.x 使用 ruleList
+            if "ruleList" in raw_data and isinstance(raw_data["ruleList"], list):
+                items = raw_data["ruleList"]
+            elif "data" in raw_data:
                 d = raw_data["data"]
                 if isinstance(d, list):
                     items = d
@@ -204,14 +261,15 @@ class LuckyClient:
 
             # 协议识别
             raw_proto = str(item.get("ListenProtocol") or item.get("Protocol") or item.get("protocol") or "").lower()
-            tls_flag = item.get("TLS") or item.get("Tls") or item.get("tls") or item.get("EnableTls")
+            tls_flag = item.get("TLS") or item.get("Tls") or item.get("tls") or item.get("EnableTLS") or item.get("EnableTls")
             if "https" in raw_proto or tls_flag or listen_port == 443:
                 protocol = "https"
             else:
                 protocol = "http"
 
             domains_raw = item.get("DomainList") or item.get("Domains") or item.get("Domain") or item.get("domains") or ""
-            sub_rules = item.get("SubRules") or item.get("subRules") or item.get("SubRuleList") or []
+            # Lucky 3.x 子规则字段为 ProxyList
+            sub_rules = item.get("ProxyList") or item.get("SubRules") or item.get("subRules") or item.get("SubRuleList") or []
 
             if not isinstance(sub_rules, list) or len(sub_rules) == 0:
                 sub_rules = [item]
@@ -221,16 +279,25 @@ class LuckyClient:
                     continue
 
                 sub_rule_key = str(sub.get("SubRuleKey") or sub.get("subRule") or sub.get("Key") or f"sub_{sidx}")
-                sub_name = str(sub.get("Remarks") or sub.get("remarks") or sub.get("Name") or rule_name or "")
-                target_str = str(
-                    sub.get("TargetServer")
-                    or sub.get("target")
-                    or sub.get("Target")
-                    or sub.get("location")
-                    or sub.get("Location")
-                    or sub.get("ProxyTarget")
-                    or ""
-                ).strip()
+                sub_name = str(sub.get("SubRuleName") or sub.get("Remarks") or sub.get("remarks") or sub.get("Name") or rule_name or "")
+                
+                # 目标后端地址 (Lucky 3.x 存放在 Locations 数组中)
+                target_str = ""
+                locs = sub.get("Locations") or sub.get("locations")
+                if isinstance(locs, list) and locs:
+                    target_str = str(locs[0]).strip()
+                elif isinstance(locs, str) and locs.strip():
+                    target_str = locs.strip()
+                else:
+                    target_str = str(
+                        sub.get("TargetServer")
+                        or sub.get("target")
+                        or sub.get("Target")
+                        or sub.get("location")
+                        or sub.get("Location")
+                        or sub.get("ProxyTarget")
+                        or ""
+                    ).strip()
 
                 if not target_str:
                     continue
@@ -240,7 +307,7 @@ class LuckyClient:
                     continue
 
                 # 域名解析 (子规则优先，主规则兜底)
-                sub_domains = sub.get("Domain") or sub.get("DomainList") or domains_raw
+                sub_domains = sub.get("Domains") or sub.get("Domain") or sub.get("DomainList") or domains_raw
                 domain = ""
                 if isinstance(sub_domains, list) and sub_domains:
                     domain = str(sub_domains[0]).strip()
@@ -276,7 +343,7 @@ class LuckyClient:
                     "target_host": target_host,
                     "target_port": target_port,
                     "external_url": ext_url,
-                    "service_type": str(sub.get("serviceType") or sub.get("ServiceType") or "reverseproxy"),
+                    "service_type": str(sub.get("WebServiceType") or sub.get("serviceType") or sub.get("ServiceType") or "reverseproxy"),
                 })
 
         return normalized
