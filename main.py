@@ -4,7 +4,7 @@ All configuration and services are persisted in SQLite (database.py).
 Monitors are dynamically discovered and instantiated from monitors package.
 """
 
-__version__ = "2.4.12"
+__version__ = "2.4.13"
 
 import asyncio
 import base64
@@ -177,7 +177,7 @@ def get_http_client(timeout: float = 10.0) -> httpx.AsyncClient:
     return httpx.AsyncClient(timeout=timeout, verify=False, follow_redirects=True)
 
 
-app = FastAPI(title="NAS Stats 2.4.12 API", lifespan=lifespan)
+app = FastAPI(title="NAS Stats 2.4.13 API", lifespan=lifespan)
 
 @app.middleware("http")
 async def add_no_cache_for_html(request: Request, call_next):
@@ -1212,6 +1212,8 @@ async def save_lucky_config_endpoint(request: Request, _auth: dict = Depends(req
     body = await request.json()
     cfg = db.get_config("lucky", {})
     cfg.update(body)
+    if "url" in cfg and isinstance(cfg["url"], str):
+        cfg["url"] = re.sub(r"/api/?$", "", cfg["url"].strip().rstrip("/"), flags=re.IGNORECASE).rstrip("/")
     db.set_config("lucky", cfg)
     return {"ok": True, "config": cfg}
 
@@ -1222,6 +1224,8 @@ async def test_lucky_endpoint(request: Request, _auth: dict = Depends(require_au
     body = await request.json()
     cfg = db.get_config("lucky", {})
     cfg.update(body)
+    if "url" in cfg and isinstance(cfg["url"], str):
+        cfg["url"] = re.sub(r"/api/?$", "", cfg["url"].strip().rstrip("/"), flags=re.IGNORECASE).rstrip("/")
 
     client = LuckyClient(
         url=cfg.get("url", ""),
@@ -1318,7 +1322,10 @@ async def add_lucky_subrule_endpoint(request: Request, _auth: dict = Depends(req
 
     service = db.get_service(service_id)
     if not service:
-        return JSONResponse({"ok": False, "error": "服务卡片不存在"}, status_code=404)
+        all_s = db.get_all_services()
+        service = next((s for s in all_s if str(s.get("id")) == str(service_id)), None)
+    if not service:
+        return JSONResponse({"ok": False, "error": f"服务卡片不存在 (ID: {service_id})"}, status_code=404)
 
     cfg = db.get_config("lucky", {})
     if not cfg.get("url"):

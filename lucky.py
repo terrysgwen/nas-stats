@@ -60,7 +60,9 @@ class LuckyClient:
         open_token: str = "",
         timeout: float = 6.0,
     ):
-        self.url = (url or "").strip().rstrip("/")
+        raw_url = (url or "").strip().rstrip("/")
+        # 严格剥离末尾误配或自动补全的 /api，避免产生 /terry/api/api/...
+        self.url = re.sub(r"/api/?$", "", raw_url, flags=re.IGNORECASE).rstrip("/")
         self.auth_type = auth_type or "login"
         self.account = account or "666"
         self.password = password or "666"

@@ -193,6 +193,13 @@ def get_all_services() -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def get_service(service_id: str) -> dict | None:
+    row = get_conn().execute(
+        "SELECT * FROM services WHERE id = ?", (str(service_id),)
+    ).fetchone()
+    return dict(row) if row else None
+
+
 def add_service(svc: dict):
     conn = get_conn()
     data = {
