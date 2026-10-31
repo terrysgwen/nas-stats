@@ -6513,14 +6513,15 @@
           toast('图片大小超过 30MB 限制', 'error');
           return;
         }
-        const formData = new FormData();
-        formData.append('file', file);
         btnDoUploadBg.disabled = true;
         btnDoUploadBg.textContent = '⏳ 上传中...';
         try {
           const res = await fetch('/api/background/upload', {
             method: 'POST',
-            body: formData
+            headers: {
+              'Content-Type': file.type || 'image/jpeg'
+            },
+            body: file
           });
           const data = await res.json();
           if (res.ok && data.ok) {

@@ -18,7 +18,7 @@ import html as html_lib
 import ipaddress
 import logging
 import uuid
-from fastapi import Depends, FastAPI, File, HTTPException, Header, Query, Request, UploadFile
+from fastapi import Depends, FastAPI, HTTPException, Header, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 import httpx
@@ -1116,18 +1116,46 @@ async def bg_proxy(url: str = ""):
 # ── Background Wallpaper Management ─────────────────────────────────
 
 @app.post("/api/background/upload")
-async def upload_background(file: UploadFile = File(...), _auth: dict = Depends(require_auth)):
-    """上传本地背景图片并持久化保存至 data/ 目录"""
-    filename = file.filename or ""
-    lower_fn = filename.lower()
-    ct = file.content_type or ""
-    allowed_exts = (".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp")
-    if not (ct.startswith("image/") or lower_fn.endswith(allowed_exts)):
-        raise HTTPException(status_code=400, detail="只允许上传常见的图片格式文件 (JPG, PNG, WebP 等)")
+async def upload_background(request: Request, _auth: dict = Depends(require_auth)):
+    """上传本地背景图片并持久化保存至 data/ 目录 (兼容原始二进制流与 multipart 表单，无强制第三方库硬依赖)"""
+    ct = request.headers.get("content-type", "").lower()
+    max_size = 30 * 1024 * 1024
+    content = bytearray()
 
-    content = await file.read()
-    if len(content) > 30 * 1024 * 1024:
+    # 1. 若客户端通过 multipart 表单上传且安装了 multipart 解析库
+    if "multipart/form-data" in ct:
+        try:
+            form = await request.form()
+            file_obj = form.get("file")
+            if file_obj:
+                raw = await file_obj.read()
+                content = bytearray(raw)
+        except Exception:
+            pass
+
+    # 2. 若未从表单中获取，直接作为原始二进制数据流读取
+    if not content:
+        async for chunk in request.stream():
+            content.extend(chunk)
+            if len(content) > max_size:
+                raise HTTPException(status_code=413, detail="图片体积过大，请上传 30MB 以内的壁纸图片")
+
+    if not content:
+        raise HTTPException(status_code=400, detail="未接收到有效的图片数据")
+
+    if len(content) > max_size:
         raise HTTPException(status_code=413, detail="图片体积过大，请上传 30MB 以内的壁纸图片")
+
+    # 校验常见图片文件头魔数 (JPEG, PNG, WebP, GIF, BMP) 或 Content-Type
+    is_jpeg = content.startswith(b"\xff\xd8\xff")
+    is_png = content.startswith(b"\x89PNG\r\n\x1a\n")
+    is_webp = content[:4] == b"RIFF" and b"WEBP" in content[:16]
+    is_gif = content.startswith(b"GIF87a") or content.startswith(b"GIF89a")
+    is_bmp = content.startswith(b"BM")
+    is_image_ct = ct.startswith("image/")
+
+    if not (is_jpeg or is_png or is_webp or is_gif or is_bmp or is_image_ct):
+        raise HTTPException(status_code=400, detail="只允许上传常见的图片格式文件 (JPG, PNG, WebP 等)")
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     with open(CUSTOM_BG_PATH, "wb") as f:
