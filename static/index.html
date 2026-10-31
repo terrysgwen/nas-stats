@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NAS 服务导航 v2.4.8</title>
+  <title>NAS 服务导航 v2.4.9</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1035,6 +1035,9 @@
     .bg-layer::after {
       content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(15, 17, 23, 0.8);
+    }
+    body.no-bg-image .bg-layer {
+      display: none !important;
     }
     .bg-caption {
       position: fixed; bottom: 70px; right: 16px; z-index: 0;
@@ -2855,6 +2858,49 @@
 
           <div class="setting-item">
             <div class="setting-item-header">
+              <div class="setting-label">🖼️ 仪表盘背景壁纸</div>
+              <div class="setting-desc">支持微软 Bing 每日壁纸、自定义网络图片直链或本地上传图片 (最高 30MB)</div>
+            </div>
+            <div class="setting-control" style="display:flex;flex-direction:column;gap:10px">
+              <select id="settingBgType">
+                <option value="bing">🌄 Bing 每日壁纸 (自动同步每日超清摄影)</option>
+                <option value="custom_url">🔗 自定义网络图片链接 (输入在线 URL)</option>
+                <option value="upload">📁 本地上传图片 (保存至 NAS 持久化)</option>
+                <option value="none">🎨 纯净无背景图 (呈现主题原生质感底色)</option>
+              </select>
+
+              <!-- 自定义 URL 区域 -->
+              <div id="bgCustomUrlBox" style="display:none;background:var(--bg-secondary);padding:10px;border-radius:6px;border:1px solid var(--border)">
+                <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px">输入任意在线图片直链 (HTTP/HTTPS):</div>
+                <div style="display:flex;gap:8px">
+                  <input type="text" id="settingBgUrl" placeholder="https://example.com/wallpaper.jpg" style="flex:1">
+                  <button type="button" class="admin-btn admin-btn-secondary" id="btnPreviewBgUrl" style="font-size:12px;padding:6px 12px;white-space:nowrap">👁️ 预览</button>
+                </div>
+              </div>
+
+              <!-- 本地上传区域 -->
+              <div id="bgUploadBox" style="display:none;background:var(--bg-secondary);padding:10px;border-radius:6px;border:1px solid var(--border)">
+                <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px">从本地选择壁纸图片 (JPG / PNG / WebP，最大 30MB):</div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                  <input type="file" id="settingBgFile" accept="image/jpeg,image/png,image/webp" style="display:none">
+                  <button type="button" class="admin-btn admin-btn-secondary" id="btnSelectBgFile" style="font-size:12px;padding:6px 12px">📂 选择本地图片</button>
+                  <span id="bgSelectedFileName" style="font-size:12px;color:var(--text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">未选择文件</span>
+                  <button type="button" class="admin-btn admin-btn-primary" id="btnDoUploadBg" style="font-size:12px;padding:6px 14px;white-space:nowrap" disabled>⬆️ 立即上传并应用</button>
+                </div>
+              </div>
+
+              <!-- 壁纸状态与缩略图预览卡片 -->
+              <div id="bgPreviewCard" style="display:flex;align-items:center;gap:12px;padding:8px 12px;background:var(--bg-secondary);border:1px dashed var(--border);border-radius:6px">
+                <img id="bgThumbImg" src="" alt="壁纸缩略图" style="width:72px;height:42px;object-fit:cover;border-radius:4px;border:1px solid var(--border);background:#000;display:none">
+                <div style="font-size:12px;color:var(--text-secondary);flex:1;line-height:1.4" id="bgStatusText">
+                  当前模式: Bing 每日壁纸
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-item-header">
               <div class="setting-label">🖥️ 卡片与导航形态</div>
               <div class="setting-desc">网格、tvOS 苹果纯网格整体效果、紧凑药丸、横向列表</div>
             </div>
@@ -3671,6 +3717,14 @@
       document.getElementById('settingTheme').value = ui.theme || 'dark';
       const elQuickTheme = document.getElementById('quickThemeSelect');
       if (elQuickTheme) elQuickTheme.value = ui.theme || 'dark';
+
+      const bgType = ui.bg_type || 'bing';
+      const elBgType = document.getElementById('settingBgType');
+      if (elBgType) elBgType.value = bgType;
+      const elBgUrl = document.getElementById('settingBgUrl');
+      if (elBgUrl) elBgUrl.value = ui.bg_url || '';
+      syncBgSettingsDisplay(bgType);
+
       document.getElementById('settingCardStyle').value = ui.card_style || 'default';
       const elColorMode = document.getElementById('settingCardColorMode');
       if (elColorMode) elColorMode.value = colorMode;
@@ -5081,18 +5135,79 @@
       }
     });
 
-    // ─── 壁纸加载 ───
+    function syncBgSettingsDisplay(bgType) {
+      const customUrlBox = document.getElementById('bgCustomUrlBox');
+      const uploadBox = document.getElementById('bgUploadBox');
+      if (customUrlBox) customUrlBox.style.display = bgType === 'custom_url' ? 'block' : 'none';
+      if (uploadBox) uploadBox.style.display = bgType === 'upload' ? 'block' : 'none';
+    }
+
+    // ─── 壁纸加载控制器 ───
     async function loadBg() {
+      const bgType = (currentUI && currentUI.bg_type) ? currentUI.bg_type : 'bing';
+      const bgLayer = document.getElementById('bgLayer');
+      const bgCaption = document.getElementById('bgCaption');
+      const thumb = document.getElementById('bgThumbImg');
+      const status = document.getElementById('bgStatusText');
+
+      if (bgType === 'none') {
+        document.body.classList.add('no-bg-image');
+        if (bgLayer) bgLayer.innerHTML = '';
+        if (bgCaption) bgCaption.textContent = '';
+        if (thumb) thumb.style.display = 'none';
+        if (status) status.textContent = '当前模式: 纯净无背景图 (呈现主题原生质感底色)';
+        return;
+      }
+
+      document.body.classList.remove('no-bg-image');
+
+      if (bgType === 'custom_url') {
+        const url = (currentUI && currentUI.bg_url) ? currentUI.bg_url.trim() : '';
+        if (url) {
+          if (bgLayer) {
+            bgLayer.innerHTML = `<img src="${url}" class="active" onerror="this.onerror=null; console.warn('自定义壁纸图片加载失败');">`;
+          }
+          if (bgCaption) bgCaption.textContent = '自定义网络壁纸';
+          if (thumb) {
+            thumb.src = url;
+            thumb.style.display = 'block';
+          }
+          if (status) status.textContent = '当前模式: 自定义网络图片 (' + (url.length > 40 ? url.substring(0, 37) + '...' : url) + ')';
+          return;
+        }
+      }
+
+      if (bgType === 'upload') {
+        const url = '/api/background/custom?t=' + Date.now();
+        if (bgLayer) {
+          bgLayer.innerHTML = `<img src="${url}" class="active" onerror="this.onerror=null; console.warn('本地壁纸加载失败');">`;
+        }
+        if (bgCaption) bgCaption.textContent = '自定义上传壁纸';
+        if (thumb) {
+          thumb.src = url;
+          thumb.style.display = 'block';
+        }
+        if (status) status.textContent = '当前模式: 本地上传壁纸 (持久保存在 NAS ./data 目录)';
+        return;
+      }
+
+      // 默认: 微软 Bing 每日壁纸
       try {
         const res = await fetch('/api/bing-bg');
         const data = await res.json();
         if (data.ok && data.images && data.images.length > 0) {
           const img = data.images[0];
-          const bgLayer = document.getElementById('bgLayer');
-          bgLayer.innerHTML = `<img src="${img.url}" class="active">`;
-          document.getElementById('bgCaption').textContent = img.title || '';
+          if (bgLayer) bgLayer.innerHTML = `<img src="${img.url}" class="active">`;
+          if (bgCaption) bgCaption.textContent = img.title || 'Bing 每日壁纸';
+          if (thumb) {
+            thumb.src = img.url;
+            thumb.style.display = 'block';
+          }
+          if (status) status.textContent = '当前模式: Bing 每日壁纸 (' + (img.title || '微软每日精选超清摄影') + ')';
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn('加载 Bing 每日壁纸失败:', e);
+      }
     }
 
     // ─── 监控渲染与顶部条 ───
@@ -6344,9 +6459,97 @@
       };
     }
 
+    // 背景壁纸切换与控制
+    const elSettingBgType = document.getElementById('settingBgType');
+    if (elSettingBgType) {
+      elSettingBgType.onchange = (e) => {
+        syncBgSettingsDisplay(e.target.value);
+      };
+    }
+
+    const btnPreviewBgUrl = document.getElementById('btnPreviewBgUrl');
+    if (btnPreviewBgUrl) {
+      btnPreviewBgUrl.onclick = () => {
+        const url = document.getElementById('settingBgUrl')?.value.trim();
+        if (!url) { toast('请先输入图片直链 URL', 'warning'); return; }
+        const bgLayer = document.getElementById('bgLayer');
+        if (bgLayer) bgLayer.innerHTML = `<img src="${url}" class="active">`;
+        document.body.classList.remove('no-bg-image');
+        const thumb = document.getElementById('bgThumbImg');
+        if (thumb) { thumb.src = url; thumb.style.display = 'block'; }
+        const status = document.getElementById('bgStatusText');
+        if (status) status.textContent = '临时预览中 (点击下方“保存界面设置”后持久生效)';
+        toast('壁纸临时预览已生效，记得点击保存', 'info');
+      };
+    }
+
+    const btnSelectBgFile = document.getElementById('btnSelectBgFile');
+    const settingBgFile = document.getElementById('settingBgFile');
+    const btnDoUploadBg = document.getElementById('btnDoUploadBg');
+    if (btnSelectBgFile && settingBgFile) {
+      btnSelectBgFile.onclick = () => settingBgFile.click();
+      settingBgFile.onchange = (e) => {
+        const file = e.target.files && e.target.files[0];
+        const nameSpan = document.getElementById('bgSelectedFileName');
+        if (file) {
+          if (nameSpan) nameSpan.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+          if (btnDoUploadBg) btnDoUploadBg.disabled = false;
+        } else {
+          if (nameSpan) nameSpan.textContent = '未选择文件';
+          if (btnDoUploadBg) btnDoUploadBg.disabled = true;
+        }
+      };
+    }
+
+    if (btnDoUploadBg) {
+      btnDoUploadBg.onclick = async () => {
+        const fileInput = document.getElementById('settingBgFile');
+        if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+          toast('请先选择要上传的图片文件', 'warning');
+          return;
+        }
+        const file = fileInput.files[0];
+        if (file.size > 30 * 1024 * 1024) {
+          toast('图片大小超过 30MB 限制', 'error');
+          return;
+        }
+        const formData = new FormData();
+        formData.append('file', file);
+        btnDoUploadBg.disabled = true;
+        btnDoUploadBg.textContent = '⏳ 上传中...';
+        try {
+          const res = await fetch('/api/background/upload', {
+            method: 'POST',
+            body: formData
+          });
+          const data = await res.json();
+          if (res.ok && data.ok) {
+            toast('壁纸上传成功并已持久化应用！', 'success');
+            if (currentUI) {
+              currentUI.bg_type = 'upload';
+              currentUI.bg_upload_url = data.url;
+            }
+            const elBgType = document.getElementById('settingBgType');
+            if (elBgType) elBgType.value = 'upload';
+            syncBgSettingsDisplay('upload');
+            loadBg();
+          } else {
+            toast('上传失败: ' + (data.detail || data.error || '未知错误'), 'error');
+          }
+        } catch (err) {
+          toast('上传出错: ' + err.message, 'error');
+        } finally {
+          btnDoUploadBg.disabled = false;
+          btnDoUploadBg.textContent = '⬆️ 立即上传并应用';
+        }
+      };
+    }
+
     document.getElementById('btnSaveUISettings').onclick = async () => {
       const ui = {
         theme: document.getElementById('settingTheme').value,
+        bg_type: document.getElementById('settingBgType')?.value || 'bing',
+        bg_url: document.getElementById('settingBgUrl')?.value.trim() || '',
         card_style: document.getElementById('settingCardStyle').value,
         card_color_mode: document.getElementById('settingCardColorMode')?.value || 'ambient',
         show_search: document.getElementById('settingShowSearch').checked,
@@ -6360,6 +6563,7 @@
         body: JSON.stringify({ ui })
       });
       applyUI(ui);
+      loadBg();
       renderServices();
       toast('界面外观设置已保存', 'success');
     };

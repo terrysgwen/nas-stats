@@ -4,7 +4,7 @@ All configuration and services are persisted in SQLite (database.py).
 Monitors are dynamically discovered and instantiated from monitors package.
 """
 
-__version__ = "2.4.8"
+__version__ = "2.4.9"
 
 import asyncio
 import base64
@@ -18,7 +18,7 @@ import html as html_lib
 import ipaddress
 import logging
 import uuid
-from fastapi import Depends, FastAPI, HTTPException, Header, Query, Request
+from fastapi import Depends, FastAPI, File, HTTPException, Header, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 import httpx
@@ -94,8 +94,10 @@ from monitors import MONITOR_REGISTRY, BaseMonitor
 
 BASE_DIR = Path(__file__).parent
 STATIC_DIR = BASE_DIR / "static"
-CONFIG_LEGACY_PATH = BASE_DIR / "data" / "config.legacy.json"
-SERVICES_LEGACY_PATH = BASE_DIR / "data" / "services.legacy.json"
+DATA_DIR = BASE_DIR / "data"
+CUSTOM_BG_PATH = DATA_DIR / "custom_bg.jpg"
+CONFIG_LEGACY_PATH = DATA_DIR / "config.legacy.json"
+SERVICES_LEGACY_PATH = DATA_DIR / "services.legacy.json"
 
 # Initialize DB and run migration if needed
 db.init_db()
@@ -174,7 +176,7 @@ def get_http_client(timeout: float = 10.0) -> httpx.AsyncClient:
     return httpx.AsyncClient(timeout=timeout, verify=False, follow_redirects=True)
 
 
-app = FastAPI(title="NAS Stats 2.4.8 API", lifespan=lifespan)
+app = FastAPI(title="NAS Stats 2.4.9 API", lifespan=lifespan)
 
 @app.middleware("http")
 async def add_no_cache_for_html(request: Request, call_next):
@@ -1109,6 +1111,50 @@ async def bg_proxy(url: str = ""):
         )
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=502)
+
+
+# ── Background Wallpaper Management ─────────────────────────────────
+
+@app.post("/api/background/upload")
+async def upload_background(file: UploadFile = File(...), _auth: dict = Depends(require_auth)):
+    """上传本地背景图片并持久化保存至 data/ 目录"""
+    filename = file.filename or ""
+    lower_fn = filename.lower()
+    ct = file.content_type or ""
+    allowed_exts = (".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp")
+    if not (ct.startswith("image/") or lower_fn.endswith(allowed_exts)):
+        raise HTTPException(status_code=400, detail="只允许上传常见的图片格式文件 (JPG, PNG, WebP 等)")
+
+    content = await file.read()
+    if len(content) > 30 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="图片体积过大，请上传 30MB 以内的壁纸图片")
+
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    with open(CUSTOM_BG_PATH, "wb") as f:
+        f.write(content)
+
+    timestamp = int(time.time())
+    custom_url = f"/api/background/custom?t={timestamp}"
+
+    # 自动保存到 ui 配置
+    ui = db.get_config("ui", {})
+    ui["bg_type"] = "upload"
+    ui["bg_upload_url"] = custom_url
+    db.set_config("ui", ui)
+
+    return {"ok": True, "url": custom_url}
+
+
+@app.get("/api/background/custom")
+async def get_custom_background():
+    """获取用户上传的本地自定义背景图片"""
+    if not CUSTOM_BG_PATH.exists():
+        raise HTTPException(status_code=404, detail="未找到自定义背景图片")
+    return FileResponse(
+        CUSTOM_BG_PATH,
+        media_type="image/jpeg",
+        headers={"Cache-Control": "public, max-age=86400"}
+    )
 
 
 # ── Services Management (CRUD) ──────────────────────────────────────
