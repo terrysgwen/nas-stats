@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NAS 服务导航 v2.4.11</title>
+  <title>NAS 服务导航 v2.4.12</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -6092,22 +6092,39 @@
           fp.style.display = 'none';
         }
 
-        // 联动 Lucky 外部地址提示与一键填入
+        // 联动 Lucky 外部地址提示与一键填入 / 同步创建子规则
         const luckyHint = document.getElementById('luckyModalHint');
         const luckyText = document.getElementById('luckyModalHintText');
+        const btnFill = document.getElementById('btnFillLuckyWanUrl');
         const luckyUrl = (luckyMatchedUrls && luckyMatchedUrls[id]) ? luckyMatchedUrls[id] : '';
         if (luckyUrl) {
           if (luckyText) luckyText.textContent = `🍀 Lucky 推荐公网地址: ${luckyUrl}`;
-          if (luckyHint) luckyHint.style.display = 'flex';
-          const btnFill = document.getElementById('btnFillLuckyWanUrl');
           if (btnFill) {
+            btnFill.textContent = '一键填入';
             btnFill.onclick = () => {
               document.getElementById('editWanUrl').value = luckyUrl;
               toast('已填入 Lucky 外部地址', 'info');
             };
           }
+          if (luckyHint) luckyHint.style.display = 'flex';
         } else {
-          if (luckyHint) luckyHint.style.display = 'none';
+          if (luckyHint) {
+            luckyText.textContent = `🍀 Lucky 暂无对应规则 (填入上方地址后可同步创建)`;
+            if (btnFill) {
+              btnFill.textContent = '➕ 同步到 Lucky 子规则';
+              btnFill.onclick = async () => {
+                const currentWan = document.getElementById('editWanUrl').value.trim();
+                if (!currentWan) {
+                  toast('请先在上方「外网独立访问地址」填入域名或地址，例如 https://qb.example.com', 'warning');
+                  document.getElementById('editWanUrl').focus();
+                  return;
+                }
+                await quickAddLuckySubRule(id, s.name);
+                document.getElementById('editWanUrl').value = currentWan;
+              };
+            }
+            luckyHint.style.display = 'flex';
+          }
         }
       } else {
         document.getElementById('editName').value = '';
@@ -6699,12 +6716,21 @@
           `<span style="display:inline-block;padding:2px 8px;border-radius:10px;background:rgba(16,185,129,0.15);color:var(--accent-green);font-size:11px;font-weight:600">✓ 匹配成功</span>` :
           `<span style="display:inline-block;padding:2px 8px;border-radius:10px;background:rgba(107,114,128,0.15);color:var(--text-muted);font-size:11px">未匹配</span>`;
 
+        const defaultAddDomain = escapeHtml(item.wan_url || '');
         const luckyUrlHtml = item.lucky_url ?
           `<a href="${escapeHtml(item.lucky_url)}" target="_blank" style="color:var(--accent-blue);text-decoration:none;word-break:break-all;display:inline-flex;align-items:center;gap:4px">
             <span>${escapeHtml(item.lucky_url)}</span>
             <span style="font-size:11px">↗</span>
           </a>` :
-          `<span style="color:var(--text-muted)">无对应规则</span>`;
+          `<div style="display:flex;flex-direction:column;gap:5px;min-width:220px;max-width:320px">
+            <div style="display:flex;align-items:center;gap:4px">
+              <span style="display:inline-block;padding:1px 6px;border-radius:4px;background:rgba(239,68,68,0.1);color:var(--accent-red);font-size:11px;font-weight:500">无对应规则</span>
+            </div>
+            <div style="display:flex;gap:4px;align-items:center">
+              <input type="text" id="addDomain_${escapeHtml(item.id)}" value="${defaultAddDomain}" placeholder="填入外部域名如 qb.top" style="flex:1;padding:4px 6px;font-size:11px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);outline:none" onkeydown="if(event.key==='Enter')quickAddLuckySubRule('${escapeHtml(item.id)}', '${escapeHtml(item.name)}')">
+              <button type="button" class="admin-btn admin-btn-primary" style="padding:4px 8px;font-size:11px;white-space:nowrap;background:var(--accent-green);border-color:var(--accent-green)" onclick="quickAddLuckySubRule('${escapeHtml(item.id)}', '${escapeHtml(item.name)}')">➕ 添加子规则</button>
+            </div>
+          </div>`;
 
         const luckyTargetText = item.lucky_target ?
           `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;font-family:monospace">后端: ${escapeHtml(item.lucky_target)}</div>` : '';
@@ -6749,6 +6775,54 @@
       if (input) {
         input.value = url;
         saveSingleWanUrl(id);
+      }
+    }
+
+    async function quickAddLuckySubRule(id, name) {
+      const input = document.getElementById('addDomain_' + id);
+      const val = input ? input.value.trim() : '';
+      if (!val) {
+        toast('请先填入外部访问域名或完整地址 (例如 qb.example.com)', 'warning');
+        if (input) input.focus();
+        return;
+      }
+
+      let selectedMainRuleKey = null;
+      try {
+        const mrRes = await fetch('/api/lucky/main-rules');
+        const mrData = await mrRes.json();
+        if (mrData.ok && Array.isArray(mrData.rules) && mrData.rules.length > 1) {
+          const optionsText = mrData.rules.map((r, i) => `${i+1}. ${r.name} (端口 ${r.port}, ${r.protocol.toUpperCase()}, 现有 ${r.subrules_count} 个子规则)`).join('\n');
+          const choice = prompt(`Lucky 存在多个 Web 服务主规则，请输入序号选择归属主规则（直接回车默认选择第 1 个）：\n\n${optionsText}`, '1');
+          if (choice === null) return;
+          const num = parseInt(choice.trim()) || 1;
+          const picked = mrData.rules[Math.max(0, Math.min(mrData.rules.length - 1, num - 1))];
+          if (picked) selectedMainRuleKey = picked.key;
+        }
+      } catch (e) {
+        console.warn('获取主规则列表提示:', e);
+      }
+
+      toast(`正在将「${name}」同步添加到 Lucky 子规则...`, 'info');
+      try {
+        const res = await fetch('/api/lucky/subrule/add', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            service_id: id,
+            external_url: val,
+            main_rule_key: selectedMainRuleKey
+          })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          toast(data.msg || '添加子规则成功！已自动设置为卡片外部访问地址', 'success');
+          await loadLuckyRulesAndCompare(false);
+        } else {
+          toast('添加子规则失败: ' + (data.error || '未知错误'), 'error');
+        }
+      } catch (e) {
+        toast('网络请求失败: ' + e.message, 'error');
       }
     }
 

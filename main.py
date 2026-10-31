@@ -4,7 +4,7 @@ All configuration and services are persisted in SQLite (database.py).
 Monitors are dynamically discovered and instantiated from monitors package.
 """
 
-__version__ = "2.4.11"
+__version__ = "2.4.12"
 
 import asyncio
 import base64
@@ -177,7 +177,7 @@ def get_http_client(timeout: float = 10.0) -> httpx.AsyncClient:
     return httpx.AsyncClient(timeout=timeout, verify=False, follow_redirects=True)
 
 
-app = FastAPI(title="NAS Stats 2.4.11 API", lifespan=lifespan)
+app = FastAPI(title="NAS Stats 2.4.12 API", lifespan=lifespan)
 
 @app.middleware("http")
 async def add_no_cache_for_html(request: Request, call_next):
@@ -1280,6 +1280,87 @@ async def get_lucky_rules_endpoint(_auth: dict = Depends(require_auth)):
             "unmatched_count": len(services) - matched_count,
         },
     }
+
+
+@app.get("/api/lucky/main-rules")
+async def get_lucky_main_rules_endpoint(_auth: dict = Depends(require_auth)):
+    """获取 Lucky 中已存在的所有主规则列表"""
+    cfg = db.get_config("lucky", {})
+    if not cfg.get("url"):
+        return {"ok": False, "error": "尚未配置 Lucky 服务地址", "rules": []}
+
+    client = LuckyClient(
+        url=cfg.get("url", ""),
+        auth_type=cfg.get("auth_type", "login"),
+        account=cfg.get("account", "666"),
+        password=cfg.get("password", "666"),
+        open_token=cfg.get("open_token", ""),
+    )
+    try:
+        main_rules = await client.get_main_rules_summary()
+        return {"ok": True, "rules": main_rules}
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e), "rules": []}, status_code=502)
+
+
+@app.post("/api/lucky/subrule/add")
+async def add_lucky_subrule_endpoint(request: Request, _auth: dict = Depends(require_auth)):
+    """为无对应规则的服务卡片在 Lucky 指定主规则下创建子规则 (继承同级规则配置)"""
+    body = await request.json()
+    service_id = body.get("service_id")
+    external_url = (body.get("external_url") or "").strip()
+    main_rule_key = body.get("main_rule_key")
+
+    if not service_id:
+        return JSONResponse({"ok": False, "error": "缺少 service_id 参数"}, status_code=400)
+    if not external_url:
+        return JSONResponse({"ok": False, "error": "外部地址或域名不能为空"}, status_code=400)
+
+    service = db.get_service(service_id)
+    if not service:
+        return JSONResponse({"ok": False, "error": "服务卡片不存在"}, status_code=404)
+
+    cfg = db.get_config("lucky", {})
+    if not cfg.get("url"):
+        return JSONResponse({"ok": False, "error": "尚未配置 Lucky 服务地址"}, status_code=400)
+
+    # 计算内网后端目标地址
+    nas_ip = db.get_config("nas_ip", "") or "127.0.0.1"
+    target_url = service.get("url", "").strip()
+    if not target_url:
+        port = service.get("port")
+        if port:
+            target_url = f"http://{nas_ip}:{port}"
+        else:
+            target_url = f"http://{nas_ip}"
+
+    client = LuckyClient(
+        url=cfg.get("url", ""),
+        auth_type=cfg.get("auth_type", "login"),
+        account=cfg.get("account", "666"),
+        password=cfg.get("password", "666"),
+        open_token=cfg.get("open_token", ""),
+    )
+
+    try:
+        res = await client.add_subrule_to_main_rule(
+            service_name=service.get("name", "未命名服务"),
+            domain_or_url=external_url,
+            target_url=target_url,
+            main_rule_key=main_rule_key,
+        )
+        # 自动更新服务卡片的外网访问地址 (wan_url)
+        new_wan_url = res.get("external_url") or external_url
+        db.update_service(service_id, wan_url=new_wan_url)
+
+        return {
+            "ok": True,
+            "msg": f"已成功为「{service.get('name')}」在 Lucky 主规则「{res.get('main_rule_name')}」下添加子规则！",
+            "external_url": new_wan_url,
+            "main_rule_key": res.get("main_rule_key"),
+        }
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=502)
 
 
 @app.post("/api/lucky/apply")
