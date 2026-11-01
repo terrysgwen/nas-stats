@@ -892,35 +892,28 @@ def match_services_with_lucky(
         surl = str(s.get("url", "")).strip()
         swan = str(s.get("wan_url", "")).strip()
 
-        # 解析卡片实际端口、主机与路径
+        # 解析卡片实际端口、主机与路径 (原则：匹配只看 url 里的端口与地址，绝不看卡片的 port 字段)
         card_port = 0
         card_host = ""
         card_path = ""
-        if sport and int(sport) > 0:
-            card_port = int(sport)
         if surl:
-            h, p = parse_target_host_port(surl)
-            if not card_port and p:
-                card_port = p
-            card_host = h
+            card_host, card_port = parse_target_host_port(surl)
             try:
                 card_path = (urlparse(surl if "://" in surl else f"http://{surl}").path or "").rstrip("/")
             except Exception:
                 card_path = ""
 
-        if not card_host:
-            card_host = clean_nas_ip or "127.0.0.1"
-
         matched_rule = None
         candidates = []
 
-        # 候选筛选：必须同时满足目标主机匹配与端口匹配
-        for r in lucky_rules:
-            r_port = r.get("target_port")
-            r_host = r.get("target_host", "")
+        # 候选筛选：必须有有效的 card_host 与 card_port，且同时满足目标主机匹配与 URL 提取的端口匹配
+        if card_host and card_port:
+            for r in lucky_rules:
+                r_port = r.get("target_port")
+                r_host = r.get("target_host", "")
 
-            if card_port and r_port == card_port and is_same_host(card_host, r_host, clean_nas_ip):
-                candidates.append(r)
+                if r_port == card_port and is_same_host(card_host, r_host, clean_nas_ip):
+                    candidates.append(r)
 
         if len(candidates) == 1:
             matched_rule = candidates[0]
