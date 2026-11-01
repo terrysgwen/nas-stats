@@ -127,6 +127,15 @@ nas-stats/
 
 ## 📝 版本更新记录
 
+### v2.4.15
+- 🍀 **重构 Lucky 规则写入链路与严格即时回读校验**:
+  - 改用 `GET /api/webservice/rule/{RuleKey}` 精确获取完整主规则对象（避免列表精简对象丢失字段）。
+  - 深拷贝 `ProxyList[0]` 作为模板并移除旧 `Key` / `SubRuleKey`，正确写入 `Remarks`、`Domains`、`Locations` 与 `Enable` 等字段，通过 `PUT /api/webservice/rule/{RuleKey}` 提交。
+  - 增加**即时 GET 回读校验**：写回后立即拉取最新规则，严格验证子规则数量与域名是否存在，彻底杜绝假成功。
+- ✏️ **新增 Lucky 反代子规则修改与同步更新功能**:
+  - 支持对已有规则或已匹配卡片直接就地修改外部域名/地址，并通过 `POST /api/lucky/subrule/update` 同步修改 Lucky 上的子规则配置。
+  - 在 Lucky 穿透联动对比表格与卡片编辑弹窗中全面提供“✏️ 修改”与“💾 同步修改到 Lucky”交互。
+
 ### v2.4.14
 - 🐛 **修复 Lucky 模块全局导入与子规则时间戳生成**:
   - 在 `lucky.py` 顶部显式补齐 `time`、`json`、`copy`、`secrets`、`base64` 全局导入，根治 `add_subrule_to_main_rule` 因 `time.time()` 触发 `NameError` 的问题。

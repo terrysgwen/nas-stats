@@ -274,6 +274,37 @@ class LuckyClient:
             })
         return summary
 
+    async def get_full_rule(self, client: httpx.AsyncClient, rule_key: str, headers: dict) -> Dict[str, Any]:
+        """从 Lucky 获取单个主规则的完整对象"""
+        url = f"{self.url}/api/webservice/rule/{rule_key}"
+        try:
+            resp = await client.get(url, headers=headers)
+        except Exception as e:
+            raise Exception(f"连接 Lucky 获取主规则失败: {e}")
+
+        if resp.status_code != 200:
+            raise Exception(f"获取 Lucky 主规则 (Key: {rule_key}) 失败: HTTP {resp.status_code} - {resp.text[:200]}")
+
+        try:
+            data = resp.json()
+        except Exception as e:
+            raise Exception(f"解析 Lucky 主规则响应 JSON 失败: {e}")
+
+        rule_obj = None
+        if isinstance(data, dict):
+            if "data" in data and isinstance(data["data"], dict):
+                rule_obj = data["data"]
+            elif "rule" in data and isinstance(data["rule"], dict):
+                rule_obj = data["rule"]
+            elif "Rule" in data and isinstance(data["Rule"], dict):
+                rule_obj = data["Rule"]
+            elif "ProxyList" in data or "RuleKey" in data or "RuleName" in data or "Key" in data:
+                rule_obj = data
+
+        if not isinstance(rule_obj, dict):
+            raise Exception(f"未能从 Lucky 返回的数据中解析出有效主规则对象: {data}")
+        return rule_obj
+
     async def add_subrule_to_main_rule(
         self,
         service_name: str,
@@ -281,7 +312,15 @@ class LuckyClient:
         target_url: str,
         main_rule_key: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """为指定的卡片地址在 Lucky 主规则下克隆同级配置并添加子规则"""
+        """
+        按 Lucky 标准流程添加反代子规则并执行即时回读校验：
+        1. 确定主规则 RuleKey
+        2. GET /api/webservice/rule/{RuleKey} 获取完整主规则对象
+        3. 深拷贝 ProxyList[0] 作为模板，去掉 Key
+        4. 写入 Remarks / Domains / Locations / Enable
+        5. PUT /api/webservice/rule/{RuleKey} 写回
+        6. 立刻 GET 回读校验：子规则数 +1 且新域名在，否则抛错
+        """
         if not self.url:
             raise Exception("未配置 Lucky 服务器地址")
 
@@ -296,24 +335,28 @@ class LuckyClient:
                 rule_list = raw_data["data"]
 
         if not rule_list:
-            raise Exception("Lucky 中未找到任何 Web 服务的「主规则」，请先在 Lucky 后台【Web服务】创建一条主规则（设置监听端口与证书）后，即可自动添加子规则。")
+            raise Exception("Lucky 中未找到任何 Web 服务的「主规则」，请先在 Lucky 后台【Web服务】创建一条主规则（设置监听端口与证书）后即可自动添加子规则。")
 
-        target_rule = None
+        target_main_rule = None
         if main_rule_key:
             for r in rule_list:
                 if str(r.get("RuleKey") or r.get("Key")) == str(main_rule_key):
-                    target_rule = r
+                    target_main_rule = r
                     break
 
-        if not target_rule:
+        if not target_main_rule:
             # 优先选择已有子规则的主规则作为载体
             for r in rule_list:
                 pl = r.get("ProxyList") or r.get("SubRules")
                 if isinstance(pl, list) and len(pl) > 0:
-                    target_rule = r
+                    target_main_rule = r
                     break
-            if not target_rule:
-                target_rule = rule_list[0]
+            if not target_main_rule:
+                target_main_rule = rule_list[0]
+
+        rule_key = str(target_main_rule.get("RuleKey") or target_main_rule.get("Key"))
+        if not rule_key:
+            raise Exception("无法确定目标主规则的 RuleKey")
 
         # 解析用户填写的外部域名与可能包含的路径
         raw_input = domain_or_url.strip()
@@ -328,66 +371,6 @@ class LuckyClient:
         if not clean_domain:
             raise Exception("请输入有效的外部访问域名或完整 URL (如 qb.example.com)")
 
-        # 确保 ProxyList 存在
-        proxy_list = target_rule.get("ProxyList")
-        if not isinstance(proxy_list, list):
-            proxy_list = target_rule.get("SubRules")
-            if not isinstance(proxy_list, list):
-                proxy_list = []
-                target_rule["ProxyList"] = proxy_list
-
-        new_sub_key = str(int(time.time() * 1000))
-        if proxy_list:
-            # 深度克隆该主规则下的已有子规则，实现“和其他同主规则下的子规则设置完全一致”
-            template_sub = proxy_list[0]
-            new_sub = copy.deepcopy(template_sub)
-            new_sub["Key"] = new_sub_key
-            new_sub["SubRuleKey"] = new_sub_key
-            new_sub["Remarks"] = service_name
-            new_sub["SubRuleName"] = service_name
-            new_sub["Domains"] = [clean_domain]
-            new_sub["Domain"] = clean_domain
-            new_sub["Locations"] = [target_url]
-            new_sub["TargetServer"] = target_url
-            new_sub["Enable"] = True
-            new_sub["WebServiceType"] = template_sub.get("WebServiceType") or "reverseproxy"
-            if path:
-                new_sub["MatchPath"] = path
-                new_sub["Path"] = path
-        else:
-            new_sub = {
-                "Key": new_sub_key,
-                "SubRuleKey": new_sub_key,
-                "Remarks": service_name,
-                "SubRuleName": service_name,
-                "Domains": [clean_domain],
-                "Domain": clean_domain,
-                "Locations": [target_url],
-                "TargetServer": target_url,
-                "Enable": True,
-                "WebServiceType": "reverseproxy",
-            }
-            if path:
-                new_sub["MatchPath"] = path
-                new_sub["Path"] = path
-
-        proxy_list.append(new_sub)
-
-        # 计算生成的外部访问完整 URL
-        listen_port = target_rule.get("ListenPort") or 0
-        try:
-            listen_port = int(listen_port)
-        except Exception:
-            listen_port = 0
-
-        is_tls = bool(target_rule.get("EnableTLS") or target_rule.get("TLS") or listen_port == 443)
-        proto = "https" if is_tls else "http"
-        if (is_tls and listen_port in (443, 0)) or (not is_tls and listen_port in (80, 0)):
-            ext_url = f"{proto}://{clean_domain}{path}"
-        else:
-            ext_url = f"{proto}://{clean_domain}:{listen_port}{path}"
-
-        # 调用 Lucky API 保存主规则 (更新其 ProxyList)
         async with httpx.AsyncClient(verify=False, timeout=self.timeout, follow_redirects=True) as client:
             token = await self.get_token(client)
             headers = {
@@ -402,38 +385,337 @@ class LuckyClient:
             if self.open_token:
                 headers["openToken"] = self.open_token
 
-            save_url = f"{self.url}/api/webservice/rules"
-            try:
-                resp = await client.post(save_url, json=target_rule, headers=headers)
-            except Exception as e:
-                raise Exception(f"连接 Lucky 保存子规则失败: {e}")
+            # 1. GET /api/webservice/rule/{RuleKey} 取完整规则
+            full_rule = await self.get_full_rule(client, rule_key, headers)
 
-            if resp.status_code == 200:
-                try:
-                    res_data = resp.json()
-                    if isinstance(res_data, dict) and res_data.get("ret") not in (0, None):
-                        raise Exception(res_data.get("msg") or "Lucky 保存子规则失败")
-                except Exception as e:
-                    if "Lucky 保存子规则失败" in str(e):
-                        raise
-            elif resp.status_code == 404:
-                # 兼容部分老版本单个子规则或规则保存接口
-                try:
-                    resp2 = await client.post(f"{self.url}/api/reverseproxyrule", json=target_rule, headers=headers)
-                    if resp2.status_code != 200:
-                        raise Exception(f"Lucky 保存失败 (HTTP {resp2.status_code})")
-                except Exception as e2:
-                    raise Exception(f"Lucky 保存接口返回 404，请确认 Lucky 版本与权限: {e2}")
+            # 确保 ProxyList 存在
+            proxy_list = full_rule.get("ProxyList")
+            if not isinstance(proxy_list, list):
+                proxy_list = full_rule.get("SubRules")
+                if not isinstance(proxy_list, list):
+                    proxy_list = []
+                full_rule["ProxyList"] = proxy_list
+
+            initial_count = len(proxy_list)
+
+            # 2. 深拷贝 ProxyList[0] 当模板，去掉 Key
+            if proxy_list:
+                template_sub = copy.deepcopy(proxy_list[0])
+                # 去掉旧 Key，让 Lucky 自动生成新 Key
+                template_sub.pop("Key", None)
+                template_sub.pop("SubRuleKey", None)
+                template_sub.pop("key", None)
             else:
-                raise Exception(f"Lucky 保存接口返回异常状态码: HTTP {resp.status_code}")
+                template_sub = {}
 
-        return {
-            "ok": True,
-            "main_rule_key": str(target_rule.get("RuleKey") or target_rule.get("Key")),
-            "main_rule_name": target_rule.get("RuleName") or f"端口-{listen_port}",
-            "sub_rule_key": new_sub_key,
-            "external_url": ext_url,
-        }
+            # 3. 写 Remarks / Domains / Locations / Enable
+            template_sub["Remarks"] = service_name
+            template_sub["SubRuleName"] = service_name
+            template_sub["Domains"] = [clean_domain]
+            template_sub["Domain"] = clean_domain
+            template_sub["Locations"] = [target_url]
+            template_sub["TargetServer"] = target_url
+            template_sub["Enable"] = True
+            template_sub["WebServiceType"] = template_sub.get("WebServiceType") or "reverseproxy"
+            if path:
+                template_sub["MatchPath"] = path
+                template_sub["Path"] = path
+            elif "MatchPath" in template_sub:
+                template_sub["MatchPath"] = ""
+                template_sub["Path"] = ""
+
+            proxy_list.append(template_sub)
+
+            # 4. PUT /api/webservice/rule/{RuleKey} 写回
+            put_url = f"{self.url}/api/webservice/rule/{rule_key}"
+            try:
+                put_resp = await client.put(put_url, json=full_rule, headers=headers)
+            except Exception as e:
+                raise Exception(f"连接 Lucky 提交新子规则失败: {e}")
+
+            if put_resp.status_code != 200:
+                raise Exception(f"Lucky 提交规则失败: HTTP {put_resp.status_code} - {put_resp.text[:200]}")
+
+            try:
+                put_data = put_resp.json()
+                if isinstance(put_data, dict) and put_data.get("ret") not in (0, None):
+                    raise Exception(put_data.get("msg") or "Lucky 保存子规则被拒绝")
+            except Exception as e:
+                if "Lucky 保存子规则被拒绝" in str(e):
+                    raise
+
+            # 5. 立刻 GET 回读校验：子规则数 +1 且新域名在，否则抛错（不再假成功）
+            verify_rule = await self.get_full_rule(client, rule_key, headers)
+            verify_proxy_list = verify_rule.get("ProxyList") or verify_rule.get("SubRules") or []
+            new_count = len(verify_proxy_list)
+
+            # 校验子规则数是否增加
+            if new_count <= initial_count:
+                raise Exception(f"Lucky 子规则写入未生效（回读校验失败：子规则数未增加，当前: {new_count}，初始: {initial_count}）")
+
+            # 校验新域名是否存在
+            domain_found = False
+            for sub in verify_proxy_list:
+                sub_doms = sub.get("Domains") or sub.get("Domain") or []
+                if isinstance(sub_doms, list):
+                    if any(clean_domain.lower() in str(d).lower() for d in sub_doms):
+                        domain_found = True
+                        break
+                elif isinstance(sub_doms, str) and clean_domain.lower() in sub_doms.lower():
+                    domain_found = True
+                    break
+
+            if not domain_found:
+                raise Exception(f"Lucky 子规则写入未生效（回读校验失败：未在子规则列表中找到新域名 {clean_domain}）")
+
+            # 计算外部访问完整 URL
+            listen_port = verify_rule.get("ListenPort") or full_rule.get("ListenPort") or 0
+            try:
+                listen_port = int(listen_port)
+            except Exception:
+                listen_port = 0
+
+            is_tls = bool(verify_rule.get("EnableTLS") or verify_rule.get("TLS") or listen_port == 443)
+            proto = "https" if is_tls else "http"
+            if (is_tls and listen_port in (443, 0)) or (not is_tls and listen_port in (80, 0)):
+                ext_url = f"{proto}://{clean_domain}{path}"
+            else:
+                ext_url = f"{proto}://{clean_domain}:{listen_port}{path}"
+
+            return {
+                "ok": True,
+                "main_rule_key": rule_key,
+                "main_rule_name": verify_rule.get("RuleName") or verify_rule.get("Remarks") or f"主规则-{listen_port}",
+                "external_url": ext_url,
+                "domain": clean_domain,
+                "subrules_count": new_count,
+            }
+
+    async def update_subrule_in_main_rule(
+        self,
+        service_name: str,
+        new_domain_or_url: str,
+        target_url: str,
+        old_domain: Optional[str] = None,
+        sub_rule_key: Optional[str] = None,
+        main_rule_key: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        在 Lucky 主规则下修改已有子规则并执行即时回读校验：
+        1. 确定主规则 RuleKey
+        2. GET /api/webservice/rule/{RuleKey} 获取完整主规则对象
+        3. 定位对应子规则并更新 Remarks / Domains / Locations / Enable
+        4. PUT /api/webservice/rule/{RuleKey} 写回
+        5. 立刻 GET 回读校验：新域名在子规则列表中，否则抛错
+        """
+        if not self.url:
+            raise Exception("未配置 Lucky 服务器地址")
+
+        raw_data = await self.fetch_raw_rules()
+        rule_list = []
+        if isinstance(raw_data, list):
+            rule_list = raw_data
+        elif isinstance(raw_data, dict):
+            if "ruleList" in raw_data and isinstance(raw_data["ruleList"], list):
+                rule_list = raw_data["ruleList"]
+            elif "data" in raw_data and isinstance(raw_data["data"], list):
+                rule_list = raw_data["data"]
+
+        if not rule_list:
+            raise Exception("Lucky 中未找到任何 Web 服务的「主规则」")
+
+        target_main_rule = None
+        # 如果未传入 main_rule_key，根据 sub_rule_key 或 old_domain 自动在主规则中检索
+        if main_rule_key:
+            for r in rule_list:
+                if str(r.get("RuleKey") or r.get("Key")) == str(main_rule_key):
+                    target_main_rule = r
+                    break
+
+        if not target_main_rule and (sub_rule_key or old_domain):
+            clean_old_dom = re.sub(r"^https?://", "", (old_domain or "").strip()).split("/")[0].split(":")[0].strip().lower()
+            for r in rule_list:
+                pls = r.get("ProxyList") or r.get("SubRules") or []
+                if isinstance(pls, list):
+                    for sub in pls:
+                        if sub_rule_key and str(sub.get("Key") or sub.get("SubRuleKey")) == str(sub_rule_key):
+                            target_main_rule = r
+                            break
+                        if clean_old_dom:
+                            doms = sub.get("Domains") or sub.get("Domain") or []
+                            if isinstance(doms, list) and any(clean_old_dom in str(d).lower() for d in doms):
+                                target_main_rule = r
+                                break
+                            elif isinstance(doms, str) and clean_old_dom in doms.lower():
+                                target_main_rule = r
+                                break
+                if target_main_rule:
+                    break
+
+        if not target_main_rule:
+            for r in rule_list:
+                pl = r.get("ProxyList") or r.get("SubRules")
+                if isinstance(pl, list) and len(pl) > 0:
+                    target_main_rule = r
+                    break
+            if not target_main_rule:
+                target_main_rule = rule_list[0]
+
+        rule_key = str(target_main_rule.get("RuleKey") or target_main_rule.get("Key"))
+        if not rule_key:
+            raise Exception("无法确定目标主规则的 RuleKey")
+
+        # 解析用户填写的新域名与路径
+        raw_input = new_domain_or_url.strip()
+        clean = re.sub(r"^https?://", "", raw_input)
+        path = ""
+        if "/" in clean:
+            domain_part, path_part = clean.split("/", 1)
+            clean = domain_part
+            path = "/" + path_part.rstrip("/")
+
+        new_clean_domain = clean.split(":")[0].strip()
+        if not new_clean_domain:
+            raise Exception("请输入有效的外部访问域名或完整 URL (如 qb.example.com)")
+
+        clean_old_domain = ""
+        if old_domain:
+            clean_old_domain = re.sub(r"^https?://", "", old_domain.strip()).split("/")[0].split(":")[0].strip().lower()
+
+        async with httpx.AsyncClient(verify=False, timeout=self.timeout, follow_redirects=True) as client:
+            token = await self.get_token(client)
+            headers = {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            }
+            if token:
+                headers["Authorization"] = token
+                headers["openToken"] = token
+                headers["Lucky-Admin-Token"] = token
+                headers["token"] = token
+            if self.open_token:
+                headers["openToken"] = self.open_token
+
+            # 1. GET /api/webservice/rule/{RuleKey} 获取完整主规则
+            full_rule = await self.get_full_rule(client, rule_key, headers)
+            proxy_list = full_rule.get("ProxyList")
+            if not isinstance(proxy_list, list):
+                proxy_list = full_rule.get("SubRules")
+                if not isinstance(proxy_list, list):
+                    proxy_list = []
+                full_rule["ProxyList"] = proxy_list
+
+            # 2. 定位要修改的子规则
+            target_sub = None
+            if sub_rule_key:
+                for sub in proxy_list:
+                    if str(sub.get("Key") or sub.get("SubRuleKey")) == str(sub_rule_key):
+                        target_sub = sub
+                        break
+
+            if not target_sub and clean_old_domain:
+                for sub in proxy_list:
+                    sub_doms = sub.get("Domains") or sub.get("Domain") or []
+                    if isinstance(sub_doms, list) and any(clean_old_domain in str(d).lower() for d in sub_doms):
+                        target_sub = sub
+                        break
+                    elif isinstance(sub_doms, str) and clean_old_domain in sub_doms.lower():
+                        target_sub = sub
+                        break
+
+            if not target_sub and target_url:
+                for sub in proxy_list:
+                    locs = sub.get("Locations") or sub.get("TargetServer") or []
+                    if isinstance(locs, list) and any(str(l).strip() == str(target_url).strip() for l in locs):
+                        target_sub = sub
+                        break
+                    elif isinstance(locs, str) and locs.strip() == target_url.strip():
+                        target_sub = sub
+                        break
+
+            if not target_sub:
+                for sub in proxy_list:
+                    if (sub.get("Remarks") or sub.get("SubRuleName")) == service_name:
+                        target_sub = sub
+                        break
+
+            if not target_sub:
+                raise Exception(f"在 Lucky 主规则中未找到对应的已有子规则，无法执行修改（已查找 Key: {sub_rule_key or '无'}, 域名: {clean_old_domain or '无'}）")
+
+            # 3. 更新字段
+            if service_name:
+                target_sub["Remarks"] = service_name
+                target_sub["SubRuleName"] = service_name
+            target_sub["Domains"] = [new_clean_domain]
+            target_sub["Domain"] = new_clean_domain
+            target_sub["Locations"] = [target_url]
+            target_sub["TargetServer"] = target_url
+            target_sub["Enable"] = True
+            if path:
+                target_sub["MatchPath"] = path
+                target_sub["Path"] = path
+            elif "MatchPath" in target_sub:
+                target_sub["MatchPath"] = ""
+                target_sub["Path"] = ""
+
+            # 4. PUT /api/webservice/rule/{RuleKey} 写回
+            put_url = f"{self.url}/api/webservice/rule/{rule_key}"
+            try:
+                put_resp = await client.put(put_url, json=full_rule, headers=headers)
+            except Exception as e:
+                raise Exception(f"连接 Lucky 提交修改子规则失败: {e}")
+
+            if put_resp.status_code != 200:
+                raise Exception(f"Lucky 提交规则失败: HTTP {put_resp.status_code} - {put_resp.text[:200]}")
+
+            try:
+                put_data = put_resp.json()
+                if isinstance(put_data, dict) and put_data.get("ret") not in (0, None):
+                    raise Exception(put_data.get("msg") or "Lucky 修改子规则被拒绝")
+            except Exception as e:
+                if "Lucky 修改子规则被拒绝" in str(e):
+                    raise
+
+            # 5. 立刻 GET 回读校验：新域名必须在子规则列表中
+            verify_rule = await self.get_full_rule(client, rule_key, headers)
+            verify_proxy_list = verify_rule.get("ProxyList") or verify_rule.get("SubRules") or []
+
+            domain_found = False
+            for sub in verify_proxy_list:
+                sub_doms = sub.get("Domains") or sub.get("Domain") or []
+                if isinstance(sub_doms, list):
+                    if any(new_clean_domain.lower() in str(d).lower() for d in sub_doms):
+                        domain_found = True
+                        break
+                elif isinstance(sub_doms, str) and new_clean_domain.lower() in sub_doms.lower():
+                    domain_found = True
+                    break
+
+            if not domain_found:
+                raise Exception(f"Lucky 子规则修改未生效（回读校验失败：未在子规则列表中找到新域名 {new_clean_domain}）")
+
+            # 计算外部访问完整 URL
+            listen_port = verify_rule.get("ListenPort") or full_rule.get("ListenPort") or 0
+            try:
+                listen_port = int(listen_port)
+            except Exception:
+                listen_port = 0
+
+            is_tls = bool(verify_rule.get("EnableTLS") or verify_rule.get("TLS") or listen_port == 443)
+            proto = "https" if is_tls else "http"
+            if (is_tls and listen_port in (443, 0)) or (not is_tls and listen_port in (80, 0)):
+                ext_url = f"{proto}://{new_clean_domain}{path}"
+            else:
+                ext_url = f"{proto}://{new_clean_domain}:{listen_port}{path}"
+
+            return {
+                "ok": True,
+                "main_rule_key": rule_key,
+                "main_rule_name": verify_rule.get("RuleName") or verify_rule.get("Remarks") or f"主规则-{listen_port}",
+                "sub_rule_key": str(target_sub.get("Key") or target_sub.get("SubRuleKey") or ""),
+                "external_url": ext_url,
+                "domain": new_clean_domain,
+            }
 
     def _parse_rules(self, raw_data: Any) -> List[Dict[str, Any]]:
         """将不同结构版本的 Lucky 规则标准化解析"""
@@ -646,6 +928,8 @@ def match_services_with_lucky(
             "lucky_url": lucky_ext_url,
             "lucky_target": lucky_target,
             "lucky_rule_name": lucky_rule_name,
+            "main_rule_key": matched_rule.get("rule_key", "") if matched_rule else "",
+            "sub_rule_key": matched_rule.get("sub_rule_key", "") if matched_rule else "",
         })
 
     return matched_results

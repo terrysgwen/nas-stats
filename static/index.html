@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NAS 服务导航 v2.4.14</title>
+  <title>NAS 服务导航 v2.4.15</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -3534,9 +3534,12 @@
         <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
           💡 选填。在外网/域名环境下访问时优先使用此地址；若留空则自动按上方的局域网端口或默认域名自动替换。
         </div>
-        <div id="luckyModalHint" style="display:none;margin-top:6px;padding:6px 10px;background:rgba(16,185,129,0.08);border:1px dashed rgba(16,185,129,0.3);border-radius:6px;font-size:12px;color:var(--accent-green);align-items:center;justify-content:space-between">
-          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" id="luckyModalHintText">🍀 Lucky 推荐公网地址: </span>
-          <button type="button" class="admin-btn admin-btn-secondary" id="btnFillLuckyWanUrl" style="padding:2px 8px;font-size:11px;white-space:nowrap;margin-left:8px">一键填入</button>
+        <div id="luckyModalHint" style="display:none;margin-top:6px;padding:6px 10px;background:rgba(16,185,129,0.08);border:1px dashed rgba(16,185,129,0.3);border-radius:6px;font-size:12px;color:var(--accent-green);align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:140px" id="luckyModalHintText">🍀 Lucky 推荐公网地址: </span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button type="button" class="admin-btn admin-btn-secondary" id="btnFillLuckyWanUrl" style="padding:2px 8px;font-size:11px;white-space:nowrap">一键填入</button>
+            <button type="button" class="admin-btn admin-btn-primary" id="btnSyncEditLuckySubRule" style="display:none;padding:2px 8px;font-size:11px;white-space:nowrap;background:var(--accent-blue);border-color:var(--accent-blue)">✏️ 同步修改到 Lucky</button>
+          </div>
         </div>
       </div>
       <div class="modal-field">
@@ -6096,6 +6099,7 @@
         const luckyHint = document.getElementById('luckyModalHint');
         const luckyText = document.getElementById('luckyModalHintText');
         const btnFill = document.getElementById('btnFillLuckyWanUrl');
+        const btnSyncEdit = document.getElementById('btnSyncEditLuckySubRule');
         const luckyUrl = (luckyMatchedUrls && luckyMatchedUrls[id]) ? luckyMatchedUrls[id] : '';
         if (luckyUrl) {
           if (luckyText) luckyText.textContent = `🍀 Lucky 推荐公网地址: ${luckyUrl}`;
@@ -6106,8 +6110,46 @@
               toast('已填入 Lucky 外部地址', 'info');
             };
           }
+          if (btnSyncEdit) {
+            btnSyncEdit.style.display = 'inline-block';
+            btnSyncEdit.onclick = async () => {
+              const currentWan = document.getElementById('editWanUrl').value.trim();
+              if (!currentWan) {
+                toast('请先在上方「外网独立访问地址」输入要修改的新域名或地址', 'warning');
+                document.getElementById('editWanUrl').focus();
+                return;
+              }
+              const it = luckyMatchedList ? luckyMatchedList.find(x => x.id === id) : null;
+              toast(`正在将「${s.name}」修改同步到 Lucky...`, 'info');
+              try {
+                const res = await fetch('/api/lucky/subrule/update', {
+                  method: 'POST',
+                  headers: {'Content-Type': 'application/json'},
+                  body: JSON.stringify({
+                    service_id: id,
+                    new_external_url: currentWan,
+                    old_external_url: luckyUrl,
+                    sub_rule_key: it ? it.sub_rule_key : '',
+                    main_rule_key: it ? it.main_rule_key : ''
+                  })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                  toast(data.msg || '修改 Lucky 子规则成功！', 'success');
+                  document.getElementById('editWanUrl').value = data.external_url || currentWan;
+                  await loadLuckyRulesAndCompare(false);
+                  loadServicesAdmin();
+                } else {
+                  toast('修改 Lucky 子规则失败: ' + (data.error || '未知错误'), 'error');
+                }
+              } catch (e) {
+                toast('网络请求失败: ' + e.message, 'error');
+              }
+            };
+          }
           if (luckyHint) luckyHint.style.display = 'flex';
         } else {
+          if (btnSyncEdit) btnSyncEdit.style.display = 'none';
           if (luckyHint) {
             luckyText.textContent = `🍀 Lucky 暂无对应规则 (填入上方地址后可同步创建)`;
             if (btnFill) {
@@ -6718,10 +6760,22 @@
 
         const defaultAddDomain = escapeHtml(item.wan_url || '');
         const luckyUrlHtml = item.lucky_url ?
-          `<a href="${escapeHtml(item.lucky_url)}" target="_blank" style="color:var(--accent-blue);text-decoration:none;word-break:break-all;display:inline-flex;align-items:center;gap:4px">
-            <span>${escapeHtml(item.lucky_url)}</span>
-            <span style="font-size:11px">↗</span>
-          </a>` :
+          `<div style="display:flex;flex-direction:column;gap:5px;min-width:220px">
+            <div id="luckyDisplay_${escapeHtml(item.id)}" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+              <a href="${escapeHtml(item.lucky_url)}" target="_blank" style="color:var(--accent-blue);text-decoration:none;word-break:break-all;display:inline-flex;align-items:center;gap:4px">
+                <span>${escapeHtml(item.lucky_url)}</span>
+                <span style="font-size:11px">↗</span>
+              </a>
+              <button type="button" class="admin-btn admin-btn-secondary" style="padding:2px 6px;font-size:11px" onclick="toggleLuckyEditForm('${escapeHtml(item.id)}', true)">✏️ 修改</button>
+            </div>
+            <div id="luckyEdit_${escapeHtml(item.id)}" style="display:none;flex-direction:column;gap:4px;width:100%">
+              <div style="display:flex;gap:4px;align-items:center">
+                <input type="text" id="editLuckyUrl_${escapeHtml(item.id)}" value="${escapeHtml(item.lucky_url)}" placeholder="填入新域名如 qb.example.com" style="flex:1;padding:4px 6px;font-size:11px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);outline:none" onkeydown="if(event.key==='Enter')quickUpdateLuckySubRule('${escapeHtml(item.id)}', '${escapeHtml(item.name)}')">
+                <button type="button" class="admin-btn admin-btn-primary" style="padding:4px 8px;font-size:11px;white-space:nowrap;background:var(--accent-blue);border-color:var(--accent-blue)" onclick="quickUpdateLuckySubRule('${escapeHtml(item.id)}', '${escapeHtml(item.name)}')">💾 同步到 Lucky</button>
+                <button type="button" class="admin-btn admin-btn-secondary" style="padding:4px 6px;font-size:11px;white-space:nowrap" onclick="toggleLuckyEditForm('${escapeHtml(item.id)}', false)">✖</button>
+              </div>
+            </div>
+          </div>` :
           `<div style="display:flex;flex-direction:column;gap:5px;min-width:220px;max-width:320px">
             <div style="display:flex;align-items:center;gap:4px">
               <span style="display:inline-block;padding:1px 6px;border-radius:4px;background:rgba(239,68,68,0.1);color:var(--accent-red);font-size:11px;font-weight:500">无对应规则</span>
@@ -6818,8 +6872,64 @@
         if (data.ok) {
           toast(data.msg || '添加子规则成功！已自动设置为卡片外部访问地址', 'success');
           await loadLuckyRulesAndCompare(false);
+          loadServicesAdmin();
         } else {
           toast('添加子规则失败: ' + (data.error || '未知错误'), 'error');
+        }
+      } catch (e) {
+        toast('网络请求失败: ' + e.message, 'error');
+      }
+    }
+
+    function toggleLuckyEditForm(id, show) {
+      const disp = document.getElementById('luckyDisplay_' + id);
+      const edit = document.getElementById('luckyEdit_' + id);
+      if (disp && edit) {
+        disp.style.display = show ? 'none' : 'flex';
+        edit.style.display = show ? 'flex' : 'none';
+        if (show) {
+          const inp = document.getElementById('editLuckyUrl_' + id);
+          if (inp) { inp.focus(); inp.select(); }
+        }
+      }
+    }
+
+    async function quickUpdateLuckySubRule(id, name) {
+      const input = document.getElementById('editLuckyUrl_' + id);
+      const newVal = input ? input.value.trim() : '';
+      if (!newVal) {
+        toast('请输入要修改的新外部域名或地址', 'warning');
+        if (input) input.focus();
+        return;
+      }
+
+      const it = luckyMatchedList.find(x => x.id === id);
+      const oldUrl = it ? (it.lucky_url || it.wan_url || '') : '';
+      const subRuleKey = it ? it.sub_rule_key : '';
+      const mainRuleKey = it ? it.main_rule_key : '';
+
+      toast(`正在为「${name}」同步修改 Lucky 反代子规则...`, 'info');
+      try {
+        const res = await fetch('/api/lucky/subrule/update', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            service_id: id,
+            new_external_url: newVal,
+            old_external_url: oldUrl,
+            sub_rule_key: subRuleKey,
+            main_rule_key: mainRuleKey
+          })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          toast(data.msg || '修改 Lucky 子规则成功！', 'success');
+          const wanInput = document.getElementById('inputWan_' + id);
+          if (wanInput) wanInput.value = data.external_url || newVal;
+          await loadLuckyRulesAndCompare(false);
+          loadServicesAdmin();
+        } else {
+          toast('修改 Lucky 子规则失败: ' + (data.error || '未知错误'), 'error');
         }
       } catch (e) {
         toast('网络请求失败: ' + e.message, 'error');

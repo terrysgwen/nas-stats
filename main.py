@@ -4,7 +4,7 @@ All configuration and services are persisted in SQLite (database.py).
 Monitors are dynamically discovered and instantiated from monitors package.
 """
 
-__version__ = "2.4.14"
+__version__ = "2.4.15"
 
 import asyncio
 import base64
@@ -1365,6 +1365,72 @@ async def add_lucky_subrule_endpoint(request: Request, _auth: dict = Depends(req
             "msg": f"已成功为「{service.get('name')}」在 Lucky 主规则「{res.get('main_rule_name')}」下添加子规则！",
             "external_url": new_wan_url,
             "main_rule_key": res.get("main_rule_key"),
+        }
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=502)
+
+
+@app.post("/api/lucky/subrule/update")
+async def update_lucky_subrule_endpoint(request: Request, _auth: dict = Depends(require_auth)):
+    """在 Lucky 主规则下修改已有子规则 (支持修改外部域名/地址并即时回读校验)"""
+    body = await request.json()
+    service_id = body.get("service_id")
+    new_external_url = (body.get("new_external_url") or body.get("external_url") or "").strip()
+    old_external_url = (body.get("old_external_url") or "").strip()
+    main_rule_key = body.get("main_rule_key")
+    sub_rule_key = body.get("sub_rule_key")
+
+    if not service_id:
+        return JSONResponse({"ok": False, "error": "缺少 service_id 参数"}, status_code=400)
+    if not new_external_url:
+        return JSONResponse({"ok": False, "error": "新外部地址或域名不能为空"}, status_code=400)
+
+    service = db.get_service(service_id)
+    if not service:
+        all_s = db.get_all_services()
+        service = next((s for s in all_s if str(s.get("id")) == str(service_id)), None)
+    if not service:
+        return JSONResponse({"ok": False, "error": f"服务卡片不存在 (ID: {service_id})"}, status_code=404)
+
+    cfg = db.get_config("lucky", {})
+    if not cfg.get("url"):
+        return JSONResponse({"ok": False, "error": "尚未配置 Lucky 服务地址"}, status_code=400)
+
+    nas_ip = db.get_config("nas_ip", "") or "127.0.0.1"
+    target_url = service.get("url", "").strip()
+    if not target_url:
+        port = service.get("port")
+        if port:
+            target_url = f"http://{nas_ip}:{port}"
+        else:
+            target_url = f"http://{nas_ip}"
+
+    client = LuckyClient(
+        url=cfg.get("url", ""),
+        auth_type=cfg.get("auth_type", "login"),
+        account=cfg.get("account", "666"),
+        password=cfg.get("password", "666"),
+        open_token=cfg.get("open_token", ""),
+    )
+
+    try:
+        res = await client.update_subrule_in_main_rule(
+            service_name=service.get("name", "未命名服务"),
+            new_domain_or_url=new_external_url,
+            target_url=target_url,
+            old_domain=old_external_url or service.get("wan_url"),
+            sub_rule_key=sub_rule_key,
+            main_rule_key=main_rule_key,
+        )
+        new_wan_url = res.get("external_url") or new_external_url
+        db.update_service(service_id, wan_url=new_wan_url)
+
+        return {
+            "ok": True,
+            "msg": f"已成功为「{service.get('name')}」更新 Lucky 子规则，外部地址更新为: {new_wan_url}",
+            "external_url": new_wan_url,
+            "main_rule_key": res.get("main_rule_key"),
+            "sub_rule_key": res.get("sub_rule_key"),
         }
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=502)
