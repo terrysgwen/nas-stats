@@ -844,6 +844,33 @@ class LuckyClient:
         return normalized
 
 
+def is_same_host(h1: str, h2: str, nas_ip: str = "") -> bool:
+    """
+    判断两个目标后端主机/IP 是否一致。
+    原则：
+      1. 完全相同的 IP 或主机名一致 (如都是 192.168.1.253)
+      2. 仅当两者【同时】属于本机回环集合 (127.0.0.1/localhost/0.0.0.0/nas_ip) 时才视为等价
+      3. 严禁将局域网内不同 IP 视为相同 (如 192.168.1.247 与 192.168.1.253 绝对不相同)
+    """
+    h1 = (h1 or "").strip().lower()
+    h2 = (h2 or "").strip().lower()
+    if not h1 or not h2:
+        return False
+    if h1 == h2:
+        return True
+
+    local_set = {"127.0.0.1", "localhost", "0.0.0.0"}
+    clean_nas = (nas_ip or "").strip().lower()
+    if clean_nas:
+        local_set.add(clean_nas)
+
+    # 必须两者「同时」属于本机回环集合才成立
+    if h1 in local_set and h2 in local_set:
+        return True
+
+    return False
+
+
 def match_services_with_lucky(
     services: List[Dict[str, Any]],
     lucky_rules: List[Dict[str, Any]],
@@ -851,9 +878,9 @@ def match_services_with_lucky(
 ) -> List[Dict[str, Any]]:
     """
     智能对比本地服务卡片与 Lucky Web 服务规则，生成匹配对照清单。
-    对比策略:
-      1. 精确匹配: target_port 相等，且 (target_host 相等 或 为本地回环 127.0.0.1/localhost/0.0.0.0 或等于 nas_ip)
-      2. 端口唯一匹配: target_port 相等
+    严格比对原则:
+      必须【目标主机相同/等价】且【目标端口相同】。
+      严禁只看端口就盲目匹配，防止将相同端口但不同 IP 的局域网设备 (如多个路由器的 80 端口) 混淆！
     """
     clean_nas_ip = (nas_ip or "").strip().lower()
     matched_results = []
@@ -865,9 +892,10 @@ def match_services_with_lucky(
         surl = str(s.get("url", "")).strip()
         swan = str(s.get("wan_url", "")).strip()
 
-        # 解析卡片实际端口与主机
+        # 解析卡片实际端口、主机与路径
         card_port = 0
         card_host = ""
+        card_path = ""
         if sport and int(sport) > 0:
             card_port = int(sport)
         if surl:
@@ -875,42 +903,56 @@ def match_services_with_lucky(
             if not card_port and p:
                 card_port = p
             card_host = h
+            try:
+                card_path = (urlparse(surl if "://" in surl else f"http://{surl}").path or "").rstrip("/")
+            except Exception:
+                card_path = ""
 
         if not card_host:
-            card_host = clean_nas_ip
+            card_host = clean_nas_ip or "127.0.0.1"
 
-        # 执行匹配
         matched_rule = None
+        candidates = []
 
-        # 策略 1: 目标端口与目标主机精准一致 (考虑 127.0.0.1 等价性)
+        # 候选筛选：必须同时满足目标主机匹配与端口匹配
         for r in lucky_rules:
             r_port = r.get("target_port")
-            r_host = r.get("target_host", "").lower()
+            r_host = r.get("target_host", "")
 
-            if card_port and r_port == card_port:
-                is_local_equivalent = (
-                    r_host in ("127.0.0.1", "localhost", "0.0.0.0")
-                    or card_host in ("127.0.0.1", "localhost", "0.0.0.0")
-                    or (clean_nas_ip and r_host == clean_nas_ip)
-                    or (clean_nas_ip and card_host == clean_nas_ip)
-                    or (r_host == card_host)
-                )
-                if is_local_equivalent:
-                    matched_rule = r
-                    break
+            if card_port and r_port == card_port and is_same_host(card_host, r_host, clean_nas_ip):
+                candidates.append(r)
 
-        # 策略 2: 端口唯一匹配
-        if not matched_rule and card_port:
-            candidates = [r for r in lucky_rules if r.get("target_port") == card_port]
-            if len(candidates) == 1:
-                matched_rule = candidates[0]
-            elif len(candidates) > 1:
-                # 优先匹配有外部域名的
-                with_dom = [r for r in candidates if r.get("external_url")]
-                if with_dom:
-                    matched_rule = with_dom[0]
-                else:
-                    matched_rule = candidates[0]
+        if len(candidates) == 1:
+            matched_rule = candidates[0]
+        elif len(candidates) > 1:
+            # 候选仲裁策略:
+            # 1. 优先匹配外网地址与卡片已有 wan_url 完全一致的
+            if swan:
+                for c in candidates:
+                    if c.get("external_url") and (swan == c.get("external_url") or swan in c.get("external_url")):
+                        matched_rule = c
+                        break
+
+            # 2. 优先匹配备注/名称中包含卡片名称的
+            if not matched_rule and sname:
+                for c in candidates:
+                    c_name = str(c.get("name") or "").lower()
+                    if sname.lower() in c_name or c_name in sname.lower():
+                        matched_rule = c
+                        break
+
+            # 3. 优先匹配路径一致的
+            if not matched_rule and card_path:
+                for c in candidates:
+                    r_target = str(c.get("target") or "")
+                    if card_path in r_target:
+                        matched_rule = c
+                        break
+
+            # 4. 默认取首个有外部访问地址的规则
+            if not matched_rule:
+                with_ext = [c for c in candidates if c.get("external_url")]
+                matched_rule = with_ext[0] if with_ext else candidates[0]
 
         is_matched = bool(matched_rule and matched_rule.get("external_url"))
         lucky_ext_url = matched_rule.get("external_url", "") if matched_rule else ""
