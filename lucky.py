@@ -410,6 +410,7 @@ class LuckyClient:
 
             # 3. 写 Remarks / Domains / Locations / Enable
             template_sub["Remarks"] = service_name
+            template_sub["Remark"] = service_name          # Lucky 3.x 实际字段
             template_sub["SubRuleName"] = service_name
             template_sub["Domains"] = [clean_domain]
             template_sub["Domain"] = clean_domain
@@ -635,7 +636,7 @@ class LuckyClient:
 
             if not target_sub:
                 for sub in proxy_list:
-                    if (sub.get("Remarks") or sub.get("SubRuleName")) == service_name:
+                    if (sub.get("Remark") or sub.get("Remarks") or sub.get("SubRuleName")) == service_name:
                         target_sub = sub
                         break
 
@@ -645,6 +646,7 @@ class LuckyClient:
             # 3. 更新字段
             if service_name:
                 target_sub["Remarks"] = service_name
+                target_sub["Remark"] = service_name          # Lucky 3.x 实际字段
                 target_sub["SubRuleName"] = service_name
             target_sub["Domains"] = [new_clean_domain]
             target_sub["Domain"] = new_clean_domain
@@ -772,7 +774,7 @@ class LuckyClient:
                     continue
 
                 sub_rule_key = str(sub.get("SubRuleKey") or sub.get("subRule") or sub.get("Key") or f"sub_{sidx}")
-                sub_name = str(sub.get("SubRuleName") or sub.get("Remarks") or sub.get("remarks") or sub.get("Name") or rule_name or "")
+                sub_name = str(sub.get("Remark") or sub.get("SubRuleName") or sub.get("Remarks") or sub.get("remarks") or sub.get("Name") or rule_name or "")
                 
                 # 目标后端地址 (Lucky 3.x 存放在 Locations 数组中)
                 target_str = ""
