@@ -3,44 +3,57 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EasyNVR 实时监控中心</title>
+  <title>EasyNVR 实时监控中心 v2.5.0</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📹</text></svg>">
+  <!-- 引入主流低延迟网页流媒体解码器 flv.js 与 hls.js -->
+  <script src="https://cdn.jsdelivr.net/npm/flv.js@1.6.2/dist/flv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.8/dist/hls.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg: #0f1117;
-      --card-bg: #1a1d27;
+      --bg: #0b0d13;
+      --card-bg: #141721;
+      --card-hover: #1c2130;
       --border: rgba(255, 255, 255, 0.08);
-      --text: #e8eaf0;
-      --text-muted: #9ca3b4;
+      --border-focus: rgba(59, 130, 246, 0.5);
+      --text: #f1f3f9;
+      --text-muted: #8b92a5;
       --accent: #3b82f6;
+      --accent-hover: #2563eb;
       --online: #10b981;
       --offline: #ef4444;
+      --warning: #f59e0b;
     }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      overflow-x: hidden;
     }
     header {
-      background: var(--card-bg);
+      background: rgba(20, 23, 33, 0.95);
+      backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border);
-      padding: 14px 24px;
+      padding: 12px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
     .brand {
       display: flex;
       align-items: center;
-      gap: 10px;
-      font-size: 18px;
+      gap: 12px;
+      font-size: 17px;
       font-weight: 600;
+      letter-spacing: 0.3px;
     }
     .back-btn {
       padding: 6px 14px;
@@ -50,48 +63,93 @@
       color: var(--text);
       text-decoration: none;
       font-size: 13px;
-      transition: background 0.2s;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
     }
     .back-btn:hover {
       background: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.2);
     }
     .stats-bar {
       display: flex;
-      gap: 20px;
+      align-items: center;
+      gap: 16px;
       font-size: 13px;
       color: var(--text-muted);
+      flex-wrap: wrap;
+    }
+    .stats-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
     .stats-val {
-      font-weight: 600;
+      font-weight: 700;
       color: var(--text);
       font-family: monospace;
+    }
+    .refresh-select {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 5px 8px;
+      font-size: 12px;
+      outline: none;
+      cursor: pointer;
     }
     .main-content {
       flex: 1;
       padding: 24px;
-      max-width: 1800px;
+      max-width: 1920px;
       width: 100%;
       margin: 0 auto;
     }
+    .notice-bar {
+      margin-bottom: 20px;
+      padding: 10px 16px;
+      background: rgba(59, 130, 246, 0.08);
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      border-radius: 10px;
+      font-size: 12.5px;
+      color: #93c5fd;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
     .video-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 20px;
     }
     .cam-card {
       background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 14px;
       overflow: hidden;
       display: flex;
       flex-direction: column;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    }
+    .cam-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--border-focus);
+      background: var(--card-hover);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
     }
     .cam-header {
-      padding: 10px 14px;
+      padding: 10px 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       border-bottom: 1px solid var(--border);
+      background: rgba(0,0,0,0.15);
     }
     .cam-title {
       font-size: 14px;
@@ -99,11 +157,15 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .status-dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
+      flex-shrink: 0;
     }
     .status-dot.online {
       background: var(--online);
@@ -121,14 +183,42 @@
       align-items: center;
       justify-content: center;
       overflow: hidden;
+      cursor: pointer;
     }
     .cam-snap {
       width: 100%;
       height: 100%;
       object-fit: cover;
+      transition: opacity 0.3s ease;
+    }
+    .cam-hover-mask {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      backdrop-filter: blur(2px);
+    }
+    .cam-screen:hover .cam-hover-mask {
+      opacity: 1;
+    }
+    .play-icon-badge {
+      padding: 8px 18px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5);
     }
     .cam-placeholder {
-      color: #666;
+      color: #64748b;
       font-size: 13px;
       display: flex;
       flex-direction: column;
@@ -136,46 +226,207 @@
       gap: 8px;
     }
     .cam-footer {
-      padding: 10px 14px;
+      padding: 10px 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       font-size: 12px;
       color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      background: rgba(0,0,0,0.1);
     }
-    .play-btn {
+    .cam-footer-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .cam-btn {
       padding: 4px 10px;
-      background: var(--accent);
-      color: #fff;
       border-radius: 6px;
+      font-size: 11.5px;
       text-decoration: none;
-      font-size: 11px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      transition: all 0.2s;
+    }
+    .cam-btn:hover {
+      background: rgba(255,255,255,0.15);
+      border-color: rgba(255,255,255,0.25);
+    }
+    .cam-btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .cam-btn-primary:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
     }
     .empty-msg {
       text-align: center;
-      padding: 60px 0;
+      padding: 80px 20px;
       color: var(--text-muted);
     }
+
+    /* ─── 实时播放器模态框 ─── */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(10px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .player-dialog {
+      background: #12151f;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 1080px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+      animation: modalZoom 0.25s ease;
+    }
+    @keyframes modalZoom {
+      from { transform: scale(0.95); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .player-header {
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: #181c28;
+    }
+    .player-title {
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .player-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: none;
+      background: rgba(255,255,255,0.08);
+      color: var(--text);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .player-close:hover {
+      background: rgba(239, 68, 68, 0.8);
+      color: #fff;
+    }
+    .player-screen-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .player-screen-wrap video,
+    .player-screen-wrap iframe {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border: none;
+      background: #000;
+    }
+    .player-loading {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-muted);
+      font-size: 13px;
+      pointer-events: none;
+    }
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid rgba(255,255,255,0.1);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .player-toolbar {
+      padding: 12px 20px;
+      background: #181c28;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .proto-nav {
+      display: flex;
+      background: rgba(0,0,0,0.25);
+      padding: 3px;
+      border-radius: 8px;
+      gap: 4px;
+      border: 1px solid var(--border);
+    }
+    .proto-btn {
+      padding: 6px 12px;
+      font-size: 12px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .proto-btn:hover {
+      color: var(--text);
+    }
+    .proto-btn.active {
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+    .player-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
     @media (max-width: 768px) {
-      header {
-        padding: 10px 14px;
-      }
-      .brand {
-        font-size: 15px;
-      }
-      .stats-bar {
-        font-size: 11.5px;
-        gap: 10px;
-        width: 100%;
-        justify-content: space-between;
-      }
-      .main-content {
-        padding: 12px;
-      }
-      .video-grid {
-        grid-template-columns: 1fr;
-        gap: 12px;
-      }
+      header { padding: 10px 14px; }
+      .brand { font-size: 15px; }
+      .main-content { padding: 12px; }
+      .video-grid { grid-template-columns: 1fr; gap: 14px; }
+      .player-toolbar { flex-direction: column; align-items: stretch; }
+      .proto-nav { justify-content: center; }
+      .player-actions { justify-content: center; }
     }
   </style>
 </head>
@@ -183,24 +434,94 @@
   <header>
     <div class="brand">
       <a href="/" class="back-btn">⬅ 返回导航</a>
-      <span>📹 EasyNVR 实时监控</span>
+      <span>📹 EasyNVR 实时监控中心</span>
     </div>
     <div class="stats-bar">
-      <div>总通道: <span id="totalChannels" class="stats-val">0</span></div>
-      <div>在线: <span id="onlineChannels" class="stats-val" style="color:var(--online)">0</span></div>
-      <div>离线: <span id="offlineChannels" class="stats-val" style="color:var(--offline)">0</span></div>
-      <button class="back-btn" onclick="loadNVRData()">🔄 刷新</button>
+      <div class="stats-item">总通道: <span id="totalChannels" class="stats-val">0</span></div>
+      <div class="stats-item">在线: <span id="onlineChannels" class="stats-val" style="color:var(--online)">0</span></div>
+      <div class="stats-item">离线: <span id="offlineChannels" class="stats-val" style="color:var(--offline)">0</span></div>
+      <div class="stats-item">
+        <span>监控轮询:</span>
+        <select id="selRefreshRate" class="refresh-select" onchange="changeRefreshRate()">
+          <option value="2000">2秒 (动态监控)</option>
+          <option value="5000" selected>5秒 (标准)</option>
+          <option value="10000">10秒 (低载)</option>
+          <option value="0">停止轮询</option>
+        </select>
+      </div>
+      <button class="back-btn" onclick="loadNVRData(true)">🔄 立即刷新</button>
     </div>
   </header>
 
   <main class="main-content">
+    <div class="notice-bar">
+      <span>💡 <b>实时流说明</b>：由于主流浏览器原生不支持直接播放 RTSP/裸FLV 直链，本页面已内置 <b>flv.js</b> 与 <b>hls.js</b> 播放器。点击画面即可在当前窗口直接开启低延迟实时监控！</span>
+      <span style="font-size:11px;opacity:0.8">支持 HTTP-FLV / HLS / EasyNVR 原生页面自由切换</span>
+    </div>
+
     <div id="videoGrid" class="video-grid">
       <div class="empty-msg">正在加载 EasyNVR 通道列表...</div>
     </div>
   </main>
 
+  <!-- ─── 实时播放器弹窗 ─── -->
+  <div id="playerModal" class="modal-overlay" onclick="if(event.target===this)closePlayer()">
+    <div class="player-dialog">
+      <div class="player-header">
+        <div class="player-title">
+          <span class="status-dot online"></span>
+          <span id="playerCamName">摄像头</span>
+          <span id="playerCamId" style="font-size:12px;color:var(--text-muted);margin-left:6px"></span>
+        </div>
+        <button class="player-close" onclick="closePlayer()" title="关闭播放器">✕</button>
+      </div>
+
+      <div class="player-screen-wrap">
+        <video id="liveVideo" autoplay muted playsinline controls style="display:none"></video>
+        <iframe id="liveIframe" style="display:none"></iframe>
+        <div id="playerLoading" class="player-loading">
+          <div class="spinner"></div>
+          <div id="playerLoadingText">正在连接视频流...</div>
+        </div>
+      </div>
+
+      <div class="player-toolbar">
+        <div class="proto-nav">
+          <button class="proto-btn active" id="btnProtoFlv" onclick="switchPlayerProto('flv')">⚡ HTTP-FLV (低延迟)</button>
+          <button class="proto-btn" id="btnProtoHls" onclick="switchPlayerProto('hls')">📺 HLS (.m3u8)</button>
+          <button class="proto-btn" id="btnProtoIframe" onclick="switchPlayerProto('iframe')">🌐 EasyNVR 原生播放</button>
+        </div>
+        <div class="player-actions">
+          <button class="cam-btn" onclick="retryPlayerStream()">🔄 重试拉流</button>
+          <button class="cam-btn" onclick="copyCurrentStreamUrl()">📋 复制直链</button>
+          <button class="cam-btn" onclick="togglePlayerFullscreen()">⛶ 全屏</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
-    async function loadNVRData() {
+    let nvrChannelsData = [];
+    let refreshTimer = null;
+    let currentChannel = null;
+    let flvPlayer = null;
+    let hlsPlayer = null;
+    let currentProto = 'flv';
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function sanitizeUrl(raw) {
+      if (!raw || typeof raw !== 'string') return '';
+      const trimmed = raw.trim();
+      const lower = trimmed.toLowerCase();
+      if (lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('/') || lower.startsWith('data:image/')) return trimmed;
+      return '';
+    }
+
+    async function loadNVRData(isManual = false) {
       const grid = document.getElementById('videoGrid');
       try {
         const token = localStorage.getItem('nas_auth_token') || sessionStorage.getItem('nas_auth_token') || '';
@@ -214,7 +535,7 @@
             <div class="empty-msg">
               <h3 style="margin-bottom:8px">EasyNVR 监控未启用</h3>
               <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">
-                请点击右上角返回主页，进入 <b>⚙️ 系统管理 -> 📡 监控服务设置</b>，找到 EasyNVR 并勾选<b>启用</b>，同时填入地址（例如 http://127.0.0.1:10000）。
+                请进入 <b>⚙️ 系统管理 -> 📡 监控服务设置</b>，找到 EasyNVR 并勾选<b>启用</b>，同时填入地址（例如 http://127.0.0.1:10000）。
               </p>
               <a href="/" class="back-btn" style="display:inline-block">前往管理面板配置</a>
             </div>
@@ -227,7 +548,7 @@
             <div class="empty-msg" style="color:var(--offline)">
               <h3 style="margin-bottom:8px">无法连接到 EasyNVR</h3>
               <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">${nvr.error || '连接超时或接口无法访问'}</p>
-              <button class="back-btn" onclick="loadNVRData()">重新尝试</button>
+              <button class="back-btn" onclick="loadNVRData(true)">重新尝试</button>
             </div>
           `;
           return;
@@ -237,67 +558,288 @@
         document.getElementById('onlineChannels').textContent = nvr.online_channels || 0;
         document.getElementById('offlineChannels').textContent = (nvr.total_channels || 0) - (nvr.online_channels || 0);
 
-        const channels = nvr.channels || [];
-        if (channels.length === 0) {
+        nvrChannelsData = nvr.channels || [];
+        if (nvrChannelsData.length === 0) {
           grid.innerHTML = '<div class="empty-msg">暂无可用摄像头通道</div>';
           return;
         }
 
-        function escapeHtml(str) {
-          if (!str) return '';
-          return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        }
-        function sanitizeUrl(raw) {
-          if (!raw || typeof raw !== 'string') return '';
-          const trimmed = raw.trim();
-          const lower = trimmed.toLowerCase();
-          if (lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('/') || lower.startsWith('data:image/')) return trimmed;
-          return '';
-        }
-
-        grid.innerHTML = channels.map(ch => {
-          const isOnline = ch.online;
-          const snapUrl = sanitizeUrl(ch.snap_url);
-          const flvUrl = sanitizeUrl(ch.flv);
-          const chName = escapeHtml(ch.name || ('通道 ' + ch.channel));
-          return `
-            <div class="cam-card">
-              <div class="cam-header">
-                <div class="cam-title">
-                  <span class="status-dot ${isOnline ? 'online' : 'offline'}"></span>
-                  <span>${chName}</span>
-                </div>
-                <span style="font-size:11px;color:var(--text-muted)">ID: ${escapeHtml(ch.channel)}</span>
-              </div>
-              <div class="cam-screen" style="cursor:${isOnline ? 'pointer' : 'default'}" onclick="${isOnline && flvUrl ? `window.open('${escapeHtml(flvUrl)}', '_blank')` : ''}" title="${isOnline ? '点击在新窗口打开 EasyNVR 实时监控流' : '通道离线'}">
-                ${snapUrl ? `
-                  <img src="${snapUrl}" class="cam-snap" alt="${chName}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                  <div class="cam-placeholder" style="display:none">
-                    <span>📷 快照不可用</span>
-                    <span style="font-size:11px;color:var(--accent)">点击尝试播放实时流</span>
-                  </div>
-                ` : `
-                  <div class="cam-placeholder">
-                    <span>${isOnline ? '🟢 通道在线' : '🔴 通道离线'}</span>
-                    ${isOnline ? '<span style="font-size:11px;color:var(--accent);margin-top:4px">▶ 点击开启实时视频</span>' : ''}
-                  </div>
-                `}
-              </div>
-              <div class="cam-footer">
-                <span>协议: RTSP/HLS/FLV</span>
-                ${isOnline && flvUrl ? `<a href="${escapeHtml(flvUrl)}" target="_blank" class="play-btn">播放流 ↗</a>` : ''}
-              </div>
-            </div>
-          `;
-        }).join('');
+        renderChannelGrid();
 
       } catch (err) {
-        grid.innerHTML = `<div class="empty-msg" style="color:var(--offline)">数据加载出错: ${err.message}</div>`;
+        if (isManual) {
+          grid.innerHTML = `<div class="empty-msg" style="color:var(--offline)">数据加载出错: ${err.message}</div>`;
+        }
       }
     }
 
-    loadNVRData();
-    setInterval(loadNVRData, 10000);
+    function renderChannelGrid() {
+      const grid = document.getElementById('videoGrid');
+      const ts = Date.now();
+
+      grid.innerHTML = nvrChannelsData.map((ch, idx) => {
+        const isOnline = ch.online;
+        let snapUrl = sanitizeUrl(ch.snap_url);
+        // 防缓存刷新
+        if (snapUrl && !snapUrl.startsWith('data:')) {
+          snapUrl += (snapUrl.includes('?') ? '&' : '?') + '_t=' + ts;
+        }
+        const chName = escapeHtml(ch.name || ('通道 ' + ch.channel));
+        const chId = escapeHtml(ch.channel);
+
+        return `
+          <div class="cam-card">
+            <div class="cam-header">
+              <div class="cam-title">
+                <span class="status-dot ${isOnline ? 'online' : 'offline'}"></span>
+                <span>${chName}</span>
+              </div>
+              <span style="font-size:11px;color:var(--text-muted);font-family:monospace">CH ${chId}</span>
+            </div>
+
+            <div class="cam-screen" onclick="${isOnline ? `openLivePlayer(${idx})` : ''}" title="${isOnline ? '点击在当前页面开启实时监控' : '通道离线'}">
+              ${snapUrl ? `
+                <img src="${snapUrl}" class="cam-snap" alt="${chName}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                <div class="cam-placeholder" style="display:none">
+                  <span>📷 暂无最新快照</span>
+                  ${isOnline ? '<span style="font-size:11px;color:var(--accent)">▶ 点击尝试连接实时流</span>' : ''}
+                </div>
+              ` : `
+                <div class="cam-placeholder">
+                  <span>${isOnline ? '🟢 通道在线' : '🔴 通道离线'}</span>
+                  ${isOnline ? '<span style="font-size:11px;color:var(--accent);margin-top:4px">▶ 点击开启实时视频</span>' : ''}
+                </div>
+              `}
+
+              ${isOnline ? `
+                <div class="cam-hover-mask">
+                  <div class="play-icon-badge">
+                    <span>▶</span>
+                    <span>开启实时监控</span>
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+
+            <div class="cam-footer">
+              <span style="font-size:11px;color:var(--text-muted)">协议: RTSP/FLV/HLS</span>
+              <div class="cam-footer-actions">
+                ${isOnline ? `<button type="button" class="cam-btn cam-btn-primary" onclick="openLivePlayer(${idx})">▶ 实时监控</button>` : ''}
+                ${ch.iframe_url ? `<a href="${escapeHtml(ch.iframe_url)}" target="_blank" class="cam-btn" title="在新窗口打开 EasyNVR 原厂播放器">原厂 ↗</a>` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ─── 播放器控制 ───
+    function openLivePlayer(index) {
+      const ch = nvrChannelsData[index];
+      if (!ch) return;
+      currentChannel = ch;
+
+      document.getElementById('playerCamName').textContent = ch.name || ('通道 ' + ch.channel);
+      document.getElementById('playerCamId').textContent = `(ID: ${ch.channel})`;
+      document.getElementById('playerModal').classList.add('active');
+
+      currentProto = 'flv';
+      playStreamWithProto(currentProto);
+    }
+
+    function closePlayer() {
+      destroyCurrentPlayer();
+      document.getElementById('playerModal').classList.remove('active');
+      currentChannel = null;
+    }
+
+    function destroyCurrentPlayer() {
+      const video = document.getElementById('liveVideo');
+      const iframe = document.getElementById('liveIframe');
+
+      if (flvPlayer) {
+        try {
+          flvPlayer.pause();
+          flvPlayer.unload();
+          flvPlayer.detachMediaElement();
+          flvPlayer.destroy();
+        } catch (e) {}
+        flvPlayer = null;
+      }
+
+      if (hlsPlayer) {
+        try {
+          hlsPlayer.destroy();
+        } catch (e) {}
+        hlsPlayer = null;
+      }
+
+      if (video) {
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+        video.style.display = 'none';
+      }
+
+      if (iframe) {
+        iframe.src = 'about:blank';
+        iframe.style.display = 'none';
+      }
+    }
+
+    function switchPlayerProto(proto) {
+      if (!currentChannel) return;
+      currentProto = proto;
+
+      document.querySelectorAll('.proto-btn').forEach(b => b.classList.remove('active'));
+      if (proto === 'flv') document.getElementById('btnProtoFlv')?.classList.add('active');
+      if (proto === 'hls') document.getElementById('btnProtoHls')?.classList.add('active');
+      if (proto === 'iframe') document.getElementById('btnProtoIframe')?.classList.add('active');
+
+      playStreamWithProto(proto);
+    }
+
+    function retryPlayerStream() {
+      if (currentProto) playStreamWithProto(currentProto);
+    }
+
+    function playStreamWithProto(proto) {
+      if (!currentChannel) return;
+      destroyCurrentPlayer();
+
+      const video = document.getElementById('liveVideo');
+      const iframe = document.getElementById('liveIframe');
+      const loading = document.getElementById('playerLoading');
+      const loadingText = document.getElementById('playerLoadingText');
+
+      loading.style.display = 'flex';
+      loadingText.textContent = `正在连接 ${proto.toUpperCase()} 视频流...`;
+
+      if (proto === 'iframe') {
+        const url = currentChannel.iframe_url || currentChannel.flv;
+        if (!url) {
+          loadingText.textContent = '未提供 EasyNVR 原生播放页面地址';
+          return;
+        }
+        iframe.src = url;
+        iframe.style.display = 'block';
+        iframe.onload = () => { loading.style.display = 'none'; };
+        return;
+      }
+
+      video.style.display = 'block';
+
+      if (proto === 'flv') {
+        const streamUrl = currentChannel.flv;
+        if (!streamUrl) {
+          loadingText.textContent = '该通道暂未提供 FLV 视频流地址';
+          return;
+        }
+
+        if (window.flvjs && flvjs.isSupported()) {
+          try {
+            flvPlayer = flvjs.createPlayer({
+              type: 'flv',
+              isLive: true,
+              hasAudio: false,
+              url: streamUrl,
+            }, {
+              enableStashBuffer: false,
+              stashInitialSize: 128,
+              lazyLoad: false,
+              autoCleanupSourceBuffer: true
+            });
+
+            flvPlayer.attachMediaElement(video);
+            flvPlayer.load();
+            flvPlayer.play().then(() => {
+              loading.style.display = 'none';
+            }).catch(err => {
+              loadingText.textContent = 'HTTP-FLV 启动失败，可尝试切换至 HLS 协议或原厂播放页面';
+            });
+
+            flvPlayer.on(flvjs.Events.ERROR, (errType, errDetail) => {
+              console.warn('FLV Error:', errType, errDetail);
+              loadingText.textContent = `FLV 拉流异常 (${errDetail})，建议切换协议或检查跨域设置`;
+            });
+          } catch (e) {
+            loadingText.textContent = `FLV.js 解码失败: ${e.message}`;
+          }
+        } else {
+          loadingText.textContent = '当前浏览器不支持 FLV MSE 解码，请切换为 HLS 或原厂页面';
+        }
+      } else if (proto === 'hls') {
+        const streamUrl = currentChannel.hls;
+        if (!streamUrl) {
+          loadingText.textContent = '该通道暂未提供 HLS 视频流地址';
+          return;
+        }
+
+        if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          // Safari 原生支持 HLS
+          video.src = streamUrl;
+          video.play().then(() => { loading.style.display = 'none'; });
+        } else if (window.Hls && Hls.isSupported()) {
+          hlsPlayer = new Hls({
+            liveDurationInfinity: true,
+            lowLatencyMode: true
+          });
+          hlsPlayer.loadSource(streamUrl);
+          hlsPlayer.attachMedia(video);
+          hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
+            video.play().then(() => { loading.style.display = 'none'; });
+          });
+          hlsPlayer.on(Hls.Events.ERROR, (event, data) => {
+            if (data.fatal) {
+              loadingText.textContent = `HLS 播放错误 (${data.type})，请检查 NVR 服务端是否已转码`;
+            }
+          });
+        } else {
+          loadingText.textContent = '当前浏览器不支持 HLS 播放';
+        }
+      }
+    }
+
+    function copyCurrentStreamUrl() {
+      if (!currentChannel) return;
+      const url = currentProto === 'hls' ? currentChannel.hls :
+                  currentProto === 'flv' ? currentChannel.flv :
+                  (currentChannel.rtsp || currentChannel.flv);
+      if (!url) {
+        alert('暂无可用的流媒体直链');
+        return;
+      }
+      navigator.clipboard.writeText(url).then(() => {
+        alert(`已成功复制视频流地址到剪贴板：\n${url}\n\n可直接粘贴至 PotPlayer / VLC 播放器中打开！`);
+      }).catch(() => {
+        prompt('请复制以下流媒体地址：', url);
+      });
+    }
+
+    function togglePlayerFullscreen() {
+      const box = document.querySelector('.player-screen-wrap');
+      if (!box) return;
+      if (!document.fullscreenElement) {
+        box.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+
+    function changeRefreshRate() {
+      const val = parseInt(document.getElementById('selRefreshRate').value);
+      if (refreshTimer) {
+        clearInterval(refreshTimer);
+        refreshTimer = null;
+      }
+      if (val > 0) {
+        refreshTimer = setInterval(() => loadNVRData(false), val);
+      }
+    }
+
+    // 初始化
+    loadNVRData(true);
+    changeRefreshRate();
   </script>
 </body>
 </html>

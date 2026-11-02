@@ -147,12 +147,25 @@ class EasyNVRMonitor(BaseMonitor):
                             except Exception:
                                 pass
 
+                            # 自动补全流媒体多协议地址
+                            flv_raw = item.get("flv") or item.get("FLV") or f"/flv/hls/channel_{ch_id}.flv"
+                            flv_url = urljoin(base + "/", flv_raw.lstrip("/")) if not flv_raw.startswith(("http://", "https://")) else flv_raw
+
+                            hls_raw = item.get("hls") or item.get("HLS") or f"/hls/channel_{ch_id}/channel_{ch_id}_live.m3u8"
+                            hls_url = urljoin(base + "/", hls_raw.lstrip("/")) if not hls_raw.startswith(("http://", "https://")) else hls_raw
+
+                            rtsp_url = item.get("rtsp") or item.get("RTSP") or ""
+                            iframe_url = f"{base}/cloud/#/preview?channel={ch_id}"
+
                             channels.append({
                                 "channel": ch_id,
                                 "name": name,
                                 "online": is_online,
                                 "snap_url": snap_data,
-                                "flv": f"{base}/cloud/#/preview",
+                                "flv": flv_url,
+                                "hls": hls_url,
+                                "rtsp": rtsp_url,
+                                "iframe_url": iframe_url,
                             })
 
                         return {
@@ -172,6 +185,7 @@ class EasyNVRMonitor(BaseMonitor):
                     total_count = len(channel_list)
 
                     for ch in channel_list:
+                        ch_id = ch.get("Channel") or ch.get("ChannelID") or ch.get("ID")
                         is_online = bool(ch.get("Online") or ch.get("Status") == "ON" or ch.get("ChannelOnline"))
                         if is_online:
                             online_count += 1
@@ -179,12 +193,24 @@ class EasyNVRMonitor(BaseMonitor):
                         if snap and not snap.startswith(("http://", "https://")):
                             snap = urljoin(base, snap)
 
+                        flv_raw = ch.get("FLV") or f"/flv/hls/channel_{ch_id}.flv"
+                        flv_url = urljoin(base + "/", flv_raw.lstrip("/")) if not flv_raw.startswith(("http://", "https://")) else flv_raw
+
+                        hls_raw = ch.get("HLS") or f"/hls/channel_{ch_id}/channel_{ch_id}_live.m3u8"
+                        hls_url = urljoin(base + "/", hls_raw.lstrip("/")) if not hls_raw.startswith(("http://", "https://")) else hls_raw
+
+                        rtsp_url = ch.get("RTSP") or ch.get("Rtsp") or ""
+                        iframe_url = ch.get("PlayURL") or f"{base}/play.html?channel={ch_id}&iframe=yes"
+
                         channels.append({
-                            "channel": ch.get("Channel") or ch.get("ChannelID") or ch.get("ID"),
-                            "name": ch.get("Name") or f"通道 {ch.get('Channel')}",
+                            "channel": ch_id,
+                            "name": ch.get("Name") or f"通道 {ch_id}",
                             "online": is_online,
                             "snap_url": snap,
-                            "flv": ch.get("FLV") or f"{base}/cloud/#/preview",
+                            "flv": flv_url,
+                            "hls": hls_url,
+                            "rtsp": rtsp_url,
+                            "iframe_url": iframe_url,
                         })
 
                     return {
