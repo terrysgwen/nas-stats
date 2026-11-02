@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EasyNVR 实时监控中心 v2.5.0</title>
+  <title>EasyNVR 实时监控中心 v2.5.1</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📹</text></svg>">
-  <!-- 引入主流低延迟网页流媒体解码器 flv.js 与 hls.js -->
-  <script src="https://cdn.jsdelivr.net/npm/flv.js@1.6.2/dist/flv.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.8/dist/hls.min.js"></script>
+  <!-- 引入主流低延迟网页流媒体解码器 flv.js 与 hls.js（具备多 CDN 容灾备份） -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/flv.js/1.6.2/flv.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/flv.js@1.6.2/dist/flv.min.js'"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.8/hls.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/hls.js@1.5.8/dist/hls.min.js'"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {

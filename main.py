@@ -4,7 +4,7 @@ All configuration and services are persisted in SQLite (database.py).
 Monitors are dynamically discovered and instantiated from monitors package.
 """
 
-__version__ = "2.5.0"
+__version__ = "2.5.1"
 
 import asyncio
 import base64
@@ -22,7 +22,7 @@ from fastapi import Depends, FastAPI, HTTPException, Header, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 import httpx
-from lucky import LuckyClient, match_services_with_lucky
+from lucky import LuckyClient, match_services_with_lucky, parse_target_host_port
 
 logger = logging.getLogger("main")
 
