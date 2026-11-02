@@ -4,7 +4,7 @@ All configuration and services are persisted in SQLite (database.py).
 Monitors are dynamically discovered and instantiated from monitors package.
 """
 
-__version__ = "2.4.18"
+__version__ = "2.4.19"
 
 import asyncio
 import base64
@@ -1522,14 +1522,26 @@ async def handle_services(request: Request, action: str = Query(...)):
 
     if action == "update":
         sid = body.get("id")
+        url_val = (body.get("url") or "").strip()
+        port_val = body.get("port")
+        proto_val = body.get("protocol") or "http"
+        if url_val:
+            _, p = parse_target_host_port(url_val)
+            if p:
+                port_val = p
+            if url_val.startswith("https://"):
+                proto_val = "https"
+            elif url_val.startswith("http://"):
+                proto_val = "http"
+
         updates = {
             "name": body.get("name"),
             "icon": body.get("icon", ""),
             "description": body.get("desc", body.get("description", "")),
-            "url": body.get("url", ""),
+            "url": url_val,
             "wan_url": body.get("wan_url", ""),
-            "port": body.get("port"),
-            "protocol": body.get("protocol", "http"),
+            "port": port_val,
+            "protocol": proto_val,
             "favicon": body.get("favicon", ""),
         }
         updates = {k: v for k, v in updates.items() if v is not None}
@@ -1599,15 +1611,27 @@ async def handle_services(request: Request, action: str = Query(...)):
 
     if action == "add":
         count = db.count_services()
+        url_val = (body.get("url") or "").strip()
+        port_val = body.get("port") or 0
+        proto_val = body.get("protocol") or "http"
+        if url_val:
+            _, p = parse_target_host_port(url_val)
+            if p:
+                port_val = p
+            if url_val.startswith("https://"):
+                proto_val = "https"
+            elif url_val.startswith("http://"):
+                proto_val = "http"
+
         new_item = {
             "id": str(uuid.uuid4()),
-            "port": body.get("port", 0),
+            "port": port_val,
             "name": body.get("name", ""),
             "category": body.get("category", "自定义"),
-            "protocol": body.get("protocol", "http"),
+            "protocol": proto_val,
             "icon": body.get("icon", "🔧"),
             "description": body.get("desc", body.get("description", "")),
-            "url": body.get("url", ""),
+            "url": url_val,
             "wan_url": body.get("wan_url", ""),
             "favicon": body.get("favicon", ""),
             "visible": 1,

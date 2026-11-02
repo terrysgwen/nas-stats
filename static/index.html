@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NAS 服务导航 v2.4.18</title>
+  <title>NAS 服务导航 v2.4.19</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -3543,10 +3543,6 @@
         </div>
       </div>
       <div class="modal-field">
-        <label>端口</label>
-        <input type="number" id="editPort">
-      </div>
-      <div class="modal-field">
         <label>协议</label>
         <select id="editProtocol">
           <option value="http">HTTP</option>
@@ -6084,7 +6080,6 @@
         document.getElementById('editIcon').value = s.icon || '';
         document.getElementById('editUrl').value = s.url || '';
         document.getElementById('editWanUrl').value = s.wan_url || '';
-        document.getElementById('editPort').value = s.port || '';
         document.getElementById('editProtocol').value = s.protocol || 'http';
         document.getElementById('editDesc').value = s.description || '';
         if (s.favicon) {
@@ -6173,7 +6168,6 @@
         document.getElementById('editIcon').value = '🌐';
         document.getElementById('editUrl').value = '';
         document.getElementById('editWanUrl').value = '';
-        document.getElementById('editPort').value = '';
         document.getElementById('editProtocol').value = 'http';
         document.getElementById('editDesc').value = '';
         fp.style.display = 'none';
@@ -6210,9 +6204,6 @@
           }
           if (data.title && !document.getElementById('editName').value) {
             document.getElementById('editName').value = data.title;
-          }
-          if (data.port && !document.getElementById('editPort').value) {
-            document.getElementById('editPort').value = data.port;
           }
           if (data.protocol) {
             document.getElementById('editProtocol').value = data.protocol;
@@ -6285,10 +6276,10 @@
         return;
       }
       let url = document.getElementById('editUrl').value.trim();
-      let port = parseInt(document.getElementById('editPort').value) || 0;
-      let protocol = document.getElementById('editProtocol').value || 'http';
+      let port = 0;
+      let protocol = document.getElementById('editProtocol')?.value || 'http';
 
-      // 自动补全 URL 与智能提取端口
+      // 自动补全 URL 并直接从 URL 中智能提取端口与协议
       if (url) {
         if (!url.startsWith('http://') && !url.startsWith('https://')) {
           url = `${protocol}://${url}`;
@@ -6296,13 +6287,15 @@
         }
         try {
           const parsed = new URL(url);
-          if (!port && parsed.port) {
+          if (parsed.port) {
             port = parseInt(parsed.port) || 0;
-            document.getElementById('editPort').value = port;
+          } else {
+            port = (parsed.protocol === 'https:') ? 443 : 80;
           }
           if (parsed.protocol) {
             protocol = parsed.protocol.replace(':', '');
-            document.getElementById('editProtocol').value = protocol;
+            const protoEl = document.getElementById('editProtocol');
+            if (protoEl) protoEl.value = protocol;
           }
         } catch (e) {}
       }
