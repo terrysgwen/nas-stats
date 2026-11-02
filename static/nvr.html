@@ -4,16 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0b0d13">
-<title>实时监控中心</title>
+<title>实时监控中心 v2.5.3</title>
 <style>
   :root{
     --bg:#0b0d13;
     --fg:#f1f3f9;
     --muted:#8b92a5;
-    --bar:rgba(11,13,19,.78);
+    --bar:rgba(15,18,26,.88);
     --line:rgba(255,255,255,.14);
     --accent:#3b82f6;
+    --accent-hover:#2563eb;
     --danger:#ef4444;
+    --success:#10b981;
   }
   *{box-sizing:border-box;}
   html,body{height:100%;margin:0;padding:0;background:var(--bg);overflow:hidden;}
@@ -21,29 +23,51 @@
     width:100%;height:100%;border:0;display:block;background:var(--bg);
   }
 
-  /* ── 悬浮控制条（默认半透明，鼠标移上去才完全不透明） ── */
+  /* ── 悬浮控制条 ── */
   #bar{
-    position:fixed;left:50%;bottom:16px;transform:translateX(-50%);
+    position:fixed;left:50%;bottom:18px;transform:translateX(-50%);
     display:flex;align-items:center;gap:6px;
-    padding:7px 9px;border-radius:999px;
+    padding:8px 12px;border-radius:999px;
     background:var(--bar);border:1px solid var(--line);
-    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+    box-shadow:0 12px 36px rgba(0,0,0,.5);
     font:13px/1 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
-    color:var(--fg);opacity:.26;transition:opacity .18s ease;z-index:99;
+    color:var(--fg);opacity:.35;transition:opacity .22s cubic-bezier(0.16, 1, 0.3, 1), transform .22s cubic-bezier(0.16, 1, 0.3, 1);z-index:99;
     max-width:calc(100vw - 24px);
   }
-  #bar:hover,#bar.show{opacity:1;}
+  #bar:hover,#bar.show{opacity:1;transform:translateX(-50%) translateY(0);}
   #bar a,#bar button{
-    display:inline-flex;align-items:center;justify-content:center;
-    height:30px;padding:0 12px;border-radius:999px;
+    display:inline-flex;align-items:center;justify-content:center;gap:4px;
+    height:32px;padding:0 12px;border-radius:999px;
     border:1px solid transparent;background:transparent;
     color:var(--fg);font:inherit;text-decoration:none;cursor:pointer;
-    white-space:nowrap;transition:background .15s,border-color .15s;
+    white-space:nowrap;transition:background .15s,border-color .15s,color .15s;
   }
   #bar a:hover,#bar button:hover{background:rgba(255,255,255,.12);border-color:var(--line);}
   #bar .sep{width:1px;height:18px;background:var(--line);margin:0 2px;}
-  #bar .primary{background:rgba(59,130,246,.22);border-color:rgba(59,130,246,.45);}
-  #bar .primary:hover{background:rgba(59,130,246,.34);}
+  #bar .primary{background:rgba(59,130,246,.25);border-color:rgba(59,130,246,.5);}
+  #bar .primary:hover{background:rgba(59,130,246,.38);}
+  #bar .active{background:rgba(59,130,246,.22);border-color:rgba(59,130,246,.5);color:#93c5fd;}
+
+  /* ── 通道抽屉弹窗 ── */
+  #channelDrawer{
+    position:fixed;left:50%;bottom:72px;transform:translateX(-50%) translateY(12px);
+    display:none;flex-direction:column;width:min(440px, calc(100vw - 32px));
+    max-height:360px;background:rgba(20,24,35,.96);border:1px solid var(--line);
+    border-radius:16px;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
+    box-shadow:0 16px 48px rgba(0,0,0,.6);z-index:105;padding:12px;overflow:hidden;
+    opacity:0;transition:opacity .2s, transform .2s;
+  }
+  #channelDrawer.open{display:flex;opacity:1;transform:translateX(-50%) translateY(0);}
+  .drawer-head{display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;border-bottom:1px solid var(--line);font-size:13px;font-weight:600;color:var(--fg);}
+  .drawer-close{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px;}
+  .drawer-close:hover{color:#fff;background:rgba(255,255,255,.1);}
+  .channel-list{overflow-y:auto;margin-top:8px;display:flex;flex-direction:column;gap:6px;max-height:280px;padding-right:2px;}
+  .channel-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid transparent;cursor:pointer;font-size:13px;color:var(--fg);transition:background .15s, border-color .15s;}
+  .channel-item:hover{background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.35);}
+  .channel-item .status-dot{width:8px;height:8px;border-radius:50%;margin-right:8px;display:inline-block;}
+  .status-dot.online{background:var(--success);box-shadow:0 0 8px var(--success);}
+  .status-dot.offline{background:var(--muted);}
 
   /* ── 状态/错误浮层 ── */
   #mask{
@@ -52,48 +76,57 @@
     font:14px/1.7 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--fg);
   }
   #mask.on{display:flex;}
-  #mask .box{max-width:520px;}
-  #mask h2{margin:0 0 10px;font-size:17px;font-weight:600;}
-  #mask p{margin:0 0 6px;color:var(--muted);word-break:break-all;}
+  #mask .box{max-width:540px;}
+  #mask h2{margin:0 0 10px;font-size:18px;font-weight:600;}
+  #mask p{margin:0 0 8px;color:var(--muted);word-break:break-all;line-height:1.6;}
   #mask code{
-    display:inline-block;margin-top:8px;padding:6px 10px;border-radius:8px;
+    display:inline-block;margin-top:8px;padding:6px 12px;border-radius:8px;
     background:rgba(255,255,255,.07);border:1px solid var(--line);
     font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#c9d1e5;
   }
-  #mask .acts{margin-top:18px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+  #mask .acts{margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
   #mask .acts button,#mask .acts a{
-    height:34px;padding:0 16px;border-radius:8px;border:1px solid var(--line);
+    height:36px;padding:0 18px;border-radius:999px;border:1px solid var(--line);
     background:rgba(255,255,255,.06);color:var(--fg);font:13px/1 -apple-system,sans-serif;
-    cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;
+    cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:background .15s;
   }
-  #mask .acts .primary{background:rgba(59,130,246,.25);border-color:rgba(59,130,246,.5);}
+  #mask .acts .primary{background:rgba(59,130,246,.3);border-color:rgba(59,130,246,.6);}
+  #mask .acts .primary:hover{background:rgba(59,130,246,.45);}
   #spinner{
-    width:26px;height:26px;margin:0 auto 14px;border-radius:50%;
-    border:2px solid rgba(255,255,255,.16);border-top-color:var(--accent);
+    width:28px;height:28px;margin:0 auto 16px;border-radius:50%;
+    border:2.5px solid rgba(255,255,255,.16);border-top-color:var(--accent);
     animation:spin .8s linear infinite;
   }
   @keyframes spin{to{transform:rotate(360deg);}}
 
-  /* 手机：控制条贴底、可换行 */
+  /* 手机适配 */
   @media (max-width:640px){
-    #bar{bottom:10px;gap:4px;padding:6px 7px;}
-    #bar a,#bar button{height:28px;padding:0 9px;font-size:12px;}
-    #bar .opt{display:none;}
+    #bar{bottom:10px;gap:3px;padding:6px 8px;}
+    #bar a,#bar button{height:28px;padding:0 8px;font-size:12px;}
+    #bar .opt-pc{display:none;}
   }
 
-  /* ── 一次性登录提示 toast ── */
+  /* ── 登录辅助提示 toast ── */
   #toast{
-    position:fixed;left:50%;top:18px;transform:translate(-50%,-14px);
-    max-width:min(560px,calc(100vw - 24px));padding:11px 15px;border-radius:12px;
-    background:rgba(30,41,59,.96);border:1px solid rgba(96,165,250,.45);
-    box-shadow:0 10px 30px rgba(0,0,0,.45);
+    position:fixed;left:50%;top:18px;transform:translate(-50%,-16px);
+    max-width:min(620px,calc(100vw - 24px));padding:12px 18px;border-radius:14px;
+    background:rgba(24,30,46,.96);border:1px solid rgba(96,165,250,.45);
+    box-shadow:0 12px 36px rgba(0,0,0,.5);
     font:13px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
     color:#e6ebf7;z-index:130;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;
   }
   #toast.on{opacity:1;transform:translate(-50%,0);pointer-events:auto;}
-  #toast b{color:#93c5fd;}
+  #toast .cred-box{
+    display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,.3);
+    padding:3px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.1);margin:2px 4px;
+  }
+  #toast .copy-tag{
+    cursor:pointer;font-size:11px;padding:2px 6px;border-radius:4px;
+    background:rgba(59,130,246,.3);color:#bfdbfe;border:0;
+  }
+  #toast .copy-tag:hover{background:rgba(59,130,246,.5);}
   #toast .x{
-    position:absolute;top:6px;right:8px;width:22px;height:22px;border:0;background:transparent;
+    position:absolute;top:8px;right:10px;width:22px;height:22px;border:0;background:transparent;
     color:#94a3b8;font:16px/1 sans-serif;cursor:pointer;border-radius:6px;
   }
   #toast .x:hover{background:rgba(255,255,255,.12);color:#fff;}
@@ -106,22 +139,46 @@
         allowfullscreen
         referrerpolicy="no-referrer"></iframe>
 
-<div id="bar" class="show">
-  <a href="/" title="返回服务导航">← 导航</a>
-  <span class="sep"></span>
-  <button class="opt" onclick="switchPage('home')">总览</button>
-  <button class="opt" onclick="switchPage('preview')">多画面</button>
-  <button class="opt" onclick="switchPage('record')">录像</button>
-  <span class="sep opt"></span>
-  <button onclick="reloadWall()" title="重新加载">⟳ 刷新</button>
-  <a id="openNew" href="#" target="_blank" rel="noopener" title="在新窗口打开 EasyNVR">原厂 ↗</a>
+<!-- 通道快速选择抽屉 -->
+<div id="channelDrawer">
+  <div class="drawer-head">
+    <span id="drawerTitle">📹 摄像头通道列表</span>
+    <button class="drawer-close" onclick="toggleDrawer(false)">×</button>
+  </div>
+  <div class="channel-list" id="channelListContainer">
+    <div style="color:var(--muted);font-size:12px;padding:8px;text-align:center;">正在读取通道...</div>
+  </div>
 </div>
 
+<!-- 底部智能悬浮控制条 -->
+<div id="bar" class="show">
+  <a href="/" title="返回服务导航 [ESC]">← 导航</a>
+  <span class="sep"></span>
+  <button class="opt" id="btnHome" onclick="switchPage('home')" title="总览视图 [快捷键 1]">总览</button>
+  <button class="opt active" id="btnPreview" onclick="switchPage('preview')" title="多画面监控墙 [快捷键 2]">多画面</button>
+  <button class="opt" id="btnRecord" onclick="switchPage('record')" title="录像回放 [快捷键 3]">录像</button>
+  <button class="opt opt-pc" id="btnAlarm" onclick="switchPage('alarm')" title="告警中心 [快捷键 4]">告警</button>
+  <span class="sep"></span>
+  <button id="btnChannels" onclick="toggleDrawer()" title="选择单路通道">🎥 通道 <span id="chBadge" style="font-size:11px;opacity:0.8;"></span></button>
+  <button onclick="toggleFullscreen()" id="btnFs" title="全屏沉浸 [快捷键 F]">⛶ 全屏</button>
+  <button onclick="reloadWall()" title="重新加载当前画面 [快捷键 R]">⟳ 刷新</button>
+  <a id="openNew" href="#" target="_blank" rel="noopener" title="在新窗口直接打开 EasyNVR 原始后台">原厂 ↗</a>
+</div>
+
+<!-- 登录与使用辅助提示 -->
 <div id="toast">
   <button class="x" onclick="document.getElementById('toast').classList.remove('on')">×</button>
-  <span>首次进入若显示 <b>Login</b> 页：直接在当前画面里登录即可（账号密码 + 图形验证码）。登录一次浏览器会记住会话，以后打开直接进监控墙。</span>
+  <div>
+    <span>首次进入若出现 <b>Login</b> 页：请直接在画面中登录。</span>
+    <span id="credArea" style="display:none;margin-top:4px;">
+      <span class="cred-box">账号: <b id="credUser">admin</b> <button class="copy-tag" onclick="copyCred('credUser')">复制</button></span>
+      <span class="cred-box">密码: <b id="credPass">••••••</b> <button class="copy-tag" onclick="copyCred('credPassReal')">复制</button></span>
+    </span>
+    <div style="font-size:12px;color:var(--muted);margin-top:2px;">登录一次浏览器会自动记忆会话，以后进入直接直达多画面监控墙。</div>
+  </div>
 </div>
 
+<!-- 加载/错误遮罩浮层 -->
 <div id="mask">
   <div class="box">
     <div id="spinner"></div>
@@ -129,8 +186,8 @@
     <p id="maskMsg"></p>
     <code id="maskUrl"></code>
     <div class="acts">
-      <button class="primary" onclick="reloadWall()">重试</button>
-      <a id="maskOpen" href="#" target="_blank" rel="noopener">新窗口打开</a>
+      <button class="primary" onclick="reloadWall()">重试连接</button>
+      <a id="maskOpen" class="primary" href="#" target="_blank" rel="noopener">在新标签打开原生 EasyNVR ↗</a>
       <a href="/">返回导航</a>
     </div>
   </div>
@@ -145,23 +202,29 @@
   var FORCE_SRC = qs.get('src')   || '';         // ?src=http://ip:port 强制指定 EasyNVR 地址
   var TIMEOUT   = parseInt(qs.get('timeout') || '9000', 10);
 
-  var wall     = document.getElementById('wall');
-  var mask     = document.getElementById('mask');
-  var maskT    = document.getElementById('maskTitle');
-  var maskM    = document.getElementById('maskMsg');
-  var maskU    = document.getElementById('maskUrl');
-  var openNew  = document.getElementById('openNew');
-  var maskOpen = document.getElementById('maskOpen');
-  var base     = '';
-  var loaded   = false;
+  var wall      = document.getElementById('wall');
+  var mask      = document.getElementById('mask');
+  var maskT     = document.getElementById('maskTitle');
+  var maskM     = document.getElementById('maskMsg');
+  var maskU     = document.getElementById('maskUrl');
+  var openNew   = document.getElementById('openNew');
+  var maskOpen  = document.getElementById('maskOpen');
+  var bar       = document.getElementById('bar');
+  var chBadge   = document.getElementById('chBadge');
+  var drawer    = document.getElementById('channelDrawer');
+  var chList    = document.getElementById('channelListContainer');
 
-  // ── 1. 解析 EasyNVR 基地址 ──────────────────────────────────────
-  // 优先级：?src= 参数 > nas-stats 的 easynvr 监控配置 > 同主机 :10000
+  var base      = '';
+  var loaded    = false;
+  var monitorData = null;
+  var realPass  = '';
+
+  // ── 1. 解析 EasyNVR 配置与基地址 ────────────────────────────────
   function resolveBase() {
     if (FORCE_SRC) return Promise.resolve(FORCE_SRC.replace(/\/+$/, ''));
 
     var ctrl = new AbortController();
-    var timer = setTimeout(function () { ctrl.abort(); }, 3000);
+    var timer = setTimeout(function () { ctrl.abort(); }, 3500);
 
     return fetch('/api/monitors', { cache: 'no-store', signal: ctrl.signal })
       .then(function (r) { return r.ok ? r.json() : null; })
@@ -172,8 +235,17 @@
         for (var i = 0; i < list.length; i++) {
           var m = list[i] || {};
           if (String(m.id || '').toLowerCase() !== 'easynvr') continue;
+          monitorData = m;
           var cfg = m.config || {};
           if (typeof cfg === 'string') { try { cfg = JSON.parse(cfg); } catch (e) { cfg = {}; } }
+          
+          if (cfg.username) {
+            document.getElementById('credUser').textContent = cfg.username;
+          }
+          if (cfg.password) {
+            realPass = cfg.password;
+            document.getElementById('credArea').style.display = 'inline-block';
+          }
           if (cfg.url) return String(cfg.url).replace(/\/+$/, '');
         }
         return null;
@@ -182,7 +254,6 @@
       .finally(function () { clearTimeout(timer); })
       .then(function (u) {
         if (u) return u;
-        // 兜底：同主机 10000（EasyNVR 默认端口）
         return location.protocol + '//' + location.hostname + ':10000';
       });
   }
@@ -194,7 +265,10 @@
 
   // ── 3. 组装 EasyNVR 内部地址 ───────────────────────────────────
   function buildUrl(b, page) {
-    // /cloud/ 是 umi SPA，hash 路由：#/preview、#/home、#/record、#/alarm …
+    var ch = qs.get('channel');
+    if (ch) {
+      return b + '/cloud/#/apps/' + encodeURIComponent(ch) + '/channel';
+    }
     return b + '/cloud/#/' + (page || 'preview');
   }
 
@@ -212,17 +286,37 @@
   var toastTimer = null;
   function showLoginToast() {
     if (qs.get('notoast') === '1') return;
-    // 同一标签页只提示一次
     try { if (sessionStorage.getItem('nvrWallToast') === '1') return; sessionStorage.setItem('nvrWallToast', '1'); } catch (e) {}
     var t = document.getElementById('toast');
     t.classList.add('on');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { t.classList.remove('on'); }, 9000);
+    toastTimer = setTimeout(function () { t.classList.remove('on'); }, 10000);
   }
 
-  // ── 4. 加载 ────────────────────────────────────────────────────
+  // 复制辅助
+  window.copyCred = function (type) {
+    var val = type === 'credPassReal' ? realPass : document.getElementById('credUser').textContent;
+    if (!val) return;
+    navigator.clipboard.writeText(val).then(function () {
+      var t = document.getElementById('toast');
+      var oldTitle = t.querySelector('span').textContent;
+      t.querySelector('span').textContent = '已复制到剪贴板，请在登录框直接粘贴！';
+      setTimeout(function () { t.querySelector('span').textContent = oldTitle; }, 2000);
+    });
+  };
+
+  // ── 4. 加载页面 ────────────────────────────────────────────────
+  function updateNavActive() {
+    var btns = { home: 'btnHome', preview: 'btnPreview', record: 'btnRecord', alarm: 'btnAlarm' };
+    for (var k in btns) {
+      var el = document.getElementById(btns[k]);
+      if (el) el.classList.toggle('active', PAGE === k);
+    }
+  }
+
   function loadWall() {
     loaded = false;
+    updateNavActive();
     showMask('正在连接 EasyNVR…', '', '', true);
 
     resolveBase().then(function (b) {
@@ -232,11 +326,17 @@
       openNew.href  = url;
       maskOpen.href = url;
 
+      // 渲染通道抽屉列表
+      renderChannels();
+
       if (mixedContentBlocked(base)) {
         showMask(
-          '浏览器阻止了不安全内容',
-          '当前页面是 https，而 EasyNVR 是 http，浏览器会按「混合内容」直接拦截。' +
-          '解决办法：用 http 方式访问本页，或先给 EasyNVR 也套一层 https 反代。',
+          '浏览器拦截了非安全协议内容 (Mixed Content)',
+          '当前 nas-stats 处于 HTTPS 访问环境下，而 EasyNVR 运行在 HTTP 协议下，浏览器安全策略会自动拦截跨协议的 iframe 嵌入。\n\n' +
+          '解决方案：\n' +
+          '1. 点击下方按钮，在新标签页直接打开原生 EasyNVR 画面；\n' +
+          '2. 或在 Lucky 穿透中为 10000 端口配置 SSL/HTTPS 规则；\n' +
+          '3. 或使用 HTTP 方式访问本面板。',
           base, false
         );
         return;
@@ -244,14 +344,13 @@
 
       wall.src = url;
 
-      // 跨域无法读取 iframe 内部状态，只能靠 onload + 超时兜底
       var fired = false;
       var t = setTimeout(function () {
         if (fired || loaded) return;
         fired = true;
         showMask(
           '连接 EasyNVR 超时',
-          'iframe 在 ' + Math.round(TIMEOUT / 1000) + ' 秒内没有加载完成。请确认 EasyNVR 正在运行、端口可达。',
+          'iframe 在 ' + Math.round(TIMEOUT / 1000) + ' 秒内未能响应。请确认 EasyNVR 正在运行、10000 端口可达。',
           url, false
         );
       }, TIMEOUT);
@@ -262,39 +361,97 @@
         clearTimeout(t);
         loaded = true;
         hideMask();
-        // EasyNVR 是 SPA，iframe 加载完可能停在 #/login —— 跨域无法探测，
-        // 用一条一次性 toast 告知用户「按需登录（需验证码）」。
         setTimeout(showLoginToast, 1200);
       };
 
       wall.onerror = function () {
         clearTimeout(t);
-        showMask('无法加载 EasyNVR', 'iframe 报错，检查地址是否可访问。', url, false);
+        showMask('无法加载 EasyNVR 画面', 'iframe 报错，请检查 EasyNVR 地址与端口是否正确。', url, false);
       };
     });
   }
 
-  // ── 5. 对外操作 ────────────────────────────────────────────────
+  // ── 5. 通道抽屉与状态 ──────────────────────────────────────────
+  function renderChannels() {
+    if (!monitorData) return;
+    var st = monitorData.data || monitorData.stats || {};
+    var channels = st.channels || [];
+    var online = st.online_channels || 0;
+    var total = st.total_channels || channels.length || 0;
+
+    if (total > 0) {
+      chBadge.textContent = '(' + online + '/' + total + ')';
+    }
+
+    if (!channels.length) {
+      chList.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:12px;text-align:center;">暂无通道数据或正在探测中...</div>';
+      return;
+    }
+
+    var html = '';
+    for (var i = 0; i < channels.length; i++) {
+      var c = channels[i];
+      var isOnline = !!c.online;
+      var name = c.name || ('通道 ' + c.id);
+      html += '<div class="channel-item" onclick="switchChannel(\'' + c.id + '\')">' +
+        '<span><span class="status-dot ' + (isOnline ? 'online' : 'offline') + '"></span>' + name + '</span>' +
+        '<span style="font-size:11px;color:var(--muted)">' + (isOnline ? '在线' : '离线') + ' ↗</span>' +
+        '</div>';
+    }
+    chList.innerHTML = html;
+  }
+
+  window.toggleDrawer = function (force) {
+    var isOpen = drawer.classList.contains('open');
+    var target = typeof force === 'boolean' ? force : !isOpen;
+    drawer.classList.toggle('open', target);
+  };
+
+  window.switchChannel = function (chId) {
+    toggleDrawer(false);
+    qs.set('channel', chId);
+    history.replaceState(null, '', location.pathname + '?' + qs.toString());
+    reloadWall();
+  };
+
+  // ── 6. 对外交互动作 ────────────────────────────────────────────
   window.reloadWall = function () {
     if (!base) { loadWall(); return; }
     hideMask();
     loaded = false;
-    // 强制重载：先清空再赋值，避免同 URL 不触发导航
     wall.src = 'about:blank';
     setTimeout(function () { wall.src = buildUrl(base, PAGE); }, 60);
   };
 
   window.switchPage = function (page) {
     PAGE = page;
-    var u = new URL(location.href);
-    u.searchParams.set('page', page);
-    history.replaceState(null, '', u.toString());
+    qs.delete('channel');
+    qs.set('page', page);
+    history.replaceState(null, '', location.pathname + '?' + qs.toString());
+    updateNavActive();
     reloadWall();
   };
 
-  // 控制条：3 秒后淡出，鼠标靠近底部时重新显现
-  var bar = document.getElementById('bar');
-  var fadeTimer = setTimeout(function () { bar.classList.remove('show'); }, 3000);
+  window.toggleFullscreen = function () {
+    var btn = document.getElementById('btnFs');
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().then(function () {
+        btn.textContent = '🗗 还原';
+      }).catch(function () {});
+    } else {
+      document.exitFullscreen().then(function () {
+        btn.textContent = '⛶ 全屏';
+      }).catch(function () {});
+    }
+  };
+
+  document.addEventListener('fullscreenchange', function () {
+    var btn = document.getElementById('btnFs');
+    if (btn) btn.textContent = document.fullscreenElement ? '🗗 还原' : '⛶ 全屏';
+  });
+
+  // 控制条自动隐藏交互
+  var fadeTimer = setTimeout(function () { bar.classList.remove('show'); }, 3500);
   document.addEventListener('mousemove', function (e) {
     if (e.clientY > window.innerHeight - 110) {
       bar.classList.add('show');
@@ -305,13 +462,19 @@
     }
   }, { passive: true });
 
-  // 键盘：r 刷新，1/2/3 切页
+  // 键盘快捷键监听
   document.addEventListener('keydown', function (e) {
     if (e.target && /input|textarea/i.test(e.target.tagName)) return;
-    if (e.key === 'r' || e.key === 'R') reloadWall();
-    if (e.key === '1') switchPage('home');
-    if (e.key === '2') switchPage('preview');
-    if (e.key === '3') switchPage('record');
+    var k = e.key.toLowerCase();
+    if (k === 'r') reloadWall();
+    if (k === 'f') toggleFullscreen();
+    if (k === '1') switchPage('home');
+    if (k === '2') switchPage('preview');
+    if (k === '3') switchPage('record');
+    if (k === '4') switchPage('alarm');
+    if (e.key === 'Escape') {
+      toggleDrawer(false);
+    }
   });
 
   loadWall();
