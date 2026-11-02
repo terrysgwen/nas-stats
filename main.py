@@ -4,7 +4,7 @@ All configuration and services are persisted in SQLite (database.py).
 Monitors are dynamically discovered and instantiated from monitors package.
 """
 
-__version__ = "2.5.1"
+__version__ = "2.5.2"
 
 import asyncio
 import base64
