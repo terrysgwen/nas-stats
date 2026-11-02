@@ -7,7 +7,9 @@ Compatible with modern EasyNVR Cloud / Go-based backend (e.g. Speed 12Q / ONVIF 
 - Legacy EasyDarwin fallback: /api/v1/getchannels, /api/v1/login
 """
 
+import base64
 import hashlib
+import os
 from urllib.parse import urljoin
 import httpx
 from .base import BaseMonitor
@@ -129,23 +131,25 @@ class EasyNVRMonitor(BaseMonitor):
 
                             name = item.get("custom_name") or item.get("name") or ch_id
 
-                            # Fetch snapshot base64 image
-                            snap_data = ""
-                            try:
-                                r_snap = await client.get(
-                                    f"{base}/channels/{ch_id}/snapshot",
-                                    headers=headers,
-                                    timeout=3
-                                )
-                                if r_snap.status_code == 200:
-                                    img_b64 = r_snap.json().get("img", "")
-                                    if img_b64:
-                                        if not img_b64.startswith("data:"):
-                                            snap_data = f"data:image/jpeg;base64,{img_b64}"
-                                        else:
-                                            snap_data = img_b64
-                            except Exception:
-                                pass
+                            # Fetch snapshot image: URL endpoint by default, base64 if env enabled
+                            include_inline_snap = os.getenv("EASYNVR_SNAPSHOT_IN_STATS", "false").lower() in ("1", "true", "yes")
+                            snap_data = f"/api/monitors/easynvr/snapshot?channel={ch_id}"
+                            if include_inline_snap:
+                                try:
+                                    r_snap = await client.get(
+                                        f"{base}/channels/{ch_id}/snapshot",
+                                        headers=headers,
+                                        timeout=3
+                                    )
+                                    if r_snap.status_code == 200:
+                                        img_b64 = r_snap.json().get("img", "")
+                                        if img_b64:
+                                            if not img_b64.startswith("data:"):
+                                                snap_data = f"data:image/jpeg;base64,{img_b64}"
+                                            else:
+                                                snap_data = img_b64
+                                except Exception:
+                                    pass
 
                             # 自动补全流媒体多协议地址
                             flv_raw = item.get("flv") or item.get("FLV") or f"/flv/hls/channel_{ch_id}.flv"
@@ -230,3 +234,38 @@ class EasyNVRMonitor(BaseMonitor):
                 return {"enabled": True, "status": "error", "error": f"EasyNVR 请求异常: {str(e)}"}
 
         return {"enabled": True, "status": "error", "error": "EasyNVR 连接超时"}
+
+    async def get_snapshot(self, channel_id: str) -> bytes:
+        """Fetch binary JPEG snapshot for a specific channel on demand."""
+        base = self._format_url()
+        if not base or not channel_id:
+            return b""
+        client = self.client or httpx.AsyncClient(timeout=5, verify=False)
+        for attempt in range(2):
+            if not self._token:
+                if not await self._login(client, base):
+                    return b""
+            headers = {
+                "Authorization": f"Bearer {self._token}",
+                "token": self._token,
+            }
+            try:
+                r_snap = await client.get(
+                    f"{base}/channels/{channel_id}/snapshot",
+                    headers=headers,
+                    timeout=4
+                )
+                if r_snap.status_code in (401, 403):
+                    self._token = ""
+                    if attempt == 0:
+                        continue
+                    return b""
+                if r_snap.status_code == 200:
+                    img_b64 = r_snap.json().get("img", "")
+                    if img_b64:
+                        if "," in img_b64:
+                            img_b64 = img_b64.split(",", 1)[1]
+                        return base64.b64decode(img_b64)
+            except Exception:
+                pass
+        return b""

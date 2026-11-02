@@ -4,10 +4,11 @@ All configuration and services are persisted in SQLite (database.py).
 Monitors are dynamically discovered and instantiated from monitors package.
 """
 
-__version__ = "2.5.3"
+__version__ = "2.5.4"
 
 import asyncio
 import base64
+from collections import OrderedDict
 import json
 from pathlib import Path
 import re
@@ -20,7 +21,8 @@ import logging
 import uuid
 from fastapi import Depends, FastAPI, HTTPException, Header, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
+from starlette.middleware.gzip import GZipMiddleware
 import httpx
 from lucky import LuckyClient, match_services_with_lucky, parse_target_host_port
 
@@ -177,17 +179,23 @@ def get_http_client(timeout: float = 10.0) -> httpx.AsyncClient:
     return httpx.AsyncClient(timeout=timeout, verify=False, follow_redirects=True)
 
 
+class SafeGZipMiddleware(GZipMiddleware):
+    """Safely apply GZip compression without crashing on aborted streams."""
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        try:
+            await super().__call__(scope, receive, send)
+        except Exception as e:
+            logger.warning(f"SafeGZipMiddleware error: {e}")
+            await self.app(scope, receive, send)
+
+
 app = FastAPI(title="NAS Stats 2.4.14 API", lifespan=lifespan)
 
-@app.middleware("http")
-async def add_no_cache_for_html(request: Request, call_next):
-    response = await call_next(request)
-    ct = response.headers.get("content-type", "")
-    if "text/html" in ct:
-        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-        response.headers["Pragma"] = "no-cache"
-        response.headers["Expires"] = "0"
-    return response
+# O1: 最外层中间件注册 SafeGZipMiddleware (对大于 1024 字节响应开启 gzip 压缩)
+app.add_middleware(SafeGZipMiddleware, minimum_size=1024)
 
 # Setup CORS from DB config (default to empty list to block unauthorized cross-origin requests)
 cors_origins = db.get_config("cors_origins", [])
@@ -200,25 +208,41 @@ if cors_origins:
     )
 
 
-# ── Pages ──────────────────────────────────────────────────────────
+# ── Pages (O5: 304 ETag 支持) ────────────────────────────────────────
+
+def _html_response(request: Request, filename: str) -> Response:
+    file_path = STATIC_DIR / filename
+    if not file_path.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    stat = file_path.stat()
+    etag = f'"{hex(int(stat.st_mtime))[2:]}-{hex(stat.st_size)[2:]}"'
+    
+    inm = request.headers.get("if-none-match")
+    if inm and inm.strip() == etag:
+        return Response(
+            status_code=304,
+            headers={
+                "ETag": etag,
+                "Cache-Control": "no-cache",
+            }
+        )
+    
+    resp = FileResponse(file_path, media_type="text/html")
+    resp.headers["ETag"] = etag
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
 
 @app.get("/")
 @app.get("/index.html")
-async def index():
-    resp = FileResponse(STATIC_DIR / "index.html", media_type="text/html")
-    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    resp.headers["Pragma"] = "no-cache"
-    resp.headers["Expires"] = "0"
-    return resp
-
-
+async def index(request: Request):
+    return _html_response(request, "index.html")
 
 
 @app.get("/nvr")
-async def nvr_page():
-    resp = FileResponse(STATIC_DIR / "nvr.html", media_type="text/html")
-    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    return resp
+async def nvr_page(request: Request):
+    return _html_response(request, "nvr.html")
 
 
 # ── Health & Stats ──────────────────────────────────────────────────
@@ -276,26 +300,83 @@ async def get_stats():
     return final_output
 
 
-# ── Monitor Management ──────────────────────────────────────────────
+# ── O2: EasyNVR Snapshot Endpoint (LRU 64, max-age=3) ───────────────
+
+_easynvr_snap_cache = OrderedDict()
+_EASYNVR_SNAP_CACHE_MAX = 64
+_EASYNVR_SNAP_TTL = 3.0
+
+@app.get("/api/monitors/easynvr/snapshot")
+async def get_easynvr_snapshot(channel: str = Query(...)):
+    channel = channel.strip()
+    if not channel:
+        raise HTTPException(status_code=400, detail="Channel ID required")
+    
+    now = time.time()
+    if channel in _easynvr_snap_cache:
+        cached_ts, cached_data = _easynvr_snap_cache[channel]
+        if now - cached_ts < _EASYNVR_SNAP_TTL and cached_data:
+            _easynvr_snap_cache.move_to_end(channel)
+            return Response(
+                content=cached_data,
+                media_type="image/jpeg",
+                headers={"Cache-Control": "public, max-age=3"}
+            )
+
+    inst = active_monitors.get("easynvr")
+    if not inst or not hasattr(inst, "get_snapshot"):
+        raise HTTPException(status_code=404, detail="EasyNVR monitor not active")
+    
+    img_bytes = await inst.get_snapshot(channel)
+    if not img_bytes:
+        raise HTTPException(status_code=404, detail="Snapshot not available")
+
+    _easynvr_snap_cache[channel] = (now, img_bytes)
+    _easynvr_snap_cache.move_to_end(channel)
+    if len(_easynvr_snap_cache) > _EASYNVR_SNAP_CACHE_MAX:
+        _easynvr_snap_cache.popitem(last=False)
+
+    return Response(
+        content=img_bytes,
+        media_type="image/jpeg",
+        headers={"Cache-Control": "public, max-age=3"}
+    )
+
+
+# ── Monitor Management (O7: 附带 stats 与 channels 补全) ──────────────
 
 @app.get("/api/monitors")
 async def list_monitors():
     monitors = db.get_all_monitors()
-    # Mask secret fields
     safe_list = []
+    cached_all_stats = stats_cache.get("data") or {}
     for m in monitors:
         cfg = dict(m["config"])
         for secret_key in ("password", "token_secret", "token", "api_key"):
             if secret_key in cfg and cfg[secret_key]:
                 cfg[secret_key] = "********"
-        safe_list.append({
+        m_item = {
             "id": m["id"],
             "display_name": m["display_name"],
             "enabled": m["enabled"],
             "show_in_banner": m["show_in_banner"],
             "sort_order": m["sort_order"],
             "config": cfg,
-        })
+        }
+        # O7: 附带当前组件最新 stats 数据并补齐 channels 的 id 别名
+        m_stats = cached_all_stats.get(m["id"])
+        if m_stats and isinstance(m_stats, dict):
+            st_copy = dict(m_stats)
+            if "channels" in st_copy and isinstance(st_copy["channels"], list):
+                ch_list = []
+                for ch in st_copy["channels"]:
+                    ch_item = dict(ch)
+                    ch_item.setdefault("id", ch_item.get("channel", ""))
+                    ch_item.setdefault("channel", ch_item.get("id", ""))
+                    ch_list.append(ch_item)
+                st_copy["channels"] = ch_list
+            m_item["stats"] = st_copy
+        safe_list.append(m_item)
     return {"items": safe_list}
 
 
@@ -1505,11 +1586,49 @@ async def get_lucky_mappings_endpoint():
 
 # ── Services Management (CRUD) ──────────────────────────────────────
 
+# O3: Favicon Binary Endpoint (7-day strong cache + immutable)
+@app.get("/api/services/{sid}/favicon")
+async def get_service_favicon(sid: str):
+    svc = db.get_service(sid)
+    if not svc or not svc.get("favicon"):
+        raise HTTPException(status_code=404, detail="Favicon not found")
+    fav = svc["favicon"]
+    if fav.startswith("data:"):
+        try:
+            header, b64_data = fav.split(",", 1)
+            ct = "image/x-icon"
+            if ";" in header and ":" in header:
+                ct = header.split(":", 1)[1].split(";", 1)[0]
+            content = base64.b64decode(b64_data)
+            return Response(
+                content=content,
+                media_type=ct,
+                headers={"Cache-Control": "public, max-age=604800, immutable"}
+            )
+        except Exception:
+            raise HTTPException(status_code=500, detail="Invalid favicon data")
+    elif fav.startswith(("http://", "https://")):
+        return RedirectResponse(fav)
+    raise HTTPException(status_code=404, detail="Favicon not found")
+
+
+FAVICON_INLINE_LIMIT = 4096
+
+
 @app.api_route("/api/services", methods=["GET", "POST"])
 async def handle_services(request: Request, action: str = Query(...)):
     if action == "list":
+        # O4: 图标大于 4KB 转为 URL 按需拉取，减小列表体积 99%
         services = db.get_all_services()
-        return {"items": services}
+        items = []
+        for s in services:
+            item = dict(s)
+            fav = item.get("favicon") or ""
+            if fav.startswith("data:"):
+                if len(fav) > FAVICON_INLINE_LIMIT:
+                    item["favicon"] = f"/api/services/{item['id']}/favicon"
+            items.append(item)
+        return {"items": items}
 
     # All mutating actions require active admin auth
     await require_auth(request)
@@ -1534,6 +1653,19 @@ async def handle_services(request: Request, action: str = Query(...)):
             elif url_val.startswith("http://"):
                 proto_val = "http"
 
+        # O4b: 图标防静默清空保护机制
+        clear_favicon = bool(body.get("clear_favicon"))
+        fav_input = body.get("favicon")
+        if clear_favicon:
+            favicon_val = ""
+        elif fav_input:
+            if fav_input.startswith(f"/api/services/{sid}/favicon"):
+                favicon_val = None
+            else:
+                favicon_val = fav_input
+        else:
+            favicon_val = None
+
         updates = {
             "name": body.get("name"),
             "icon": body.get("icon", ""),
@@ -1542,8 +1674,9 @@ async def handle_services(request: Request, action: str = Query(...)):
             "wan_url": body.get("wan_url", ""),
             "port": port_val,
             "protocol": proto_val,
-            "favicon": body.get("favicon", ""),
         }
+        if favicon_val is not None:
+            updates["favicon"] = favicon_val
         updates = {k: v for k, v in updates.items() if v is not None}
         db.update_service(sid, **updates)
         return {"ok": True}

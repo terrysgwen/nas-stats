@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NAS 服务导航 v2.5.3</title>
+  <title>NAS 服务导航 v2.5.4</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -5769,7 +5769,7 @@
 
       grid.innerHTML = filtered.map((s, idx) => {
         const iconSrc = s.favicon || s.icon;
-        const isImg = iconSrc && (iconSrc.startsWith('http') || iconSrc.startsWith('data:image'));
+        const isImg = iconSrc && (iconSrc.startsWith('http') || iconSrc.startsWith('data:image') || iconSrc.startsWith('/api/services/'));
         const cardRgb = getInitialServiceColor(s);
         const cardId = `srv-card-${s.id || s.port || idx}`;
 
@@ -5937,7 +5937,7 @@
       const listEl = document.getElementById('adminServicesList');
       listEl.innerHTML = allServices.map(s => {
         const iconSrc = s.favicon || s.icon;
-        const isImg = iconSrc && (iconSrc.startsWith('http') || iconSrc.startsWith('data:image'));
+        const isImg = iconSrc && (iconSrc.startsWith('http') || iconSrc.startsWith('data:image') || iconSrc.startsWith('/api/services/'));
         const iconHtml = isImg ?
           `<img src="${escapeHtml(iconSrc)}" style="width:20px;height:20px;border-radius:4px;object-fit:contain">` :
           `<span style="font-size:16px">${escapeHtml(s.icon || '🔧')}</span>`;
