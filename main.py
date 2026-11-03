@@ -4,7 +4,7 @@ All configuration and services are persisted in SQLite (database.py).
 Monitors are dynamically discovered and instantiated from monitors package.
 """
 
-__version__ = "2.6.2"
+__version__ = "2.6.3"
 
 import asyncio
 import base64
@@ -27,6 +27,10 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Resp
 from starlette.middleware.gzip import GZipMiddleware
 import httpx
 from lucky import LuckyClient, match_services_with_lucky, parse_target_host_port
+import sys_logger
+
+# 初始化系统全量日志监听器，捕获整个程序的运行日志
+sys_logger.setup_system_logging()
 
 logger = logging.getLogger("main")
 
@@ -1204,6 +1208,39 @@ async def download_music_logs(_auth: dict = Depends(require_auth)):
         path=music_logger.MUSIC_LOG_FILE,
         filename="music.log",
         media_type="text/plain; charset=utf-8"
+    )
+
+
+# ── System Full Logs API ───────────────────────────────────────────
+
+@app.get("/api/system/logs")
+async def get_system_logs(limit: int = 250, level: str = "ALL", keyword: str = "", _auth: dict = Depends(require_auth)):
+    """Retrieve filtered full application logs from memory buffer (requires auth)."""
+    logs = sys_logger.get_logs(limit=limit, level=level, keyword=keyword)
+    return {
+        "ok": True,
+        "total": len(logs),
+        "logs": logs,
+    }
+
+
+@app.post("/api/system/logs/clear")
+async def clear_system_logs(_auth: dict = Depends(require_auth)):
+    """Clear full application logs (requires auth)."""
+    ok = sys_logger.clear_logs()
+    return {"ok": ok, "message": "系统全量运行日志已清空" if ok else "清空失败"}
+
+
+@app.get("/api/system/logs/download")
+async def download_system_logs(_auth: dict = Depends(require_auth)):
+    """Download data/app.log directly (requires auth)."""
+    if not sys_logger.APP_LOG_FILE.exists():
+        with open(sys_logger.APP_LOG_FILE, "w", encoding="utf-8") as f:
+            f.write("")
+    return FileResponse(
+        path=sys_logger.APP_LOG_FILE,
+        filename="app.log",
+        media_type="text/plain; charset=utf-8",
     )
 
 

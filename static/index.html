@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NAS 服务导航 v2.6.2</title>
+  <title>NAS 服务导航 v2.6.3</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
   <link rel="manifest" href="/manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -3818,31 +3818,31 @@
         </div>
       </div>
 
-      <!-- Tab 6: 运行日志 (独立音乐日志面板) -->
+      <!-- Tab 6: 运行日志 (系统全量应用日志面板) -->
       <div class="admin-tab-content" id="tab-logs">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px">
           <div>
-            <div style="font-size:14px;font-weight:600;color:var(--text-primary)">📋 飞牛音乐与系统运行日志</div>
-            <div style="font-size:12px;color:var(--text-muted)">实时排查音乐鉴权、歌单拉取与音频流代理状态（存储于 data/music.log）</div>
+            <div style="font-size:14px;font-weight:600;color:var(--text-primary)">📋 系统全量运行日志</div>
+            <div style="font-size:12px;color:var(--text-muted)">实时监控整个程序各模块运行状态（FastAPI 路由探针、Uvicorn 访问、监控器数据拉取、系统异常等全量日志，持久化于 data/app.log）</div>
           </div>
           <div style="display:flex;gap:8px">
             <button class="admin-btn admin-btn-secondary" style="font-size:12px;padding:5px 12px" onclick="openMusicCardModal(false); switchMusicTab('logs');">
-              🎵 在音乐播放器中打开
+              🎵 查看飞牛音乐专属日志
             </button>
           </div>
         </div>
         <div class="music-log-toolbar">
-          <input type="text" id="adminLogSearch" placeholder="🔍 搜索日志关键字..." style="flex:1;min-width:140px;padding:6px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:12px;outline:none">
+          <input type="text" id="adminLogSearch" placeholder="🔍 搜索全量日志 (模块/路由/报错/关键词)..." style="flex:1;min-width:140px;padding:6px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:12px;outline:none">
           <select id="adminLogLevel" style="width:110px;padding:6px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:12px;outline:none">
             <option value="ALL">全部级别</option>
             <option value="INFO">仅 INFO</option>
             <option value="WARN">仅 WARN</option>
             <option value="ERROR">仅 ERROR</option>
           </select>
-          <button class="admin-btn admin-btn-secondary" style="font-size:12px;padding:5px 10px" id="btnAdminRefreshLogs" title="刷新日志">🔄 刷新</button>
+          <button class="admin-btn admin-btn-secondary" style="font-size:12px;padding:5px 10px" id="btnAdminRefreshLogs" title="刷新系统日志">🔄 刷新</button>
           <button class="admin-btn admin-btn-secondary" style="font-size:12px;padding:5px 10px" id="btnAdminCopyLogs" title="一键复制全部日志">📋 复制</button>
-          <a href="/api/music/logs/download" class="admin-btn admin-btn-secondary" style="font-size:12px;padding:5px 10px;text-decoration:none" download title="下载原始日志文件">⬇️ 导出</a>
-          <button class="admin-btn admin-btn-danger" style="font-size:12px;padding:5px 10px" id="btnAdminClearLogs" title="清空全部日志">🗑️ 清空</button>
+          <a href="/api/system/logs/download" class="admin-btn admin-btn-secondary" style="font-size:12px;padding:5px 10px;text-decoration:none" download="app.log" title="下载系统完整日志文件">⬇️ 导出</a>
+          <button class="admin-btn admin-btn-danger" style="font-size:12px;padding:5px 10px" id="btnAdminClearLogs" title="清空系统日志">🗑️ 清空</button>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:11px;color:var(--text-muted)">
           <div>
@@ -3902,7 +3902,7 @@
         <span>🎧 飞牛音乐完整版</span>
       </a>
     </div>
-    <audio id="audioElement" preload="metadata"></audio>
+    <audio id="audioElement" preload="none"></audio>
   </div>
 
   <!-- 弹窗卡片式音乐播放器 Modal -->
@@ -5026,21 +5026,21 @@
       }
     }
 
+    // ── 飞牛音乐专属日志 (弹窗内使用) ──
     async function refreshMusicLogs(target = 'modal') {
       if (isLogLoading) return;
       isLogLoading = true;
 
-      const isModal = target === 'modal';
-      const consoleEl = document.getElementById(isModal ? 'musicLogConsole' : 'adminLogConsole');
-      const statusEl = document.getElementById(isModal ? 'musicLogStatusText' : 'adminLogStatusText');
-      const levelEl = document.getElementById(isModal ? 'musicLogLevel' : 'adminLogLevel');
-      const searchEl = document.getElementById(isModal ? 'musicLogSearch' : 'adminLogSearch');
+      const consoleEl = document.getElementById('musicLogConsole');
+      const statusEl = document.getElementById('musicLogStatusText');
+      const levelEl = document.getElementById('musicLogLevel');
+      const searchEl = document.getElementById('musicLogSearch');
 
       const level = levelEl ? levelEl.value : 'ALL';
       const keyword = searchEl ? searchEl.value.trim() : '';
 
       if (statusEl && (!consoleEl || consoleEl.children.length === 0)) {
-        statusEl.textContent = '正在获取最新日志...';
+        statusEl.textContent = '正在获取飞牛音乐日志...';
       }
 
       const data = await fetchMusicLogs(level, keyword);
@@ -5048,7 +5048,7 @@
         renderLogEntries(data.logs, consoleEl, true);
         const count = data.logs ? data.logs.length : 0;
         const now = new Date().toLocaleTimeString();
-        if (statusEl) statusEl.textContent = `共 ${count} 条日志 | ${now}`;
+        if (statusEl) statusEl.textContent = `共 ${count} 条音乐日志 | ${now}`;
       } else {
         if (statusEl) statusEl.textContent = `❌ 获取失败: ${data.error || '网络错误'}`;
       }
@@ -5063,7 +5063,99 @@
         if (data.ok) {
           toast('飞牛音乐日志已成功清空', 'success');
           refreshMusicLogs('modal');
-          refreshMusicLogs('admin');
+        } else {
+          toast('清空失败: ' + (data.message || '未知错误'), 'error');
+        }
+      } catch (e) {
+        toast('清空日志异常: ' + e.message, 'error');
+      }
+    }
+
+    // ── 系统全量应用运行日志 (系统管理后台面板使用) ──
+    async function fetchSystemLogs(level = 'ALL', keyword = '') {
+      try {
+        const params = new URLSearchParams({ limit: '300' });
+        if (level && level !== 'ALL') params.append('level', level);
+        if (keyword) params.append('keyword', keyword);
+        const res = await fetch(`/api/system/logs?${params.toString()}`);
+        return await res.json();
+      } catch (e) {
+        console.error('Fetch system logs error:', e);
+        return { ok: false, error: e.message, logs: [] };
+      }
+    }
+
+    function renderSystemLogEntries(logs, containerEl, autoScroll = true) {
+      if (!containerEl) return;
+      if (!logs || logs.length === 0) {
+        containerEl.innerHTML = '<div style="color:#8b949e;text-align:center;padding:40px">暂无系统运行日志</div>';
+        return;
+      }
+
+      const html = logs.map(l => {
+        const lvl = (l.level || 'INFO').toUpperCase();
+        const badgeClass = (lvl.includes('ERR') || lvl.includes('CRIT')) ? 'ERROR' : ((lvl.includes('WARN')) ? 'WARN' : 'INFO');
+        const ts = escapeHtml(l.timestamp || '');
+        const modName = escapeHtml(l.name || 'system');
+        let msg = escapeHtml(l.message || '');
+        // 关键状态码与 HTTP 动词醒目高亮
+        msg = msg.replace(/\b(200|201|204|206)\b/g, '<span style="color:#4ade80;font-weight:bold">$1</span>')
+                 .replace(/\b(400|401|403|404|405|500|502|503|504)\b/g, '<span style="color:#f87171;font-weight:bold">$1</span>')
+                 .replace(/\b(GET|POST|PUT|DELETE|HEAD|OPTIONS)\b/g, '<span style="color:#38bdf8;font-weight:600">$1</span>');
+
+        return `
+          <div class="log-line">
+            <span class="log-time">${ts}</span>
+            <span class="log-badge ${badgeClass}">${badgeClass}</span>
+            <span style="font-size:11px;color:#94a3b8;background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:4px;margin-right:6px">[${modName}]</span>
+            <span class="log-msg">${msg}</span>
+          </div>
+        `;
+      }).join('');
+
+      containerEl.innerHTML = html;
+      if (autoScroll) {
+        containerEl.scrollTop = containerEl.scrollHeight;
+      }
+    }
+
+    let isSysLogLoading = false;
+    async function refreshSystemLogs() {
+      if (isSysLogLoading) return;
+      isSysLogLoading = true;
+
+      const consoleEl = document.getElementById('adminLogConsole');
+      const statusEl = document.getElementById('adminLogStatusText');
+      const levelEl = document.getElementById('adminLogLevel');
+      const searchEl = document.getElementById('adminLogSearch');
+
+      const level = levelEl ? levelEl.value : 'ALL';
+      const keyword = searchEl ? searchEl.value.trim() : '';
+
+      if (statusEl && (!consoleEl || consoleEl.children.length === 0)) {
+        statusEl.textContent = '正在获取系统全量日志...';
+      }
+
+      const data = await fetchSystemLogs(level, keyword);
+      if (data.ok) {
+        renderSystemLogEntries(data.logs, consoleEl, true);
+        const count = data.logs ? data.logs.length : 0;
+        const now = new Date().toLocaleTimeString();
+        if (statusEl) statusEl.textContent = `系统共 ${count} 条日志 | 刷新时间: ${now}`;
+      } else {
+        if (statusEl) statusEl.textContent = `❌ 获取失败: ${data.error || '网络错误'}`;
+      }
+      isSysLogLoading = false;
+    }
+
+    async function clearSystemLogsAction() {
+      if (!confirm('确定要清空系统全量运行日志吗？该操作将清空内存和 data/app.log 文件。')) return;
+      try {
+        const res = await fetch('/api/system/logs/clear', { method: 'POST' });
+        const data = await res.json();
+        if (data.ok) {
+          toast('系统全量日志已成功清空', 'success');
+          refreshSystemLogs();
         } else {
           toast('清空失败: ' + (data.message || '未知错误'), 'error');
         }
@@ -5077,7 +5169,7 @@
       const consoleEl = document.getElementById(isModal ? 'musicLogConsole' : 'adminLogConsole');
       if (!consoleEl) return;
       const text = consoleEl.innerText;
-      if (!text || text.includes('暂无匹配的运行日志') || text.includes('正在获取运行日志')) {
+      if (!text || text.includes('暂无匹配') || text.includes('正在获取') || text.includes('暂无系统运行日志')) {
         toast('当前没有可复制的日志', 'info');
         return;
       }
@@ -5091,18 +5183,18 @@
     // Auto refresh timer
     if (!musicLogAutoTimer) {
       musicLogAutoTimer = setInterval(() => {
-        // Check if modal log tab is active and checkbox is checked
+        // 1. 音乐弹窗日志自动更新
         const modalLogView = document.getElementById('musicViewMusicLogs');
         const chkModal = document.getElementById('chkAutoRefreshMusicLogs');
         if (modalLogView && modalLogView.classList.contains('active') && chkModal && chkModal.checked) {
           refreshMusicLogs('modal');
         }
 
-        // Check if admin log tab is active and checkbox is checked
+        // 2. 系统管理全量日志自动更新
         const adminLogView = document.getElementById('tab-logs');
         const chkAdmin = document.getElementById('chkAdminAutoRefreshLogs');
         if (adminLogView && adminLogView.classList.contains('active') && chkAdmin && chkAdmin.checked) {
-          refreshMusicLogs('admin');
+          refreshSystemLogs();
         }
       }, 3000);
     }
@@ -5122,16 +5214,16 @@
       if (el) el.scrollTop = el.scrollHeight;
     });
 
-    // Admin Log Controls
+    // Admin System Log Controls
     let searchTimerAdmin = null;
     document.getElementById('adminLogSearch')?.addEventListener('input', () => {
       clearTimeout(searchTimerAdmin);
-      searchTimerAdmin = setTimeout(() => refreshMusicLogs('admin'), 300);
+      searchTimerAdmin = setTimeout(() => refreshSystemLogs(), 300);
     });
-    document.getElementById('adminLogLevel')?.addEventListener('change', () => refreshMusicLogs('admin'));
-    document.getElementById('btnAdminRefreshLogs')?.addEventListener('click', () => refreshMusicLogs('admin'));
+    document.getElementById('adminLogLevel')?.addEventListener('change', () => refreshSystemLogs());
+    document.getElementById('btnAdminRefreshLogs')?.addEventListener('click', () => refreshSystemLogs());
     document.getElementById('btnAdminCopyLogs')?.addEventListener('click', () => copyLogsToClipboard('admin'));
-    document.getElementById('btnAdminClearLogs')?.addEventListener('click', () => clearMusicLogsAction('admin'));
+    document.getElementById('btnAdminClearLogs')?.addEventListener('click', () => clearSystemLogsAction());
     document.getElementById('btnAdminScrollLogBottom')?.addEventListener('click', () => {
       const el = document.getElementById('adminLogConsole');
       if (el) el.scrollTop = el.scrollHeight;
@@ -5261,6 +5353,28 @@
       triggerFnosReconnect(e.currentTarget);
     });
 
+    function getTrackStreamUrl(track) {
+      if (!track) return '';
+      let streamUrl = track.src || track.url || '';
+      if (track.guid) {
+        return `/api/music/fnos/stream?guid=${encodeURIComponent(track.guid)}`;
+      }
+      if (streamUrl.includes('guid=')) {
+        const m = streamUrl.match(/guid=([^&]+)/);
+        if (m) return `/api/music/fnos/stream?guid=${encodeURIComponent(m[1])}`;
+      }
+      if (streamUrl.startsWith('http://') || streamUrl.startsWith('https://')) {
+        try {
+          const u = new URL(streamUrl);
+          if (isLocalOrPrivateHost(u.hostname) && (u.port === '5888' || u.pathname.includes('/stream'))) {
+            const m = streamUrl.match(/guid=([^&]+)/);
+            if (m) return `/api/music/fnos/stream?guid=${encodeURIComponent(m[1])}`;
+          }
+        } catch(e) {}
+      }
+      return streamUrl;
+    }
+
     function loadMusicTrack(index, autoplay = false) {
       clearTimeout(trackEndTimeout);
       isSwitchingTrack = false;
@@ -5313,32 +5427,9 @@
         if (cDur) cDur.textContent = durStr;
       }
 
-      let streamUrl = track.src || track.url || '';
-      // 无论何种来源，只要包含飞牛 guid 或指向 5888 端口，外网环境下必须统一走 nas-stats 本地代理 /api/music/fnos/stream
-      if (track.guid) {
-        streamUrl = `/api/music/fnos/stream?guid=${encodeURIComponent(track.guid)}`;
-      } else if (streamUrl.includes('guid=')) {
-        const m = streamUrl.match(/guid=([^&]+)/);
-        if (m) streamUrl = `/api/music/fnos/stream?guid=${encodeURIComponent(m[1])}`;
-      } else if (streamUrl.startsWith('http://') || streamUrl.startsWith('https://')) {
-        try {
-          const u = new URL(streamUrl);
-          if (isLocalOrPrivateHost(u.hostname) && (u.port === '5888' || u.pathname.includes('/stream'))) {
-            const m = streamUrl.match(/guid=([^&]+)/);
-            if (m) streamUrl = `/api/music/fnos/stream?guid=${encodeURIComponent(m[1])}`;
-          }
-        } catch(e) {}
-      }
+      const streamUrl = getTrackStreamUrl(track);
 
       if (streamUrl) {
-        try { audio.pause(); } catch(e) {}
-        audio.currentTime = 0;
-
-        const fullUrl = streamUrl.startsWith('http') ? streamUrl : (location.origin + streamUrl);
-        if (audio.src !== fullUrl) {
-          audio.src = streamUrl;
-        }
-
         // 同步更新系统 MediaSession 元数据（支持键盘多媒体键与系统通知栏）
         updateMediaSession(track);
 
@@ -5346,6 +5437,14 @@
         loadLyricsForTrack(track);
 
         if (autoplay) {
+          try { audio.pause(); } catch(e) {}
+          audio.currentTime = 0;
+
+          const fullUrl = streamUrl.startsWith('http') ? streamUrl : (location.origin + streamUrl);
+          if (audio.src !== fullUrl) {
+            audio.src = streamUrl;
+          }
+
           // 移动端手势兼容：直接同步触发 play()，避免 setTimeout 导致用户手势令牌失效
           const p = audio.play();
           if (p !== undefined) {
@@ -5358,6 +5457,12 @@
             });
           }
         } else {
+          // 默认未播放状态：绝不为 audio.src 赋值，杜绝任何提前读取音频文件的动作！
+          try { audio.pause(); } catch(e) {}
+          if (audio.src) {
+            audio.removeAttribute('src');
+            audio.load();
+          }
           setPlayingState(false);
         }
       }
@@ -5371,9 +5476,15 @@
         return;
       }
 
-      const streamUrl = track.src || track.url;
+      // 若尚未装载音频流（默认未读取模式），点击播放时立刻装载并播放当前曲目
+      if (!audio.src) {
+        loadMusicTrack(currentMusicIndex, true);
+        return;
+      }
+
+      const streamUrl = getTrackStreamUrl(track);
       const fullUrl = streamUrl ? (streamUrl.startsWith('http') ? streamUrl : (location.origin + streamUrl)) : '';
-      if (!audio.src || (audio.src !== fullUrl && audio.src !== streamUrl)) {
+      if (audio.src !== fullUrl && audio.src !== streamUrl) {
         loadMusicTrack(currentMusicIndex, true);
         return;
       }
@@ -7963,7 +8074,7 @@
         tab.classList.add('active');
         document.getElementById(tab.dataset.tab).classList.add('active');
         if (tab.dataset.tab === 'tab-logs') {
-          refreshMusicLogs('admin');
+          refreshSystemLogs();
         }
         if (tab.dataset.tab === 'tab-lucky') {
           loadLuckyAdmin();

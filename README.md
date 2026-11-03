@@ -127,6 +127,17 @@ nas-stats/
 
 ## 📝 版本更新记录
 
+### v2.6.3
+- 🎵 **飞牛音乐默认不读取音频文件优化**:
+  - 全面调整 `<audio id="audioElement" preload="none">` 属性，根治浏览器默认预取音频流的问题。
+  - 重构曲目初始装载机制：在默认未点击播放（`autoplay = false`）状态下，仅渲染歌曲名、歌手、封面与歌词等元数据，绝不为 `audio.src` 赋值，彻底杜绝进入页面即向飞牛发起 `/api/music/fnos/stream` 音频流读取与流量消耗。
+  - 仅当用户主动点击播放、双击曲目或切歌时，动态装载流地址并流式播放。
+- 📋 **系统管理运行日志重构为全量应用日志**:
+  - 新增专用系统全量日志记录器（[`sys_logger.py`](file:///C:/Users/TerrySG/.gemini/antigravity/scratch/nas-stats/sys_logger.py)），将系统管理「📋 运行日志」面板从原单一音乐日志彻底升级为捕获整个程序的运行日志。
+  - 全面接入根日志器与 Uvicorn 访问/错误日志、FastAPI 路由探针、各 Monitors 后台轮询、系统异常等全量信息，持久化至 `data/app.log`（支持 5MB 文件轮转）。
+  - 新增 `/api/system/logs`、`/api/system/logs/clear` 与 `/api/system/logs/download` API，前端支持模块标签染色（如 `[uvicorn.access]`、`[monitors.ikuai]`）、状态码高亮、3秒自动刷新与导出。
+  - 飞牛音乐播放器弹窗内保留专属音乐日志选项卡，职责分明清晰。
+
 ### v2.6.2
 - 🏷️ **卡片实时状态角标全面重构**:
   - 彻底改变角标在卡片右下角覆盖遮挡服务标题（如压住 Transmission 文字）的旧设计，重构为卡片右上角独立胶囊徽标（Badge Pill）。
