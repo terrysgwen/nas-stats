@@ -4,7 +4,7 @@ All configuration and services are persisted in SQLite (database.py).
 Monitors are dynamically discovered and instantiated from monitors package.
 """
 
-__version__ = "2.6.0"
+__version__ = "2.6.1"
 
 import asyncio
 import base64
@@ -292,10 +292,30 @@ async def health():
     return {"status": "ok", "version": __version__}
 
 
-# ── Weather API (功能 4: 10 分钟缓存) ──────────────────────────────────
+# ── Weather API (功能 4: 10 分钟缓存与独立请求 Client) ─────────────────
 
 _weather_cache = {"ts": 0, "data": None}
 WEATHER_TTL = 600
+
+_WMO = {
+    0: ("☀️", "晴"),          1: ("🌤️", "少云"),        2: ("⛅", "多云"),
+    3: ("☁️", "阴"),          45: ("🌫️", "雾"),         48: ("🌫️", "雾凇"),
+    51: ("🌦️", "小毛毛雨"),   53: ("🌦️", "毛毛雨"),     55: ("🌦️", "密毛毛雨"),
+    56: ("🌧️", "冻毛毛雨"),   57: ("🌧️", "冻毛毛雨"),
+    61: ("🌧️", "小雨"),       63: ("🌧️", "中雨"),       65: ("🌧️", "大雨"),
+    66: ("🌧️", "冻雨"),       67: ("🌧️", "冻雨"),
+    71: ("🌨️", "小雪"),       73: ("🌨️", "中雪"),       75: ("🌨️", "大雪"),
+    77: ("🌨️", "雪粒"),
+    80: ("🌦️", "阵雨"),       81: ("🌦️", "强阵雨"),     82: ("⛈️", "暴阵雨"),
+    85: ("🌨️", "阵雪"),       86: ("🌨️", "强阵雪"),
+    95: ("⛈️", "雷阵雨"),     96: ("⛈️", "雷阵雨伴冰雹"), 99: ("⛈️", "强雷阵雨伴冰雹"),
+}
+
+def _wmo(code):
+    try:
+        return _WMO.get(int(code), ("🌤️", "未知"))
+    except Exception:
+        return ("🌤️", "未知")
 
 @app.get("/api/weather")
 async def get_weather():
@@ -312,17 +332,21 @@ async def get_weather():
             f"&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m"
             f"&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FShanghai&forecast_days=1"
         )
-        async with get_http_client(timeout=8.0) as cli:
+        async with httpx.AsyncClient(timeout=8.0, verify=False, follow_redirects=True) as cli:
             r = await cli.get(url)
             j = r.json()
             cur = j.get("current", {})
             daily = j.get("daily", {})
+            code = cur.get("weather_code", 0)
+            wx_icon, wx_text = _wmo(code)
             data = {
                 "ok": True,
                 "temp": round(cur.get("temperature_2m", 0), 1),
                 "humidity": cur.get("relative_humidity_2m"),
                 "wind": cur.get("wind_speed_10m"),
-                "code": cur.get("weather_code", 0),
+                "code": code,
+                "icon": wx_icon,
+                "text": wx_text,
                 "high": round((daily.get("temperature_2m_max") or [0])[0], 1),
                 "low":  round((daily.get("temperature_2m_min") or [0])[0], 1),
                 "updated": int(now),
@@ -335,125 +359,12 @@ async def get_weather():
         return {"ok": False, "error": str(e)}
 
 
-# ── Host Metrics API (功能 9: 本机负载/温度/磁盘/内存) ─────────────────
-
-_host_cache = {"ts": 0, "data": None}
-HOST_TTL = 5
-
-def _cpu_pct():
-    """两次采样计算 CPU 使用率"""
-    try:
-        if not os.path.exists("/proc/stat"):
-            return 0.0
-        with open("/proc/stat") as f:
-            p = f.readline().split()[1:]
-        a = [int(x) for x in p]
-        _cpu_prev = getattr(_cpu_pct, "_prev", None)
-        if _cpu_prev is None:
-            _cpu_pct._prev = a
-            return 0.0
-        idle_a, total_a = _cpu_prev[3] + _cpu_prev[4], sum(_cpu_prev)
-        idle_b, total_b = a[3] + a[4], sum(a)
-        _cpu_pct._prev = a
-        dt = total_b - total_a
-        return round(100 * (1 - (idle_b - idle_a) / dt), 1) if dt > 0 else 0.0
-    except Exception:
-        return 0.0
+# ── Host Metrics API (已根据用户需求彻底移除本地负载功能) ─────────────
 
 @app.get("/api/host")
 async def get_host():
-    now = time.time()
-    if _host_cache["data"] and now - _host_cache["ts"] < HOST_TTL:
-        return _host_cache["data"]
-
-    mem = {}
-    if os.path.exists("/proc/meminfo"):
-        try:
-            with open("/proc/meminfo") as f:
-                for line in f:
-                    if ":" in line:
-                        k, v = line.split(":", 1)
-                        mem[k.strip()] = int(v.strip().split()[0]) * 1024
-        except Exception:
-            pass
-
-    temps = []
-    try:
-        for p in sorted(glob.glob("/sys/class/thermal/thermal_zone*/temp")):
-            try:
-                t = int(open(p).read().strip()) / 1000
-                if -20 < t < 150:
-                    temps.append({"zone": p.split("/")[-2], "c": round(t, 1)})
-            except Exception:
-                pass
-    except Exception:
-        pass
-
-    disks = []
-    check_paths = [
-        ("data", "/app/data"),
-        ("vol1", "/host-vol1"),
-        ("vol4", "/host-vol4"),
-        ("vol1", "/vol1"),
-        ("vol2", "/vol2"),
-        ("vol4", "/vol4"),
-    ]
-    seen_labels = set()
-    for label, path in check_paths:
-        if label in seen_labels or not os.path.isdir(path):
-            continue
-        try:
-            st = os.statvfs(path)
-            total = st.f_blocks * st.f_frsize
-            free = st.f_bavail * st.f_frsize
-            if total > 0:
-                disks.append({
-                    "label": label,
-                    "total": total,
-                    "free": free,
-                    "used": total - free,
-                    "pct": round(100 * (total - free) / total, 1),
-                })
-                seen_labels.add(label)
-        except Exception:
-            pass
-
-    load_arr = [0.0, 0.0, 0.0]
-    if os.path.exists("/proc/loadavg"):
-        try:
-            load_arr = [float(x) for x in open("/proc/loadavg").read().split()[:3]]
-        except Exception:
-            pass
-
-    uptime_sec = 0
-    if os.path.exists("/proc/uptime"):
-        try:
-            uptime_sec = int(float(open("/proc/uptime").read().split()[0]))
-        except Exception:
-            pass
-
-    total_mem = mem.get("MemTotal", 0)
-    avail_mem = mem.get("MemAvailable", total_mem)
-    used_mem = max(0, total_mem - avail_mem)
-    mem_pct = round(100 * (1 - avail_mem / total_mem), 1) if total_mem else 0
-
-    data = {
-        "ok": True,
-        "cpu_pct": _cpu_pct(),
-        "load": load_arr,
-        "uptime": uptime_sec,
-        "mem": {
-            "total": total_mem,
-            "avail": avail_mem,
-            "used": used_mem,
-            "pct": mem_pct,
-        },
-        "temps": temps,
-        "max_temp": max([t["c"] for t in temps]) if temps else None,
-        "disks": disks,
-    }
-    _host_cache.update(ts=now, data=data)
-    return data
+    """本地负载功能已依指示彻底删除与停用"""
+    return {"ok": False, "disabled": True}
 
 
 @app.get("/api/stats")
@@ -1910,6 +1821,54 @@ async def handle_services(request: Request, action: str = Query(...)):
         ids = body.get("ids", [])
         db.delete_services_batch(ids)
         return {"ok": True, "count": len(ids)}
+
+    if action == "batch_category":
+        ids = body.get("ids", [])
+        new_cat = (body.get("category") or "自定义").strip()
+        count = db.update_services_category(ids, new_cat)
+        return {"ok": True, "count": count, "category": new_cat}
+
+    if action == "rename_category":
+        old_cat = (body.get("old_category") or "").strip()
+        new_cat = (body.get("new_category") or "自定义").strip()
+        count = db.rename_category(old_cat, new_cat)
+        return {"ok": True, "count": count, "new_category": new_cat}
+
+    if action == "auto_categorize":
+        ids = body.get("ids")
+        only_uncategorized = bool(body.get("only_uncategorized", False))
+        services = db.get_all_services()
+
+        def infer_category(s):
+            text = f"{s.get('name', '')} {s.get('description', '')} {s.get('url', '')}".lower()
+            if any(k in text for k in ["音乐", "music", "fnos", "飞牛", "plex", "emby", "jellyfin", "navidrome", "audiobook", "moviepilot", "bilibili", "youtube", "影视", "视频", "电影", "电视剧", "动漫", "iptv", "live", "tv", "stream"]):
+                return "影视媒体"
+            if any(k in text for k in ["qbittorrent", "transmission", "aria2", "qb", "tr", "thunder", "迅雷", "115", "baidunetdisk", "alist", "pikpak", "fileball", "下载", "bt", "pt", "种子", "tracker", "download", "网盘"]):
+                return "下载传输"
+            if any(k in text for k in ["pve", "proxmox", "ikuai", "openwrt", "router", "路由", "lucky", "portainer", "docker", "npm", "nginx", "easynvr", "nvr", "1panel", "ssh", "shell", "git", "gitea", "frp", "wireguard", "tailscale", "zerotier", "v2ray", "clash", "青龙", "监控", "运维", "管理", "仪表盘"]):
+                return "开发运维"
+            if any(k in text for k in ["homeassistant", "home assistant", "hass", "vaultwarden", "bitwarden", "sun-panel", "homepage", "dashy", "notion", "affine", "memos", "wiki", "calendar", "密码", "便签", "笔记", "工具", "办公"]):
+                return "工具应用"
+            if any(k in text for k in ["calibre", "kavita", "komga", "reader", "book", "小说", "漫画", "电子书", "阅读", "书"]):
+                return "教育阅读"
+            return None
+
+        updated_count = 0
+        changes = []
+        for s in services:
+            sid = s["id"]
+            if ids and sid not in ids:
+                continue
+            cur_cat = (s.get("category") or "").strip()
+            if only_uncategorized and cur_cat and cur_cat != "自定义":
+                continue
+            inferred = infer_category(s)
+            if inferred and inferred != cur_cat:
+                db.update_service(sid, category=inferred)
+                updated_count += 1
+                changes.append({"id": sid, "name": s.get("name"), "from": cur_cat, "to": inferred})
+
+        return {"ok": True, "count": updated_count, "changes": changes}
 
     if action == "batch_fetch_icons":
         services = db.get_all_services()

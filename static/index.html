@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NAS 服务导航 v2.6.0</title>
+  <title>NAS 服务导航 v2.6.1</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
   <link rel="manifest" href="/manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -3009,61 +3009,81 @@
       color: var(--accent-red);
     }
 
-    /* ─── 功能 9: 本机硬件监控卡 ─── */
-    .host-card {
-      margin-bottom: 14px;
+    body.hide-card-stats .card-stat {
+      display: none !important;
+    }
+
+    /* ─── 分类整理面板样式 ─── */
+    .cat-group-card {
       background: var(--bg-card);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 10px 16px;
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+    .cat-group-header {
       display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed var(--border);
       flex-wrap: wrap;
-      gap: 12px 18px;
-      align-items: center;
-      font-size: 12px;
-      color: var(--text-secondary);
-      box-shadow: var(--shadow);
+      gap: 8px;
     }
-    .hc-group {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      white-space: nowrap;
-    }
-    .hc-k {
-      color: var(--text-muted);
-      font-weight: 500;
-    }
-    .hc-v {
-      color: var(--text-primary);
+    .cat-group-title {
+      font-size: 14px;
       font-weight: 600;
-      font-variant-numeric: tabular-nums;
-    }
-    .hc-v.cool { color: var(--accent-green); }
-    .hc-v.warm { color: var(--accent-orange); }
-    .hc-v.hot { color: var(--accent-red); }
-    .hc-bar-wrap {
-      display: inline-flex;
+      color: var(--text-primary);
+      display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
     }
-    .hc-bar {
-      width: 68px;
-      height: 6px;
-      border-radius: 3px;
-      background: rgba(255, 255, 255, 0.1);
+    .cat-group-badge {
+      font-size: 11px;
+      padding: 1px 6px;
+      border-radius: 10px;
+      background: rgba(59, 130, 246, 0.15);
+      color: var(--accent-blue);
+      font-weight: normal;
+    }
+    .cat-services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 10px;
+    }
+    .cat-svc-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      transition: border-color 0.15s;
+    }
+    .cat-svc-row:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .cat-svc-name {
+      flex: 1;
+      min-width: 0;
       overflow: hidden;
-      display: inline-block;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
     }
-    .hc-bar > i {
-      display: block;
-      height: 100%;
-      background: var(--accent-blue);
-      border-radius: 3px;
-      transition: width 0.3s;
+    .cat-svc-select {
+      font-size: 11px;
+      padding: 3px 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-secondary);
+      outline: none;
+      max-width: 110px;
     }
-    .hc-bar.warn > i { background: var(--accent-orange); }
-    .hc-bar.danger > i { background: var(--accent-red); }
 
   </style>
 </head>
@@ -3147,9 +3167,6 @@
       <div class="live-banner-grid" id="liveBannerGrid"></div>
     </div>
 
-    <!-- 本机硬件状态卡片 (功能9) -->
-    <div class="host-card" id="hostCard" style="display:none"></div>
-
     <!-- 工作区 / 页面标签栏 (功能2) -->
     <div class="page-tabs" id="pageTabs"></div>
 
@@ -3165,6 +3182,7 @@
         <button class="admin-tab active" data-tab="tab-ui">🎨 界面与样式</button>
         <button class="admin-tab" data-tab="tab-monitors">📡 监控服务设置</button>
         <button class="admin-tab" data-tab="tab-services">📋 服务快捷方式</button>
+        <button class="admin-tab" data-tab="tab-categories">📑 分类整理</button>
         <button class="admin-tab" data-tab="tab-lucky">🍀 Lucky 穿透联动</button>
         <button class="admin-tab" data-tab="tab-import">📥 导入与发现</button>
         <button class="admin-tab" data-tab="tab-about">ℹ️ 关于系统</button>
@@ -3278,11 +3296,88 @@
 
           <div class="setting-item setting-row-item">
             <div class="setting-item-header">
+              <div class="setting-label">🌤️ 显示数字时钟与天气</div>
+              <div class="setting-desc">顶栏左侧呈现大字时间与实时气象卡片</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="settingShowClockWeather" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item setting-row-item">
+            <div class="setting-item-header">
+              <div class="setting-label">📑 显示工作区 / 标签栏</div>
+              <div class="setting-desc">卡片上方展示日常、影音、运维、下载等工作区切换</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="settingShowPageTabs" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item setting-row-item">
+            <div class="setting-item-header">
+              <div class="setting-label">🏷️ 显示卡片实时状态角标</div>
+              <div class="setting-desc">展示 qB/Transmission 下载速率、PVE、EasyNVR 等实时角标</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="settingShowCardStats" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item setting-row-item">
+            <div class="setting-item-header">
+              <div class="setting-label">📝 启用待办便签与悬浮抽屉</div>
+              <div class="setting-desc">右下角常驻待办便签按钮与备忘抽屉</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="settingShowNotes" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item setting-row-item">
+            <div class="setting-item-header">
+              <div class="setting-label">🖱️ 启用卡片右键快捷操作菜单</div>
+              <div class="setting-desc">右键服务卡片呼出新标签打开、复制链接、快速编辑等菜单</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="settingShowContextMenu" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item setting-row-item">
+            <div class="setting-item-header">
               <div class="setting-label">🔍 显示主页搜索框</div>
-              <div class="setting-desc">在快捷卡片上方呈现即时搜索过滤</div>
+              <div class="setting-desc">在快捷卡片上方呈现即时搜索过滤 (支持 !b/!g 直达)</div>
             </div>
             <label class="toggle-switch">
               <input type="checkbox" id="settingShowSearch" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item setting-row-item">
+            <div class="setting-item-header">
+              <div class="setting-label">⚡ 卡片点击热度与访问排序</div>
+              <div class="setting-desc">记录卡片点击次数与访问时间，并支持常用优先排序</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="settingEnableClickStats" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item setting-row-item">
+            <div class="setting-item-header">
+              <div class="setting-label">🌐 顶部实时监控横条</div>
+              <div class="setting-desc">展示爱快、PVE、EasyNVR 等实时概览监控横条</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="settingShowLiveBanner" checked>
               <span class="toggle-slider"></span>
             </label>
           </div>
@@ -3381,6 +3476,61 @@
           <button class="admin-btn admin-btn-success" id="btnOpenAddModal">➕ 新建自定义服务</button>
         </div>
         <div class="admin-list" id="adminServicesList"></div>
+      </div>
+
+      <!-- Tab: 分类整理与卡片归类 -->
+      <div class="admin-tab-content" id="tab-categories">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">
+            <div>
+              <div style="font-size:15px;font-weight:600;display:flex;align-items:center;gap:6px">
+                <span>📑 卡片分类整理与智能归类</span>
+                <span id="catTotalStats" style="font-size:11px;padding:2px 8px;border-radius:10px;background:rgba(59,130,246,0.15);color:var(--accent-blue)">加载中...</span>
+              </div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:4px;line-height:1.6">
+                统一管理所有卡片所属分类（如 影视媒体、下载传输、开发运维、工具应用、教育阅读 等）。支持一键智能推断分类，批量多选转移分类，或直接为单个卡片秒改分类。
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="admin-btn admin-btn-primary" id="btnAutoCategorizeAll" style="background:linear-gradient(135deg, var(--accent-blue), var(--accent-purple));border:none">⚡ 一键智能自动归类全部卡片</button>
+              <button class="admin-btn admin-btn-secondary" id="btnAutoCategorizeUnset">🔍 仅归类未分类/自定义卡片</button>
+            </div>
+          </div>
+
+          <!-- 批量操作栏 -->
+          <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <label style="font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none">
+                <input type="checkbox" id="catSelectAll"> 全选卡片
+              </label>
+              <span style="font-size:12px;color:var(--text-muted)">已选 <strong id="catSelectedCount" style="color:var(--accent-blue)">0</strong> 项</span>
+              <span style="color:var(--border)">|</span>
+              <span style="font-size:12px;color:var(--text-secondary)">批量移入分类:</span>
+              <input type="text" id="catBatchTargetInput" list="catDatalistOptions" placeholder="选择或输入目标分类" style="padding:4px 8px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-size:12px;width:150px">
+              <datalist id="catDatalistOptions">
+                <option value="影视媒体"></option>
+                <option value="下载传输"></option>
+                <option value="开发运维"></option>
+                <option value="工具应用"></option>
+                <option value="教育阅读"></option>
+                <option value="自定义"></option>
+              </datalist>
+              <button class="admin-btn admin-btn-success" id="btnBatchMoveCategory" style="padding:4px 10px;font-size:12px">执行批量修改</button>
+            </div>
+
+            <!-- 分类重命名/合并 -->
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+              <span style="font-size:12px;color:var(--text-muted)">分类更名/合并:</span>
+              <input type="text" id="catRenameOld" placeholder="原分类名" style="padding:4px 8px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-size:12px;width:110px">
+              <span>→</span>
+              <input type="text" id="catRenameNew" placeholder="新分类名" style="padding:4px 8px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-size:12px;width:110px">
+              <button class="admin-btn admin-btn-secondary" id="btnDoRenameCat" style="padding:4px 10px;font-size:12px">更名</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 按分类分组卡片列表渲染容器 -->
+        <div id="catGroupsContainer" style="display:flex;flex-direction:column;gap:14px"></div>
       </div>
 
       <!-- Tab: Lucky 穿透联动与 Web 服务外网映射 -->
@@ -4193,6 +4343,7 @@
     // ─── 主题与外观 ───
     function applyUI(ui) {
       currentUI = ui || {};
+      GS.ui = currentUI;
       let activeTheme = ui.theme || localStorage.getItem('nas_stats_theme') || 'dark';
       // 若曾存过 appletv 主题，自动平滑迁移为 dark 配色 + tvos 大屏纯网格整体效果
       if (activeTheme === 'appletv') {
@@ -4220,14 +4371,68 @@
         grid.removeAttribute('data-color-mode');
       }
 
-      document.getElementById('searchBarWrapper').style.display = ui.show_search !== false ? 'block' : 'none';
-      
+      // 功能模块开关控制
+      // 1. 搜索框
+      const showSearch = ui.show_search !== false;
+      document.getElementById('searchBarWrapper').style.display = showSearch ? 'block' : 'none';
+      const elSetSearch = document.getElementById('settingShowSearch');
+      if (elSetSearch) elSetSearch.checked = showSearch;
+
+      // 2. 音乐播放器
       const enableMusic = ui.enable_music !== false;
       const playerBar = document.getElementById('musicPlayerBar');
       if (playerBar) {
         if (enableMusic) playerBar.classList.add('active');
         else playerBar.classList.remove('active');
       }
+      const elSetMusic = document.getElementById('settingEnableMusic');
+      if (elSetMusic) elSetMusic.checked = enableMusic;
+
+      // 3. 数字时钟与实时天气
+      const showCw = ui.show_clock_weather !== false;
+      const elCw = document.getElementById('clockWeather');
+      if (elCw) elCw.style.display = showCw ? 'flex' : 'none';
+      const elSetCw = document.getElementById('settingShowClockWeather');
+      if (elSetCw) elSetCw.checked = showCw;
+
+      // 4. 工作区 / 页面标签栏
+      const showTabs = ui.show_page_tabs !== false;
+      const elTabs = document.getElementById('pageTabs');
+      if (elTabs) elTabs.style.display = showTabs ? 'flex' : 'none';
+      const elSetTabs = document.getElementById('settingShowPageTabs');
+      if (elSetTabs) elSetTabs.checked = showTabs;
+
+      // 5. 卡片实时状态角标
+      const showCardStats = ui.show_card_stats !== false;
+      document.body.classList.toggle('hide-card-stats', !showCardStats);
+      const elSetCardStats = document.getElementById('settingShowCardStats');
+      if (elSetCardStats) elSetCardStats.checked = showCardStats;
+
+      // 6. 待办便签与悬浮抽屉
+      const showNotes = ui.show_notes !== false;
+      const elNotesFab = document.getElementById('notesFab');
+      const elNotesDrawer = document.getElementById('notesDrawer');
+      if (elNotesFab) elNotesFab.style.display = showNotes ? 'flex' : 'none';
+      if (!showNotes && elNotesDrawer) elNotesDrawer.classList.remove('open');
+      const elSetNotes = document.getElementById('settingShowNotes');
+      if (elSetNotes) elSetNotes.checked = showNotes;
+
+      // 7. 卡片右键快捷操作菜单
+      const showCtx = ui.show_context_menu !== false;
+      const elSetCtx = document.getElementById('settingShowContextMenu');
+      if (elSetCtx) elSetCtx.checked = showCtx;
+
+      // 8. 卡片点击统计与访问排序
+      const enableClickStats = ui.enable_click_stats !== false;
+      const elSetClickStats = document.getElementById('settingEnableClickStats');
+      if (elSetClickStats) elSetClickStats.checked = enableClickStats;
+
+      // 9. 顶部实时监控横条
+      const showLiveBanner = ui.show_live_banner !== false;
+      const elLiveBanner = document.getElementById('liveBanner');
+      if (elLiveBanner && !showLiveBanner) elLiveBanner.style.display = 'none';
+      const elSetLiveBanner = document.getElementById('settingShowLiveBanner');
+      if (elSetLiveBanner) elSetLiveBanner.checked = showLiveBanner;
 
       document.getElementById('settingTheme').value = ui.theme || 'dark';
       const elQuickTheme = document.getElementById('quickThemeSelect');
@@ -4243,8 +4448,6 @@
       document.getElementById('settingCardStyle').value = ui.card_style || 'default';
       const elColorMode = document.getElementById('settingCardColorMode');
       if (elColorMode) elColorMode.value = colorMode;
-      document.getElementById('settingShowSearch').checked = ui.show_search !== false;
-      document.getElementById('settingEnableMusic').checked = enableMusic;
 
       const elWanReplace = document.getElementById('settingEnableWanReplace');
       if (elWanReplace) elWanReplace.checked = ui.enable_wan_replace !== false;
@@ -6127,7 +6330,7 @@
 
     // ─── 功能1: 状态角标与就地更新防闪烁 ───
     function buildCardStat(s) {
-      if (!s || !GS.stats) return '';
+      if (!s || !GS.stats || (GS.ui && GS.ui.show_card_stats === false)) return '';
       let src = s.stat_source;
       const nm = (s.name || '').toLowerCase();
       const u = (s.url || '').toLowerCase();
@@ -6174,6 +6377,7 @@
     }
 
     function onStatsUpdated(data) {
+      if (GS.ui && GS.ui.show_card_stats === false) return;
       document.querySelectorAll('.service-card[data-sid]').forEach(card => {
         const sid = card.getAttribute('data-sid');
         const s = allServices.find(x => x.id === sid);
@@ -6196,10 +6400,10 @@
     // ─── 功能2: 工作区 / 页面标签栏 ───
     const PAGE_DEFS = [
       { key: 'all', label: '全部', cats: [] },
-      { key: 'daily', label: '日常', cats: ['daily', '日常', '常用', '工具', 'default'] },
-      { key: 'media', label: '影音', cats: ['media', '影音', '影视', '音乐', '视频'] },
-      { key: 'ops', label: '运维', cats: ['ops', '运维', '管理', '路由', '系统', '网络'] },
-      { key: 'download', label: '下载', cats: ['download', '下载', '种子', 'bt'] }
+      { key: 'daily', label: '日常', cats: ['daily', '日常', '常用', '工具', 'default', '自定义', '工具应用', '教育阅读'] },
+      { key: 'media', label: '影音', cats: ['media', '影音', '影视', '音乐', '视频', '影视媒体', '音乐有声'] },
+      { key: 'ops', label: '运维', cats: ['ops', '运维', '管理', '路由', '系统', '网络', '开发运维', 'nas 管理'] },
+      { key: 'download', label: '下载', cats: ['download', '下载', '种子', 'bt', '下载传输'] }
     ];
 
     function renderPageTabs() {
@@ -6256,7 +6460,7 @@
     }
 
     function recordServiceHit(sid) {
-      if (!sid) return;
+      if (!sid || (GS.ui && GS.ui.enable_click_stats === false)) return;
       const s = allServices.find(x => x.id === sid);
       if (s) {
         s.click_count = (s.click_count || 0) + 1;
@@ -6302,55 +6506,236 @@
       }
     }
 
-    // ─── 功能9: 本机硬件监控卡片 ───
-    async function loadHost() {
-      const card = document.getElementById('hostCard');
-      if (!card) return;
-      if (GS.ui && GS.ui.show_host_card === false) {
-        card.style.display = 'none';
-        return;
+    // ─── 📑 分类整理与卡片管理中心 ───
+    function renderCategoryManager() {
+      const container = document.getElementById('catGroupsContainer');
+      const statsEl = document.getElementById('catTotalStats');
+      if (!container) return;
+
+      const services = allServices || [];
+      const groups = {};
+      services.forEach(s => {
+        const cat = (s.category || '自定义').trim() || '自定义';
+        if (!groups[cat]) groups[cat] = [];
+        groups[cat].push(s);
+      });
+
+      const catList = Object.keys(groups).sort();
+      if (statsEl) {
+        statsEl.textContent = `共 ${services.length} 个服务 · ${catList.length} 个分类`;
       }
-      try {
-        const res = await fetch('/api/host');
-        if (!res.ok) return;
-        const d = await res.json();
-        if (!d.ok) return;
-        GS.host = d;
 
-        const cpu = d.cpu_percent || 0;
-        const mem = d.mem || {};
-        const memPct = mem.percent || 0;
-        const disk = d.disk || {};
-        const diskPct = disk.percent || 0;
-        const temp = (d.temp !== null && d.temp !== undefined) ? `${d.temp}°C` : null;
-        const load = (d.loadavg && d.loadavg.length) ? d.loadavg[0] : null;
+      const allKnownCats = Array.from(new Set([
+        '影视媒体', '下载传输', '开发运维', '工具应用', '教育阅读', '自定义', ...catList
+      ]));
 
-        const getCls = (pct) => pct >= 90 ? 'danger' : (pct >= 75 ? 'warn' : '');
+      container.innerHTML = catList.map(cat => {
+        const svcs = groups[cat];
+        const rowsHtml = svcs.map(s => {
+          const iconSrc = s.favicon || s.icon;
+          const isImg = iconSrc && (iconSrc.startsWith('http') || iconSrc.startsWith('data:image') || iconSrc.startsWith('/api/services/'));
+          const iconHtml = isImg ?
+            `<img src="${escapeHtml(iconSrc)}" style="width:20px;height:20px;border-radius:4px;object-fit:contain">` :
+            `<span style="font-size:16px">${escapeHtml(s.icon || '🔧')}</span>`;
 
-        card.innerHTML = `
-          <div class="hc-item">
-            <span class="hc-label">CPU 负载</span>
-            <span class="hc-val">${cpu}% ${load !== null ? `(${load})` : ''}</span>
-            <div class="hc-bar ${getCls(cpu)}"><i style="width: ${Math.min(cpu, 100)}%"></i></div>
-          </div>
-          <div class="hc-item">
-            <span class="hc-label">内存占用</span>
-            <span class="hc-val">${mem.used_gb || 0}G / ${mem.total_gb || 0}G (${memPct}%)</span>
-            <div class="hc-bar ${getCls(memPct)}"><i style="width: ${Math.min(memPct, 100)}%"></i></div>
-          </div>
-          <div class="hc-item">
-            <span class="hc-label">根盘空间</span>
-            <span class="hc-val">${disk.used_gb || 0}G / ${disk.total_gb || 0}G (${diskPct}%)</span>
-            <div class="hc-bar ${getCls(diskPct)}"><i style="width: ${Math.min(diskPct, 100)}%"></i></div>
-          </div>
-          <div class="hc-item">
-            <span class="hc-label">系统状态</span>
-            <span class="hc-val">运行时长: ${escapeHtml(d.uptime || '刚刚')}</span>
-            <span class="hc-sub">${temp ? `CPU温度: ${temp}` : '硬件运行正常'}</span>
+          const optionsHtml = allKnownCats.map(c => {
+            const sel = (c === cat) ? 'selected' : '';
+            return `<option value="${escapeHtml(c)}" ${sel}>${escapeHtml(c)}</option>`;
+          }).join('') + `<option value="__custom__">➕ 输入新分类...</option>`;
+
+          return `
+            <div class="cat-svc-row" data-id="${escapeHtml(s.id)}">
+              <input type="checkbox" class="cat-item-cb" data-id="${escapeHtml(s.id)}" style="cursor:pointer">
+              ${iconHtml}
+              <div class="cat-svc-name" title="${escapeHtml(s.name)}">${escapeHtml(s.name)}</div>
+              <select class="cat-svc-select" onchange="onCategorySelectChange('${escapeHtml(s.id)}', this)">
+                ${optionsHtml}
+              </select>
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <div class="cat-group-card">
+            <div class="cat-group-header">
+              <div class="cat-group-title">
+                📁 <span>${escapeHtml(cat)}</span>
+                <span class="cat-group-badge">${svcs.length} 个卡片</span>
+              </div>
+              <div style="display:flex;gap:6px">
+                <button class="admin-btn admin-btn-secondary" style="font-size:11px;padding:3px 8px" onclick="quickRenameGroup('${escapeHtml(cat)}')">✏️ 批量重命名此类</button>
+              </div>
+            </div>
+            <div class="cat-services-grid">
+              ${rowsHtml}
+            </div>
           </div>
         `;
-        card.style.display = 'grid';
-      } catch (e) {}
+      }).join('');
+
+      const selectAllCb = document.getElementById('catSelectAll');
+      if (selectAllCb) {
+        selectAllCb.checked = false;
+        selectAllCb.onchange = (e) => {
+          document.querySelectorAll('.cat-item-cb').forEach(cb => cb.checked = e.target.checked);
+          updateCatSelectedCount();
+        };
+      }
+      document.querySelectorAll('.cat-item-cb').forEach(cb => {
+        cb.onchange = updateCatSelectedCount;
+      });
+      updateCatSelectedCount();
+    }
+
+    function updateCatSelectedCount() {
+      const checked = document.querySelectorAll('.cat-item-cb:checked');
+      const el = document.getElementById('catSelectedCount');
+      if (el) el.textContent = checked.length;
+    }
+
+    async function onCategorySelectChange(serviceId, selectEl) {
+      let targetCat = selectEl.value;
+      if (targetCat === '__custom__') {
+        const customCat = prompt('请输入新分类名称:');
+        if (!customCat || !customCat.trim()) {
+          selectEl.value = selectEl.getAttribute('data-prev') || '自定义';
+          return;
+        }
+        targetCat = customCat.trim();
+      }
+
+      try {
+        const res = await fetch('/api/services?action=update', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ id: serviceId, category: targetCat })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          toast(`已归入「${targetCat}」`, 'success');
+          const s = allServices.find(x => x.id === serviceId);
+          if (s) s.category = targetCat;
+          renderPageTabs();
+          renderCategoryManager();
+        } else {
+          toast('修改分类失败: ' + (data.error || '未知错误'), 'error');
+        }
+      } catch (e) {
+        toast('请求失败: ' + e.message, 'error');
+      }
+    }
+
+    function quickRenameGroup(oldCat) {
+      const newCat = prompt(`将分类「${oldCat}」下的所有卡片重命名迁移到:`, oldCat);
+      if (!newCat || !newCat.trim() || newCat.trim() === oldCat) return;
+      doRenameCategoryApi(oldCat, newCat.trim());
+    }
+
+    async function doRenameCategoryApi(oldCat, newCat) {
+      try {
+        const res = await fetch('/api/services?action=rename_category', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ old_category: oldCat, new_category: newCat })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          toast(`成功将 ${data.count} 个卡片分类更名为「${newCat}」`, 'success');
+          await loadServicesAdmin();
+          renderCategoryManager();
+        } else {
+          toast('更名失败', 'error');
+        }
+      } catch (e) {
+        toast('网络错误: ' + e.message, 'error');
+      }
+    }
+
+    function setupCategoryEvents() {
+      document.getElementById('btnAutoCategorizeAll')?.addEventListener('click', async () => {
+        if (!confirm('将对全部卡片根据服务名称与 URL 进行智能分析并自动归类，确定继续吗？')) return;
+        toast('正在智能分析卡片特征...', 'info');
+        try {
+          const res = await fetch('/api/services?action=auto_categorize', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ only_uncategorized: false })
+          });
+          const data = await res.json();
+          if (data.ok) {
+            toast(`智能归类完成！已自动调整 ${data.count} 个卡片的分类`, 'success');
+            await loadServicesAdmin();
+            renderCategoryManager();
+          } else {
+            toast('智能归类失败: ' + (data.error || '未知错误'), 'error');
+          }
+        } catch (e) {
+          toast('请求失败: ' + e.message, 'error');
+        }
+      });
+
+      document.getElementById('btnAutoCategorizeUnset')?.addEventListener('click', async () => {
+        toast('正在分析未分类卡片...', 'info');
+        try {
+          const res = await fetch('/api/services?action=auto_categorize', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ only_uncategorized: true })
+          });
+          const data = await res.json();
+          if (data.ok) {
+            toast(`归类完成！调整了 ${data.count} 个未分类卡片`, 'success');
+            await loadServicesAdmin();
+            renderCategoryManager();
+          } else {
+            toast('智能归类失败', 'error');
+          }
+        } catch (e) {
+          toast('网络错误: ' + e.message, 'error');
+        }
+      });
+
+      document.getElementById('btnBatchMoveCategory')?.addEventListener('click', async () => {
+        const checked = Array.from(document.querySelectorAll('.cat-item-cb:checked')).map(cb => cb.dataset.id);
+        if (checked.length === 0) {
+          toast('请先勾选需要调整分类的卡片', 'warning');
+          return;
+        }
+        const target = document.getElementById('catBatchTargetInput')?.value.trim();
+        if (!target) {
+          toast('请输入或选择目标分类名称', 'warning');
+          document.getElementById('catBatchTargetInput')?.focus();
+          return;
+        }
+
+        try {
+          const res = await fetch('/api/services?action=batch_category', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ ids: checked, category: target })
+          });
+          const data = await res.json();
+          if (data.ok) {
+            toast(`已将 ${data.count} 个卡片批量移入「${target}」`, 'success');
+            await loadServicesAdmin();
+            renderCategoryManager();
+          } else {
+            toast('批量修改分类失败', 'error');
+          }
+        } catch (e) {
+          toast('网络错误: ' + e.message, 'error');
+        }
+      });
+
+      document.getElementById('btnDoRenameCat')?.addEventListener('click', () => {
+        const oldCat = document.getElementById('catRenameOld')?.value.trim();
+        const newCat = document.getElementById('catRenameNew')?.value.trim();
+        if (!oldCat || !newCat) {
+          toast('请填写原分类名与新分类名', 'warning');
+          return;
+        }
+        doRenameCategoryApi(oldCat, newCat);
+      });
     }
 
     // ─── 功能6: 快捷搜索直达与键盘控制 ───
@@ -6429,6 +6814,7 @@
       if (!grid || !menu) return;
 
       grid.addEventListener('contextmenu', e => {
+        if (GS.ui && GS.ui.show_context_menu === false) return;
         const card = e.target.closest('.service-card');
         if (!card) return;
         e.preventDefault();
@@ -6833,6 +7219,10 @@
       document.querySelectorAll('.svc-item-select').forEach(cb => {
         cb.addEventListener('change', updateSelectedCount);
       });
+
+      if (document.getElementById('tab-categories')?.classList.contains('active')) {
+        renderCategoryManager();
+      }
     }
 
     function updateSelectedCount() {
@@ -7484,6 +7874,9 @@
         if (tab.dataset.tab === 'tab-lucky') {
           loadLuckyAdmin();
         }
+        if (tab.dataset.tab === 'tab-categories') {
+          renderCategoryManager();
+        }
       };
     });
 
@@ -8109,6 +8502,13 @@
         card_color_mode: document.getElementById('settingCardColorMode')?.value || 'ambient',
         show_search: document.getElementById('settingShowSearch').checked,
         enable_music: document.getElementById('settingEnableMusic').checked,
+        show_clock_weather: document.getElementById('settingShowClockWeather')?.checked !== false,
+        show_page_tabs: document.getElementById('settingShowPageTabs')?.checked !== false,
+        show_card_stats: document.getElementById('settingShowCardStats')?.checked !== false,
+        show_notes: document.getElementById('settingShowNotes')?.checked !== false,
+        show_context_menu: document.getElementById('settingShowContextMenu')?.checked !== false,
+        enable_click_stats: document.getElementById('settingEnableClickStats')?.checked !== false,
+        show_live_banner: document.getElementById('settingShowLiveBanner')?.checked !== false,
         enable_wan_replace: document.getElementById('settingEnableWanReplace')?.checked !== false,
         wan_domain: document.getElementById('settingWanDomain')?.value.trim() || '',
       };
@@ -8264,17 +8664,16 @@
       refreshStats();
       setInterval(refreshStats, 5000);
 
-      // v2.6.0 扩展功能初始化
+      // v2.6.1 扩展功能初始化
       tickClock();
       setInterval(tickClock, 1000);
       loadWeather();
       setInterval(loadWeather, 600000); // 10分钟刷新一次天气
-      loadHost();
-      setInterval(loadHost, 10000); // 10秒刷新硬件小卡
       loadNotes();
       setupNotesDrawer();
       setupSearchShortcuts();
       setupContextMenu();
+      setupCategoryEvents();
 
       // PWA 桌面支持
       if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {

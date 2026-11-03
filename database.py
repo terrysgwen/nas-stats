@@ -269,6 +269,29 @@ def update_service(service_id: str, **kwargs):
         conn.commit()
 
 
+def update_services_category(service_ids: list[str], category: str):
+    if not service_ids or not category:
+        return 0
+    conn = get_conn()
+    placeholders = ",".join(["?"] * len(service_ids))
+    cur = conn.execute(
+        f"UPDATE services SET category = ? WHERE id IN ({placeholders})",
+        [category] + list(service_ids),
+    )
+    conn.commit()
+    return cur.rowcount
+
+
+def rename_category(old_cat: str, new_cat: str):
+    conn = get_conn()
+    cur = conn.execute(
+        "UPDATE services SET category = ? WHERE category = ?",
+        (new_cat, old_cat),
+    )
+    conn.commit()
+    return cur.rowcount
+
+
 def record_service_hit(service_id: str):
     """Record service click event for frequent / recent sorting."""
     conn = get_conn()
