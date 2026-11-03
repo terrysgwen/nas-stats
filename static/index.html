@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NAS 服务导航 v2.6.1</title>
+  <title>NAS 服务导航 v2.6.2</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
   <link rel="manifest" href="/manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2742,29 +2742,67 @@
       box-shadow: 0 0 20px rgba(251, 191, 36, 0.7) !important;
     }
 
-    /* ─── 功能 1: 卡片状态角标 ─── */
+    /* ─── 功能 1: 高清晰度卡片状态角标 (右上角徽标胶囊，防压文字与高对比度) ─── */
     .card-stat {
       position: absolute;
-      right: 10px;
-      bottom: 8px;
+      top: 8px;
+      right: 8px;
       font-size: 11px;
+      font-weight: 600;
       font-variant-numeric: tabular-nums;
-      color: var(--text-muted);
-      background: rgba(0, 0, 0, 0.28);
-      padding: 1px 6px;
-      border-radius: 4px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(10, 15, 29, 0.92);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color: #f8fafc;
+      padding: 2.5px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
       pointer-events: none;
-      letter-spacing: -0.2px;
+      letter-spacing: -0.1px;
       white-space: nowrap;
-      max-width: 70%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      z-index: 2;
+      z-index: 10;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
+      line-height: 1.2;
+    }
+    .card-stat .cs-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 6px #22c55e;
+      flex-shrink: 0;
+    }
+    .card-stat .cs-val {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+      color: #ffffff;
+      font-weight: 600;
+    }
+    .card-stat .cs-dl {
+      color: #38bdf8 !important; /* 荧光青蓝 高亮清晰 */
+    }
+    .card-stat .cs-up {
+      color: #4ade80 !important; /* 荧光嫩绿 高亮清晰 */
+    }
+    .card-stat .cs-sep {
+      width: 1px;
+      height: 9px;
+      background: rgba(255, 255, 255, 0.25);
+      margin: 0 1px;
+    }
+    .services-grid.style-tvos .card-stat {
+      top: -2px;
+      right: calc(50% - 48px);
+      transform: translate(25%, 0);
+      padding: 1.5px 7px;
+      font-size: 10px;
     }
     .card-stat-warn {
       color: var(--accent-orange);
-      border-color: rgba(245, 158, 11, 0.35);
+      border-color: rgba(245, 158, 11, 0.45);
     }
 
     /* ─── 功能 2: 工作区/页面 Tabs ─── */
@@ -2913,78 +2951,125 @@
       right: 0;
       top: 0;
       height: 100vh;
-      width: min(340px, 88vw);
-      background: var(--bg-secondary);
+      width: min(460px, 92vw);
+      background: var(--bg-card);
       border-left: 1px solid var(--border);
-      box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+      box-shadow: -12px 0 48px rgba(0, 0, 0, 0.6);
       transform: translateX(100%);
       transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
       z-index: 920;
       display: flex;
       flex-direction: column;
-      padding: 16px;
+      padding: 22px 20px;
     }
     .notes-drawer.open {
       transform: translateX(0);
     }
-    .notes-head {
+    .notes-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding-bottom: 12px;
+      padding-bottom: 14px;
       border-bottom: 1px solid var(--border);
-      font-size: 15px;
+      margin-bottom: 14px;
+    }
+    .notes-title {
+      font-size: 16px;
       font-weight: 600;
       color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     .notes-close {
       border: 0;
-      background: transparent;
+      background: rgba(255, 255, 255, 0.06);
       color: var(--text-muted);
       cursor: pointer;
-      font-size: 18px;
+      font-size: 16px;
       border-radius: 6px;
-      padding: 2px 6px;
+      padding: 4px 10px;
+      transition: all 0.15s;
     }
     .notes-close:hover {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.15);
       color: #fff;
     }
-    .notes-add {
-      margin: 12px 0 8px 0;
+    .notes-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
-    .notes-input {
-      width: 100%;
-      padding: 8px 12px;
+    .notes-form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 16px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
       border-radius: 8px;
-      background: rgba(255, 255, 255, 0.05);
+      padding: 12px 14px;
+    }
+    .notes-form textarea {
+      width: 100%;
+      min-height: 85px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.25);
       border: 1px solid var(--border);
       color: var(--text-primary);
-      font-size: 13px;
+      font-size: 13.5px;
+      line-height: 1.5;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      font-family: inherit;
+    }
+    .notes-form textarea:focus {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+    }
+    .notes-form-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 2px;
+    }
+    .notes-hint {
+      font-size: 12px;
+      color: var(--text-muted);
     }
     .notes-list {
       flex: 1;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      padding-right: 2px;
-      margin-top: 6px;
+      gap: 10px;
+      padding-right: 4px;
     }
     .note-item {
       display: flex;
       align-items: flex-start;
-      gap: 8px;
-      padding: 9px 10px;
+      gap: 12px;
+      padding: 12px 14px;
       border-radius: 8px;
-      background: rgba(255, 255, 255, 0.03);
+      background: var(--bg-secondary);
       border: 1px solid var(--border);
-      font-size: 13px;
+      font-size: 14px;
       color: var(--text-primary);
-      transition: background 0.15s;
+      transition: all 0.15s;
     }
     .note-item:hover {
-      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+    .note-cb {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: var(--accent-blue);
+      margin-top: 2px;
+      flex-shrink: 0;
     }
     .note-item.done .note-text {
       text-decoration: line-through;
@@ -2993,20 +3078,23 @@
     .note-text {
       flex: 1;
       word-break: break-all;
-      line-height: 1.4;
+      line-height: 1.5;
     }
     .note-del {
       border: 0;
       background: transparent;
       color: var(--text-muted);
       cursor: pointer;
-      font-size: 13px;
-      opacity: 0.6;
-      padding: 0 4px;
+      font-size: 15px;
+      opacity: 0.5;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: all 0.15s;
     }
     .note-del:hover {
       opacity: 1;
       color: var(--accent-red);
+      background: rgba(239, 68, 68, 0.1);
     }
 
     body.hide-card-stats .card-stat {
@@ -6347,33 +6435,33 @@
       const st = GS.stats[src];
       if (!st || !st.enabled) return '';
 
-      let text = '';
-      if (src === 'qbittorrent') {
-        const dl = formatSpeed(st.dl_speed);
-        const up = formatSpeed(st.up_speed);
-        text = `↓ ${dl}  ↑ ${up}`;
-      } else if (src === 'transmission') {
-        const dl = formatSpeed(st.download_speed);
-        const up = formatSpeed(st.upload_speed);
-        text = `↓ ${dl}  ↑ ${up}`;
-      } else if (src === 'pve') {
+      if (src === 'qbittorrent' || src === 'transmission') {
+        const rawDl = src === 'qbittorrent' ? st.dl_speed : st.download_speed;
+        const rawUp = src === 'qbittorrent' ? st.up_speed : st.upload_speed;
+        const dl = formatSpeed(rawDl);
+        const up = formatSpeed(rawUp);
+        return `<span class="card-stat active" title="实时速度: 下行 ${escapeHtml(dl)} / 上行 ${escapeHtml(up)}"><span class="cs-dot"></span><span class="cs-val cs-dl">↓ ${escapeHtml(dl)}</span><span class="cs-sep"></span><span class="cs-val cs-up">↑ ${escapeHtml(up)}</span></span>`;
+      }
+      if (src === 'pve') {
         const running = st.vms_running !== undefined ? st.vms_running : (st.vms ? st.vms.filter(v=>v.status==='running').length : 0);
         const total = st.vms_total !== undefined ? st.vms_total : (st.vms ? st.vms.length : 0);
-        text = `运行 ${running} / ${total}`;
-      } else if (src === 'easynvr') {
+        return `<span class="card-stat active" title="PVE 虚拟机运行数"><span class="cs-dot"></span><span class="cs-val">VM ${running}/${total}</span></span>`;
+      }
+      if (src === 'easynvr') {
         const onl = st.online_channels || 0;
         const tot = st.total_channels || 0;
-        text = `在线 ${onl} / ${tot}`;
-      } else if (src === 'homeassistant') {
+        return `<span class="card-stat active" title="EasyNVR 在线通道"><span class="cs-dot"></span><span class="cs-val">在线 ${onl}/${tot}</span></span>`;
+      }
+      if (src === 'homeassistant') {
         const ent = st.entities_count || (st.entities ? st.entities.length : 0);
-        text = `实体 ${ent}`;
-      } else if (src === 'moviepilot') {
+        return `<span class="card-stat active" title="HomeAssistant 实体数"><span class="cs-dot"></span><span class="cs-val">实体 ${ent}</span></span>`;
+      }
+      if (src === 'moviepilot') {
         const dl = formatSpeed(st.download_speed);
-        text = `运行中 ↓ ${dl}`;
+        return `<span class="card-stat active" title="MoviePilot 状态"><span class="cs-dot"></span><span class="cs-val cs-dl">↓ ${escapeHtml(dl)}</span></span>`;
       }
 
-      if (!text) return '';
-      return `<span class="card-stat active"><span class="cs-dot"></span><span class="cs-text">${escapeHtml(text)}</span></span>`;
+      return '';
     }
 
     function onStatsUpdated(data) {
@@ -6388,8 +6476,8 @@
           if (el) {
             if (el.outerHTML !== statHtml) el.outerHTML = statHtml;
           } else {
-            const info = card.querySelector('.card-info');
-            if (info) info.insertAdjacentHTML('beforeend', statHtml);
+            // 直接作为卡片最外层子元素置顶挂载，确保绝对定位在右上角
+            card.insertAdjacentHTML('afterbegin', statHtml);
           }
         } else if (el) {
           el.remove();
@@ -6886,6 +6974,7 @@
     function renderNotes() {
       const list = document.getElementById('notesList');
       const badge = document.getElementById('notesBadge');
+      const countTitle = document.getElementById('notesCountTitle');
       if (!list) return;
 
       const uncompleted = GS.notes.filter(n => !n.done).length;
@@ -6896,6 +6985,11 @@
         } else {
           badge.style.display = 'none';
         }
+      }
+      if (countTitle) {
+        if (GS.notes.length === 0) countTitle.textContent = '';
+        else if (uncompleted > 0) countTitle.textContent = `(${uncompleted}项未完成)`;
+        else countTitle.textContent = `(全部已完成 ✓)`;
       }
 
       if (GS.notes.length === 0) {
@@ -7047,11 +7141,11 @@
         return `
           <a class="service-card" id="${cardId}" data-sid="${escapeHtml(s.id || '')}" ${href} ${clickAttr} data-has-color="true" style="--card-rgb: ${cardRgb}; position:relative" onmousedown="recordServiceHit('${escapeHtml(s.id || '')}')">
             ${extBadge}
+            ${statBadgeHtml}
             <div class="card-top">${iconHtml}</div>
             <div class="card-info">
               <div class="card-name">${escapeHtml(s.name)}</div>
               <div class="card-desc">${escapeHtml(s.description || '')}</div>
-              ${statBadgeHtml}
             </div>
           </a>
         `;
@@ -8700,16 +8794,22 @@
   </button>
   <div class="notes-drawer" id="notesDrawer">
     <div class="notes-header">
-      <div class="notes-title">📝 便签与待办</div>
-      <button class="notes-close" id="notesClose">✕</button>
+      <div class="notes-title">
+        <span>📝 便签与待办事项</span>
+        <span id="notesCountTitle" style="font-size:12px;color:var(--accent-blue);font-weight:normal"></span>
+      </div>
+      <button class="notes-close" id="notesClose" title="收起">✕</button>
     </div>
     <div class="notes-body">
       <div class="notes-form">
-        <textarea id="noteInput" placeholder="写点待办事项或备忘... (Ctrl+Enter 快速添加)" rows="2"></textarea>
-        <button id="noteAddBtn">添加便签</button>
+        <textarea id="noteInput" placeholder="写点待办事项或备忘... (按 Ctrl+Enter 快速添加)" rows="3"></textarea>
+        <div class="notes-form-footer">
+          <span class="notes-hint">💡 Ctrl + Enter 快速保存</span>
+          <button id="noteAddBtn" class="admin-btn admin-btn-primary" style="padding: 6px 16px; font-size: 13px;">➕ 添加便签</button>
+        </div>
       </div>
       <div class="notes-list" id="notesList">
-        <div style="text-align:center;color:var(--text-muted);font-size:12px;padding:20px">暂无便签</div>
+        <div style="text-align:center;color:var(--text-muted);font-size:13px;padding:30px 10px">暂无便签，写点待办吧 📝</div>
       </div>
     </div>
   </div>

@@ -51,5 +51,7 @@ class BaseMonitor:
 
     def _url(self, path: str = "") -> str:
         """Build a URL from config['url'] + path."""
-        base = (self.config.get("url") or "").rstrip("/")
+        base = (self.config.get("url") or "").strip().rstrip("/")
+        if base and not base.startswith(("http://", "https://")):
+            base = f"http://{base}"
         return f"{base}{path}" if base else ""

@@ -14,20 +14,27 @@ class IKuaiMonitor(BaseMonitor):
         super().__init__(monitor_id, config)
         self._ik_client: httpx.AsyncClient | None = None
         self._logged_in = False
+        self._last_error = ""
 
     def _get_client(self) -> httpx.AsyncClient:
         if self._ik_client is None or self._ik_client.is_closed:
-            self._ik_client = httpx.AsyncClient(timeout=10, follow_redirects=True)
+            self._ik_client = httpx.AsyncClient(timeout=10, follow_redirects=True, verify=False)
         return self._ik_client
 
     async def _login(self) -> bool:
         client = self._get_client()
         svc = self.config
         try:
-            passwd_md5 = hashlib.md5((svc.get("password") or "").encode()).hexdigest()
+            raw_pwd = str(svc.get("password") or "")
+            passwd_md5 = hashlib.md5(raw_pwd.encode()).hexdigest()
             pass_encoded = base64.b64encode(f"salt_11{passwd_md5}".encode()).decode()
+            login_url = self._url("/Action/login")
+            if not login_url:
+                self._last_error = "未配置爱快路由 URL 地址"
+                return False
+
             resp = await client.post(
-                self._url("/Action/login"),
+                login_url,
                 json={
                     "username": svc.get("username", "admin"),
                     "passwd": passwd_md5,
@@ -36,12 +43,20 @@ class IKuaiMonitor(BaseMonitor):
                 },
             )
             data = resp.json()
-            self._logged_in = (
-                data.get("Data", {}).get("login") == 1 or resp.cookies.get("sess_key") is not None
+            is_ok = (
+                data.get("Result") in (10000, 30000)
+                or data.get("Data", {}).get("login") == 1
+                or (data.get("ErrMsg") or "").lower() == "success"
+                or resp.cookies.get("sess_key") is not None
             )
+            self._logged_in = is_ok
+            if not is_ok:
+                err_msg = data.get("ErrMsg") or data.get("error") or f"登录失败(Result: {data.get('Result')})"
+                self._last_error = f"爱快返回: {err_msg}"
             return self._logged_in
-        except Exception:
+        except Exception as e:
             self._logged_in = False
+            self._last_error = f"连接异常: {e}"
             return False
 
     async def _call(self, func_name: str, action: str = "", param: dict = None) -> dict:
@@ -52,8 +67,22 @@ class IKuaiMonitor(BaseMonitor):
         try:
             resp = await client.post(self._url("/Action/call"), json=payload)
             return resp.json()
-        except Exception:
+        except Exception as e:
+            self._last_error = f"API调用失败({func_name}): {e}"
             return {}
+
+    async def test_connection(self) -> dict:
+        """测试爱快连接，返回清晰诊断信息"""
+        client = self._get_client()
+        client.cookies.clear()
+        self._logged_in = False
+        login_ok = await self._login()
+        if not login_ok:
+            return {"ok": False, "error": self._last_error or "爱快认证失败，请检查账号密码或URL"}
+        data = await self.fetch()
+        if data.get("status") == "ok":
+            return {"ok": True, "data": data}
+        return {"ok": False, "error": data.get("error") or self._last_error or "获取爱快数据失败"}
 
     async def fetch(self) -> dict:
         url = self.config.get("url")
@@ -66,7 +95,7 @@ class IKuaiMonitor(BaseMonitor):
             try:
                 if not self._logged_in:
                     if not await self._login():
-                        return {"enabled": True, "status": "auth_failed", "error": "认证失败"}
+                        return {"enabled": True, "status": "auth_failed", "error": self._last_error or "认证失败"}
 
                 sysstat = await self._call("sysstat", "show", {"TYPE": "verinfo,cpu,memory,stream,cputemp"})
                 wan_resp = await self._call("wan", "show", {})

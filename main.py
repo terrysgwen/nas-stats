@@ -4,7 +4,7 @@ All configuration and services are persisted in SQLite (database.py).
 Monitors are dynamically discovered and instantiated from monitors package.
 """
 
-__version__ = "2.6.1"
+__version__ = "2.6.2"
 
 import asyncio
 import base64
@@ -236,9 +236,11 @@ def _html_response(request: Request, filename: str) -> Response:
     return resp
 
 
-@app.get("/")
-@app.get("/index.html")
+@app.api_route("/", methods=["GET", "HEAD"])
+@app.api_route("/index.html", methods=["GET", "HEAD"])
 async def index(request: Request):
+    if request.method == "HEAD":
+        return Response(status_code=200, headers={"Content-Type": "text/html; charset=utf-8"})
     return _html_response(request, "index.html")
 
 
