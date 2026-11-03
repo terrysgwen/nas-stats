@@ -4,12 +4,14 @@ All configuration and services are persisted in SQLite (database.py).
 Monitors are dynamically discovered and instantiated from monitors package.
 """
 
-__version__ = "2.5.4"
+__version__ = "2.6.0"
 
 import asyncio
 import base64
 from collections import OrderedDict
+import glob
 import json
+import os
 from pathlib import Path
 import re
 import threading
@@ -245,11 +247,213 @@ async def nvr_page(request: Request):
     return _html_response(request, "nvr.html")
 
 
+# ── PWA 静态路由 ────────────────────────────────────────────────────
+
+@app.get("/manifest.json")
+async def manifest():
+    f = STATIC_DIR / "manifest.json"
+    if not f.is_file():
+        raise HTTPException(status_code=404, detail="manifest not found")
+    return FileResponse(f, media_type="application/manifest+json",
+                        headers={"Cache-Control": "public, max-age=3600"})
+
+
+@app.get("/sw.js")
+async def service_worker():
+    f = STATIC_DIR / "sw.js"
+    if not f.is_file():
+        raise HTTPException(status_code=404, detail="sw not found")
+    return FileResponse(f, media_type="application/javascript",
+                        headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/icon-192.png")
+async def icon192():
+    f = STATIC_DIR / "icon-192.png"
+    if not f.is_file():
+        raise HTTPException(status_code=404, detail="icon not found")
+    return FileResponse(f, media_type="image/png",
+                        headers={"Cache-Control": "public, max-age=604800"})
+
+
+@app.get("/icon-512.png")
+async def icon512():
+    f = STATIC_DIR / "icon-512.png"
+    if not f.is_file():
+        raise HTTPException(status_code=404, detail="icon not found")
+    return FileResponse(f, media_type="image/png",
+                        headers={"Cache-Control": "public, max-age=604800"})
+
+
 # ── Health & Stats ──────────────────────────────────────────────────
 
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "version": __version__}
+
+
+# ── Weather API (功能 4: 10 分钟缓存) ──────────────────────────────────
+
+_weather_cache = {"ts": 0, "data": None}
+WEATHER_TTL = 600
+
+@app.get("/api/weather")
+async def get_weather():
+    now = time.time()
+    if _weather_cache["data"] and now - _weather_cache["ts"] < WEATHER_TTL:
+        return _weather_cache["data"]
+
+    cfg = db.get_config("ui.weather", {}) or {}
+    lat = cfg.get("lat", 31.23)
+    lon = cfg.get("lon", 121.47)
+    try:
+        url = (
+            f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}"
+            f"&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m"
+            f"&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FShanghai&forecast_days=1"
+        )
+        async with get_http_client(timeout=8.0) as cli:
+            r = await cli.get(url)
+            j = r.json()
+            cur = j.get("current", {})
+            daily = j.get("daily", {})
+            data = {
+                "ok": True,
+                "temp": round(cur.get("temperature_2m", 0), 1),
+                "humidity": cur.get("relative_humidity_2m"),
+                "wind": cur.get("wind_speed_10m"),
+                "code": cur.get("weather_code", 0),
+                "high": round((daily.get("temperature_2m_max") or [0])[0], 1),
+                "low":  round((daily.get("temperature_2m_min") or [0])[0], 1),
+                "updated": int(now),
+            }
+            _weather_cache.update(ts=now, data=data)
+            return data
+    except Exception as e:
+        if _weather_cache["data"]:
+            return _weather_cache["data"]
+        return {"ok": False, "error": str(e)}
+
+
+# ── Host Metrics API (功能 9: 本机负载/温度/磁盘/内存) ─────────────────
+
+_host_cache = {"ts": 0, "data": None}
+HOST_TTL = 5
+
+def _cpu_pct():
+    """两次采样计算 CPU 使用率"""
+    try:
+        if not os.path.exists("/proc/stat"):
+            return 0.0
+        with open("/proc/stat") as f:
+            p = f.readline().split()[1:]
+        a = [int(x) for x in p]
+        _cpu_prev = getattr(_cpu_pct, "_prev", None)
+        if _cpu_prev is None:
+            _cpu_pct._prev = a
+            return 0.0
+        idle_a, total_a = _cpu_prev[3] + _cpu_prev[4], sum(_cpu_prev)
+        idle_b, total_b = a[3] + a[4], sum(a)
+        _cpu_pct._prev = a
+        dt = total_b - total_a
+        return round(100 * (1 - (idle_b - idle_a) / dt), 1) if dt > 0 else 0.0
+    except Exception:
+        return 0.0
+
+@app.get("/api/host")
+async def get_host():
+    now = time.time()
+    if _host_cache["data"] and now - _host_cache["ts"] < HOST_TTL:
+        return _host_cache["data"]
+
+    mem = {}
+    if os.path.exists("/proc/meminfo"):
+        try:
+            with open("/proc/meminfo") as f:
+                for line in f:
+                    if ":" in line:
+                        k, v = line.split(":", 1)
+                        mem[k.strip()] = int(v.strip().split()[0]) * 1024
+        except Exception:
+            pass
+
+    temps = []
+    try:
+        for p in sorted(glob.glob("/sys/class/thermal/thermal_zone*/temp")):
+            try:
+                t = int(open(p).read().strip()) / 1000
+                if -20 < t < 150:
+                    temps.append({"zone": p.split("/")[-2], "c": round(t, 1)})
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    disks = []
+    check_paths = [
+        ("data", "/app/data"),
+        ("vol1", "/host-vol1"),
+        ("vol4", "/host-vol4"),
+        ("vol1", "/vol1"),
+        ("vol2", "/vol2"),
+        ("vol4", "/vol4"),
+    ]
+    seen_labels = set()
+    for label, path in check_paths:
+        if label in seen_labels or not os.path.isdir(path):
+            continue
+        try:
+            st = os.statvfs(path)
+            total = st.f_blocks * st.f_frsize
+            free = st.f_bavail * st.f_frsize
+            if total > 0:
+                disks.append({
+                    "label": label,
+                    "total": total,
+                    "free": free,
+                    "used": total - free,
+                    "pct": round(100 * (total - free) / total, 1),
+                })
+                seen_labels.add(label)
+        except Exception:
+            pass
+
+    load_arr = [0.0, 0.0, 0.0]
+    if os.path.exists("/proc/loadavg"):
+        try:
+            load_arr = [float(x) for x in open("/proc/loadavg").read().split()[:3]]
+        except Exception:
+            pass
+
+    uptime_sec = 0
+    if os.path.exists("/proc/uptime"):
+        try:
+            uptime_sec = int(float(open("/proc/uptime").read().split()[0]))
+        except Exception:
+            pass
+
+    total_mem = mem.get("MemTotal", 0)
+    avail_mem = mem.get("MemAvailable", total_mem)
+    used_mem = max(0, total_mem - avail_mem)
+    mem_pct = round(100 * (1 - avail_mem / total_mem), 1) if total_mem else 0
+
+    data = {
+        "ok": True,
+        "cpu_pct": _cpu_pct(),
+        "load": load_arr,
+        "uptime": uptime_sec,
+        "mem": {
+            "total": total_mem,
+            "avail": avail_mem,
+            "used": used_mem,
+            "pct": mem_pct,
+        },
+        "temps": temps,
+        "max_temp": max([t["c"] for t in temps]) if temps else None,
+        "disks": disks,
+    }
+    _host_cache.update(ts=now, data=data)
+    return data
 
 
 @app.get("/api/stats")
@@ -1586,6 +1790,21 @@ async def get_lucky_mappings_endpoint():
 
 # ── Services Management (CRUD) ──────────────────────────────────────
 
+# 功能 3: 服务点击上报 (5秒防刷限制)
+_hit_guard = {}
+
+@app.post("/api/services/{sid}/hit")
+async def service_hit_endpoint(sid: str, request: Request):
+    ip = request.client.host if request.client else ""
+    k = f"{ip}|{sid}"
+    now = time.time()
+    if now - _hit_guard.get(k, 0) < 5:
+        return {"ok": True, "skipped": True}
+    _hit_guard[k] = now
+    db.record_service_hit(sid)
+    return {"ok": True}
+
+
 # O3: Favicon Binary Endpoint (7-day strong cache + immutable)
 @app.get("/api/services/{sid}/favicon")
 async def get_service_favicon(sid: str):
@@ -1674,6 +1893,8 @@ async def handle_services(request: Request, action: str = Query(...)):
             "wan_url": body.get("wan_url", ""),
             "port": port_val,
             "protocol": proto_val,
+            "stat_source": body.get("stat_source", ""),
+            "category": body.get("category"),
         }
         if favicon_val is not None:
             updates["favicon"] = favicon_val
@@ -1767,6 +1988,7 @@ async def handle_services(request: Request, action: str = Query(...)):
             "url": url_val,
             "wan_url": body.get("wan_url", ""),
             "favicon": body.get("favicon", ""),
+            "stat_source": body.get("stat_source", ""),
             "visible": 1,
             "sort_order": count,
         }
@@ -1830,6 +2052,39 @@ async def handle_services(request: Request, action: str = Query(...)):
         return {"ok": True, "count": added}
 
     return JSONResponse({"error": "unknown action"}, status_code=400)
+
+
+# ── Notes / Todo API (功能 8: 便签待办) ────────────────────────────────
+
+@app.get("/api/notes")
+async def list_notes_endpoint():
+    return {"items": db.get_all_notes()}
+
+
+@app.post("/api/notes")
+async def create_note_endpoint(request: Request, _auth: dict = Depends(require_auth)):
+    body = await request.json()
+    nid = str(uuid.uuid4())
+    content = str(body.get("content", "")).strip()
+    color = str(body.get("color", "")).strip()
+    db.add_note(nid, content, color)
+    return {"ok": True, "id": nid}
+
+
+@app.post("/api/notes/{nid}")
+async def update_note_endpoint(nid: str, request: Request, _auth: dict = Depends(require_auth)):
+    body = await request.json()
+    db.update_note(
+        nid,
+        **{k: v for k, v in body.items() if k in ("content", "done", "pinned", "color", "sort_order")}
+    )
+    return {"ok": True}
+
+
+@app.delete("/api/notes/{nid}")
+async def delete_note_endpoint(nid: str, request: Request, _auth: dict = Depends(require_auth)):
+    db.delete_note(nid)
+    return {"ok": True}
 
 
 # ── Discovery & Scans ───────────────────────────────────────────────

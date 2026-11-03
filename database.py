@@ -5,9 +5,10 @@ Thread-safe via thread-local connections.
 """
 
 import json
+from pathlib import Path
 import sqlite3
 import threading
-from pathlib import Path
+import time
 
 DB_PATH = Path(__file__).parent / "data" / "nas-stats.db"
 
@@ -54,15 +55,36 @@ def init_db():
             url         TEXT    DEFAULT '',
             wan_url     TEXT    DEFAULT '',
             favicon     TEXT    DEFAULT '',
+            stat_source TEXT    DEFAULT '',
+            click_count INTEGER DEFAULT 0,
+            last_access INTEGER DEFAULT 0,
             visible     INTEGER DEFAULT 1,
             sort_order  INTEGER DEFAULT 0
+        );
+
+        CREATE TABLE IF NOT EXISTS notes (
+            id          TEXT PRIMARY KEY,
+            content     TEXT NOT NULL DEFAULT '',
+            done        INTEGER NOT NULL DEFAULT 0,
+            pinned      INTEGER NOT NULL DEFAULT 0,
+            color       TEXT DEFAULT '',
+            sort_order  INTEGER DEFAULT 0,
+            created_at  INTEGER,
+            updated_at  INTEGER
         );
     """)
     # Migration for existing database
     try:
-        cols = [c["name"] for c in conn.execute("PRAGMA table_info(services)").fetchall()]
-        if cols and "wan_url" not in cols:
-            conn.execute("ALTER TABLE services ADD COLUMN wan_url TEXT DEFAULT ''")
+        cols = {c["name"] for c in conn.execute("PRAGMA table_info(services)").fetchall()}
+        if cols:
+            if "wan_url" not in cols:
+                conn.execute("ALTER TABLE services ADD COLUMN wan_url TEXT DEFAULT ''")
+            if "stat_source" not in cols:
+                conn.execute("ALTER TABLE services ADD COLUMN stat_source TEXT DEFAULT ''")
+            if "click_count" not in cols:
+                conn.execute("ALTER TABLE services ADD COLUMN click_count INTEGER DEFAULT 0")
+            if "last_access" not in cols:
+                conn.execute("ALTER TABLE services ADD COLUMN last_access INTEGER DEFAULT 0")
     except Exception:
         pass
     conn.commit()
@@ -213,13 +235,16 @@ def add_service(svc: dict):
         "url": svc.get("url", ""),
         "wan_url": svc.get("wan_url", ""),
         "favicon": svc.get("favicon", ""),
+        "stat_source": svc.get("stat_source", ""),
+        "click_count": int(svc.get("click_count", 0) or 0),
+        "last_access": int(svc.get("last_access", 0) or 0),
         "visible": svc.get("visible", 1),
         "sort_order": svc.get("sort_order", 0),
     }
     conn.execute(
         """INSERT INTO services
-           (id, port, name, category, protocol, icon, description, url, wan_url, favicon, visible, sort_order)
-           VALUES (:id, :port, :name, :category, :protocol, :icon, :description, :url, :wan_url, :favicon, :visible, :sort_order)""",
+           (id, port, name, category, protocol, icon, description, url, wan_url, favicon, stat_source, click_count, last_access, visible, sort_order)
+           VALUES (:id, :port, :name, :category, :protocol, :icon, :description, :url, :wan_url, :favicon, :stat_source, :click_count, :last_access, :visible, :sort_order)""",
         data,
     )
     conn.commit()
@@ -227,7 +252,10 @@ def add_service(svc: dict):
 
 def update_service(service_id: str, **kwargs):
     conn = get_conn()
-    allowed_cols = {"name", "icon", "description", "url", "wan_url", "port", "protocol", "favicon", "visible", "sort_order", "category"}
+    allowed_cols = {
+        "name", "icon", "description", "url", "wan_url", "port", "protocol",
+        "favicon", "visible", "sort_order", "category", "stat_source"
+    }
     sets, vals = [], []
     for k, v in kwargs.items():
         if k in allowed_cols:
@@ -239,6 +267,61 @@ def update_service(service_id: str, **kwargs):
             f"UPDATE services SET {', '.join(sets)} WHERE id=?", vals
         )
         conn.commit()
+
+
+def record_service_hit(service_id: str):
+    """Record service click event for frequent / recent sorting."""
+    conn = get_conn()
+    conn.execute(
+        "UPDATE services SET click_count = COALESCE(click_count, 0) + 1, "
+        "last_access = ? WHERE id = ?",
+        (int(time.time()), str(service_id))
+    )
+    conn.commit()
+
+
+# ── Notes / Todo ───────────────────────────────────────────────────
+
+def get_all_notes() -> list[dict]:
+    rows = get_conn().execute(
+        "SELECT * FROM notes ORDER BY pinned DESC, sort_order ASC, created_at DESC"
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def add_note(note_id: str, content: str, color: str = ""):
+    conn = get_conn()
+    now = int(time.time())
+    conn.execute(
+        """INSERT INTO notes (id, content, done, pinned, color, sort_order, created_at, updated_at)
+           VALUES (?, ?, 0, 0, ?, 0, ?, ?)""",
+        (str(note_id), str(content), str(color), now, now)
+    )
+    conn.commit()
+
+
+def update_note(note_id: str, **kwargs):
+    conn = get_conn()
+    allowed = {"content", "done", "pinned", "color", "sort_order"}
+    sets, vals = [], []
+    for k, v in kwargs.items():
+        if k in allowed:
+            sets.append(f"{k}=?")
+            vals.append(v)
+    if sets:
+        sets.append("updated_at=?")
+        vals.append(int(time.time()))
+        vals.append(str(note_id))
+        conn.execute(
+            f"UPDATE notes SET {', '.join(sets)} WHERE id=?", vals
+        )
+        conn.commit()
+
+
+def delete_note(note_id: str):
+    conn = get_conn()
+    conn.execute("DELETE FROM notes WHERE id=?", (str(note_id),))
+    conn.commit()
 
 
 def delete_service(service_id: str):

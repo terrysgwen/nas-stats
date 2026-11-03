@@ -3,8 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NAS 服务导航 v2.5.4</title>
+  <title>NAS 服务导航 v2.6.0</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NAS">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0b0d13">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -2735,6 +2742,329 @@
       box-shadow: 0 0 20px rgba(251, 191, 36, 0.7) !important;
     }
 
+    /* ─── 功能 1: 卡片状态角标 ─── */
+    .card-stat {
+      position: absolute;
+      right: 10px;
+      bottom: 8px;
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-muted);
+      background: rgba(0, 0, 0, 0.28);
+      padding: 1px 6px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      pointer-events: none;
+      letter-spacing: -0.2px;
+      white-space: nowrap;
+      max-width: 70%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      z-index: 2;
+    }
+    .card-stat-warn {
+      color: var(--accent-orange);
+      border-color: rgba(245, 158, 11, 0.35);
+    }
+
+    /* ─── 功能 2: 工作区/页面 Tabs ─── */
+    .page-tabs {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 12px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 2px 0;
+    }
+    .page-tabs::-webkit-scrollbar { display: none; }
+    .page-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 13px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.18s, border-color 0.18s, color 0.18s;
+    }
+    .page-tab:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+    }
+    .page-tab.active {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: rgba(59, 130, 246, 0.5);
+      color: var(--accent-blue);
+      font-weight: 600;
+    }
+
+    /* ─── 功能 4: 时钟天气卡片 ─── */
+    .clock-weather {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+      margin-left: 10px;
+      user-select: none;
+      font-variant-numeric: tabular-nums;
+    }
+    .cw-time {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1;
+      letter-spacing: -0.5px;
+    }
+    .cw-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      gap: 6px;
+    }
+    #cwWx {
+      color: var(--accent-cyan);
+      cursor: pointer;
+    }
+    @media (max-width: 768px) {
+      .clock-weather { display: none; }
+    }
+
+    /* ─── 功能 7: 右键快捷菜单 ─── */
+    .ctx-menu {
+      position: fixed;
+      z-index: 9999;
+      min-width: 170px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 5px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .ctx-item {
+      padding: 7px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      white-space: nowrap;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.15s;
+    }
+    .ctx-item:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .ctx-item.disabled {
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    /* ─── 功能 8: 便签待办抽屉与悬浮按钮 ─── */
+    .notes-fab {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 850;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: var(--accent-blue);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+      transition: transform 0.2s, background 0.2s, bottom 0.2s;
+    }
+    .notes-fab:hover {
+      transform: scale(1.08);
+      background: #2563eb;
+    }
+    .notes-badge {
+      position: absolute;
+      top: -3px;
+      right: -3px;
+      background: var(--accent-red);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      min-width: 16px;
+      height: 16px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 4px;
+      border: 1.5px solid var(--bg-primary);
+    }
+    .notes-drawer {
+      position: fixed;
+      right: 0;
+      top: 0;
+      height: 100vh;
+      width: min(340px, 88vw);
+      background: var(--bg-secondary);
+      border-left: 1px solid var(--border);
+      box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+      transform: translateX(100%);
+      transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 920;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+    }
+    .notes-drawer.open {
+      transform: translateX(0);
+    }
+    .notes-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .notes-close {
+      border: 0;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 18px;
+      border-radius: 6px;
+      padding: 2px 6px;
+    }
+    .notes-close:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+    .notes-add {
+      margin: 12px 0 8px 0;
+    }
+    .notes-input {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      font-size: 13px;
+    }
+    .notes-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-right: 2px;
+      margin-top: 6px;
+    }
+    .note-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 9px 10px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--text-primary);
+      transition: background 0.15s;
+    }
+    .note-item:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .note-item.done .note-text {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+    .note-text {
+      flex: 1;
+      word-break: break-all;
+      line-height: 1.4;
+    }
+    .note-del {
+      border: 0;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 13px;
+      opacity: 0.6;
+      padding: 0 4px;
+    }
+    .note-del:hover {
+      opacity: 1;
+      color: var(--accent-red);
+    }
+
+    /* ─── 功能 9: 本机硬件监控卡 ─── */
+    .host-card {
+      margin-bottom: 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 18px;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-secondary);
+      box-shadow: var(--shadow);
+    }
+    .hc-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+    .hc-k {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .hc-v {
+      color: var(--text-primary);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .hc-v.cool { color: var(--accent-green); }
+    .hc-v.warm { color: var(--accent-orange); }
+    .hc-v.hot { color: var(--accent-red); }
+    .hc-bar-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .hc-bar {
+      width: 68px;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+      display: inline-block;
+    }
+    .hc-bar > i {
+      display: block;
+      height: 100%;
+      background: var(--accent-blue);
+      border-radius: 3px;
+      transition: width 0.3s;
+    }
+    .hc-bar.warn > i { background: var(--accent-orange); }
+    .hc-bar.danger > i { background: var(--accent-red); }
+
   </style>
 </head>
 <body class="theme-dark">
@@ -2790,6 +3120,15 @@
         </div>
       </div>
 
+      <!-- 时钟与天气卡片 -->
+      <div class="clock-weather" id="clockWeather">
+        <div class="cw-time" id="cwTime">--:--</div>
+        <div class="cw-sub">
+          <span id="cwDate">--月--日 星期-</span>
+          <span id="cwWx">☀️ 正在获取天气...</span>
+        </div>
+      </div>
+
       <div class="toolbar-actions">
         <button class="toolbar-btn" id="musicCardToggle" title="打开弹窗音乐播放器">🎵 飞牛音乐</button>
         <a href="/nvr" target="_blank" class="toolbar-btn" title="查看 EasyNVR 实时监控中心 (新标签页打开)">📹 NVR 监控</a>
@@ -2808,10 +3147,16 @@
       <div class="live-banner-grid" id="liveBannerGrid"></div>
     </div>
 
-    <!-- 搜索栏 -->
+    <!-- 本机硬件状态卡片 (功能9) -->
+    <div class="host-card" id="hostCard" style="display:none"></div>
+
+    <!-- 工作区 / 页面标签栏 (功能2) -->
+    <div class="page-tabs" id="pageTabs"></div>
+
+    <!-- 搜索栏 (功能6: 支持!b/!g快捷直达与回车直达) -->
     <div class="search-bar" id="searchBarWrapper">
       <span class="search-icon">🔍</span>
-      <input type="text" id="searchInput" placeholder="搜索服务名称、端口或分类...">
+      <input type="text" id="searchInput" placeholder="搜索服务... 支持 !b 百度、!g 谷歌直达，Enter 键直接进入">
     </div>
 
     <!-- 分页式管理控制面板 -->
@@ -3554,6 +3899,23 @@
         <label>描述</label>
         <input type="text" id="editDesc">
       </div>
+      <div class="modal-field">
+        <label>所属分类 / 工作区</label>
+        <input type="text" id="editCategory" placeholder="如: daily, media, ops, download 或留空">
+      </div>
+      <div class="modal-field">
+        <label>实时状态数据源 (功能1角标)</label>
+        <select id="editStatSource">
+          <option value="">自动检测 (根据名称/URL匹配)</option>
+          <option value="none">不显示角标</option>
+          <option value="qbittorrent">qBittorrent (下载/做种)</option>
+          <option value="transmission">Transmission (下载/做种)</option>
+          <option value="pve">Proxmox VE (运行VM数)</option>
+          <option value="easynvr">EasyNVR (在线通道数)</option>
+          <option value="homeassistant">Home Assistant (实体数)</option>
+          <option value="moviepilot">MoviePilot (运行状态)</option>
+        </select>
+      </div>
       <div class="modal-actions">
         <button class="admin-btn admin-btn-secondary" id="editCancel">取消</button>
         <button class="admin-btn admin-btn-primary" id="editSave">保存</button>
@@ -3790,6 +4152,18 @@
 
     // 网页加载时立即执行鉴权验证
     checkAuthStartup();
+
+    // 全局状态管理中心 (v2.6.0)
+    const GS = {
+      stats: {},
+      statsAt: 0,
+      ui: {},
+      pages: [],
+      curPage: 'all',
+      host: {},
+      notes: [],
+      activeCtxSid: null
+    };
 
     let allServices = [];
     let editingServiceId = null;
@@ -5356,6 +5730,8 @@
       try {
         const res = await fetch('/api/stats');
         const data = await res.json();
+        GS.stats = data;
+        GS.statsAt = Date.now();
         const bannerGrid = document.getElementById('liveBannerGrid');
         const banner = document.getElementById('liveBanner');
         let html = '';
@@ -5581,6 +5957,7 @@
         banner.style.display = hasAny ? 'block' : 'none';
         bannerGrid.innerHTML = html;
         initPopups();
+        if (typeof onStatsUpdated === 'function') onStatsUpdated(data);
       } catch (e) {}
     }
 
@@ -5748,17 +6125,502 @@
       });
     };
 
+    // ─── 功能1: 状态角标与就地更新防闪烁 ───
+    function buildCardStat(s) {
+      if (!s || !GS.stats) return '';
+      let src = s.stat_source;
+      const nm = (s.name || '').toLowerCase();
+      const u = (s.url || '').toLowerCase();
+      if (!src) {
+        if (nm.includes('qbittorrent') || u.includes(':8080') || u.includes('qb')) src = 'qbittorrent';
+        else if (nm.includes('transmission') || u.includes(':9091')) src = 'transmission';
+        else if (nm.includes('pve') || nm.includes('proxmox') || u.includes(':8006')) src = 'pve';
+        else if (nm.includes('easynvr') || nm.includes('nvr') || u.includes(':10800')) src = 'easynvr';
+        else if (nm.includes('home assistant') || nm.includes('homeassistant') || u.includes(':8123')) src = 'homeassistant';
+        else if (nm.includes('moviepilot') || u.includes(':3000')) src = 'moviepilot';
+      }
+      if (!src || src === 'none') return '';
+
+      const st = GS.stats[src];
+      if (!st || !st.enabled) return '';
+
+      let text = '';
+      if (src === 'qbittorrent') {
+        const dl = formatSpeed(st.dl_speed);
+        const up = formatSpeed(st.up_speed);
+        text = `↓ ${dl}  ↑ ${up}`;
+      } else if (src === 'transmission') {
+        const dl = formatSpeed(st.download_speed);
+        const up = formatSpeed(st.upload_speed);
+        text = `↓ ${dl}  ↑ ${up}`;
+      } else if (src === 'pve') {
+        const running = st.vms_running !== undefined ? st.vms_running : (st.vms ? st.vms.filter(v=>v.status==='running').length : 0);
+        const total = st.vms_total !== undefined ? st.vms_total : (st.vms ? st.vms.length : 0);
+        text = `运行 ${running} / ${total}`;
+      } else if (src === 'easynvr') {
+        const onl = st.online_channels || 0;
+        const tot = st.total_channels || 0;
+        text = `在线 ${onl} / ${tot}`;
+      } else if (src === 'homeassistant') {
+        const ent = st.entities_count || (st.entities ? st.entities.length : 0);
+        text = `实体 ${ent}`;
+      } else if (src === 'moviepilot') {
+        const dl = formatSpeed(st.download_speed);
+        text = `运行中 ↓ ${dl}`;
+      }
+
+      if (!text) return '';
+      return `<span class="card-stat active"><span class="cs-dot"></span><span class="cs-text">${escapeHtml(text)}</span></span>`;
+    }
+
+    function onStatsUpdated(data) {
+      document.querySelectorAll('.service-card[data-sid]').forEach(card => {
+        const sid = card.getAttribute('data-sid');
+        const s = allServices.find(x => x.id === sid);
+        if (!s) return;
+        const statHtml = buildCardStat(s);
+        let el = card.querySelector('.card-stat');
+        if (statHtml) {
+          if (el) {
+            if (el.outerHTML !== statHtml) el.outerHTML = statHtml;
+          } else {
+            const info = card.querySelector('.card-info');
+            if (info) info.insertAdjacentHTML('beforeend', statHtml);
+          }
+        } else if (el) {
+          el.remove();
+        }
+      });
+    }
+
+    // ─── 功能2: 工作区 / 页面标签栏 ───
+    const PAGE_DEFS = [
+      { key: 'all', label: '全部', cats: [] },
+      { key: 'daily', label: '日常', cats: ['daily', '日常', '常用', '工具', 'default'] },
+      { key: 'media', label: '影音', cats: ['media', '影音', '影视', '音乐', '视频'] },
+      { key: 'ops', label: '运维', cats: ['ops', '运维', '管理', '路由', '系统', '网络'] },
+      { key: 'download', label: '下载', cats: ['download', '下载', '种子', 'bt'] }
+    ];
+
+    function renderPageTabs() {
+      const container = document.getElementById('pageTabs');
+      if (!container) return;
+
+      const customCats = new Set();
+      allServices.forEach(s => {
+        const c = (s.category || '').trim();
+        if (c && !PAGE_DEFS.some(p => p.cats.includes(c.toLowerCase()))) {
+          customCats.add(c);
+        }
+      });
+
+      let tabs = [...PAGE_DEFS];
+      customCats.forEach(c => {
+        tabs.push({ key: c, label: c, cats: [c.toLowerCase()] });
+      });
+
+      container.innerHTML = tabs.map(tab => {
+        const activeCls = (GS.curPage === tab.key) ? 'active' : '';
+        return `<div class="page-tab ${activeCls}" data-key="${escapeHtml(tab.key)}">${escapeHtml(tab.label)}</div>`;
+      }).join('');
+
+      container.querySelectorAll('.page-tab').forEach(tab => {
+        tab.onclick = () => {
+          GS.curPage = tab.getAttribute('data-key');
+          renderPageTabs();
+          renderServices(document.getElementById('searchInput')?.value || '');
+        };
+      });
+    }
+
+    function isServiceInCurPage(s) {
+      if (!GS.curPage || GS.curPage === 'all') return true;
+      const def = PAGE_DEFS.find(p => p.key === GS.curPage);
+      const cat = (s.category || '').toLowerCase().trim();
+      if (def) {
+        if (!cat) return GS.curPage === 'daily';
+        return def.cats.includes(cat);
+      }
+      return cat === GS.curPage.toLowerCase();
+    }
+
+    // ─── 功能3: 排序与点击防刷统计 ───
+    function sortServicesList(list) {
+      const mode = (GS.ui && GS.ui.sort_mode) || 'manual';
+      if (mode === 'frequent') {
+        return [...list].sort((a, b) => (b.click_count || 0) - (a.click_count || 0));
+      } else if (mode === 'recent') {
+        return [...list].sort((a, b) => (b.last_access || 0) - (a.last_access || 0));
+      }
+      return list;
+    }
+
+    function recordServiceHit(sid) {
+      if (!sid) return;
+      const s = allServices.find(x => x.id === sid);
+      if (s) {
+        s.click_count = (s.click_count || 0) + 1;
+        s.last_access = Date.now();
+      }
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(`/api/services/${encodeURIComponent(sid)}/hit`, '');
+      } else {
+        fetch(`/api/services/${encodeURIComponent(sid)}/hit`, { method: 'POST', keepalive: true }).catch(() => {});
+      }
+    }
+
+    // ─── 功能4: 时钟与天气 ───
+    function tickClock() {
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      const elTime = document.getElementById('cwTime');
+      if (elTime) elTime.textContent = `${hh}:${mm}`;
+
+      const months = now.getMonth() + 1;
+      const dates = now.getDate();
+      const days = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+      const dayStr = days[now.getDay()];
+      const elDate = document.getElementById('cwDate');
+      if (elDate) elDate.textContent = `${months}月${dates}日 ${dayStr}`;
+    }
+
+    async function loadWeather() {
+      try {
+        const res = await fetch('/api/weather');
+        const data = await res.json();
+        const elWx = document.getElementById('cwWx');
+        if (!elWx) return;
+        if (data.ok) {
+          elWx.textContent = `${data.icon || '☀️'} ${data.temp}°C ${data.text || ''}`;
+        } else {
+          elWx.textContent = '🌤️ 天气服务已就绪';
+        }
+      } catch (e) {
+        const elWx = document.getElementById('cwWx');
+        if (elWx) elWx.textContent = '🌤️ 局域网离线';
+      }
+    }
+
+    // ─── 功能9: 本机硬件监控卡片 ───
+    async function loadHost() {
+      const card = document.getElementById('hostCard');
+      if (!card) return;
+      if (GS.ui && GS.ui.show_host_card === false) {
+        card.style.display = 'none';
+        return;
+      }
+      try {
+        const res = await fetch('/api/host');
+        if (!res.ok) return;
+        const d = await res.json();
+        if (!d.ok) return;
+        GS.host = d;
+
+        const cpu = d.cpu_percent || 0;
+        const mem = d.mem || {};
+        const memPct = mem.percent || 0;
+        const disk = d.disk || {};
+        const diskPct = disk.percent || 0;
+        const temp = (d.temp !== null && d.temp !== undefined) ? `${d.temp}°C` : null;
+        const load = (d.loadavg && d.loadavg.length) ? d.loadavg[0] : null;
+
+        const getCls = (pct) => pct >= 90 ? 'danger' : (pct >= 75 ? 'warn' : '');
+
+        card.innerHTML = `
+          <div class="hc-item">
+            <span class="hc-label">CPU 负载</span>
+            <span class="hc-val">${cpu}% ${load !== null ? `(${load})` : ''}</span>
+            <div class="hc-bar ${getCls(cpu)}"><i style="width: ${Math.min(cpu, 100)}%"></i></div>
+          </div>
+          <div class="hc-item">
+            <span class="hc-label">内存占用</span>
+            <span class="hc-val">${mem.used_gb || 0}G / ${mem.total_gb || 0}G (${memPct}%)</span>
+            <div class="hc-bar ${getCls(memPct)}"><i style="width: ${Math.min(memPct, 100)}%"></i></div>
+          </div>
+          <div class="hc-item">
+            <span class="hc-label">根盘空间</span>
+            <span class="hc-val">${disk.used_gb || 0}G / ${disk.total_gb || 0}G (${diskPct}%)</span>
+            <div class="hc-bar ${getCls(diskPct)}"><i style="width: ${Math.min(diskPct, 100)}%"></i></div>
+          </div>
+          <div class="hc-item">
+            <span class="hc-label">系统状态</span>
+            <span class="hc-val">运行时长: ${escapeHtml(d.uptime || '刚刚')}</span>
+            <span class="hc-sub">${temp ? `CPU温度: ${temp}` : '硬件运行正常'}</span>
+          </div>
+        `;
+        card.style.display = 'grid';
+      } catch (e) {}
+    }
+
+    // ─── 功能6: 快捷搜索直达与键盘控制 ───
+    function setupSearchShortcuts() {
+      const input = document.getElementById('searchInput');
+      if (!input) return;
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+          input.value = '';
+          renderServices('');
+          return;
+        }
+        if (e.key === 'Enter') {
+          const q = input.value.trim();
+          if (!q) return;
+
+          if (q.startsWith('!b ') || q.startsWith('!百度 ')) {
+            window.open('https://www.baidu.com/s?wd=' + encodeURIComponent(q.replace(/^(!b|!百度)\s+/, '')), '_blank');
+            return;
+          }
+          if (q.startsWith('!g ') || q.startsWith('!谷歌 ')) {
+            window.open('https://www.google.com/search?q=' + encodeURIComponent(q.replace(/^(!g|!谷歌)\s+/, '')), '_blank');
+            return;
+          }
+          if (q.startsWith('!d ') || q.startsWith('!必应 ')) {
+            window.open('https://cn.bing.com/search?q=' + encodeURIComponent(q.replace(/^(!d|!必应)\s+/, '')), '_blank');
+            return;
+          }
+
+          const visibleCards = document.querySelectorAll('#servicesGrid .service-card');
+          if (visibleCards.length === 1) {
+            const card = visibleCards[0];
+            const href = card.getAttribute('href');
+            if (href && href !== 'javascript:void(0)') {
+              const sid = card.getAttribute('data-sid');
+              if (sid) recordServiceHit(sid);
+              window.open(href, '_blank');
+            } else {
+              card.click();
+            }
+          }
+        }
+      });
+    }
+
+    // ─── 功能7: 右键快捷菜单 ───
+    function copyTextFallback(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+          toast('已复制: ' + text, 'success');
+        }).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+    }
+
+    function fallbackCopy(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        toast('已复制: ' + text, 'success');
+      } catch (err) {
+        toast('复制失败，请手动复制', 'error');
+      }
+      document.body.removeChild(ta);
+    }
+
+    function setupContextMenu() {
+      const grid = document.getElementById('servicesGrid');
+      const menu = document.getElementById('ctxMenu');
+      if (!grid || !menu) return;
+
+      grid.addEventListener('contextmenu', e => {
+        const card = e.target.closest('.service-card');
+        if (!card) return;
+        e.preventDefault();
+
+        const sid = card.getAttribute('data-sid');
+        GS.activeCtxSid = sid;
+
+        menu.style.display = 'block';
+        const x = Math.min(e.clientX, window.innerWidth - 180);
+        const y = Math.min(e.clientY, window.innerHeight - 200);
+        menu.style.left = `${x}px`;
+        menu.style.top = `${y}px`;
+      });
+
+      document.addEventListener('click', () => {
+        menu.style.display = 'none';
+      });
+
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') menu.style.display = 'none';
+      });
+
+      menu.querySelectorAll('.ctx-item').forEach(item => {
+        item.addEventListener('click', e => {
+          e.stopPropagation();
+          menu.style.display = 'none';
+          const act = item.getAttribute('data-act');
+          const sid = GS.activeCtxSid;
+          const s = allServices.find(x => x.id === sid);
+          if (!s) return;
+
+          const card = document.querySelector(`.service-card[data-sid="${sid}"]`);
+          const url = card ? card.getAttribute('href') : s.url;
+
+          if (act === 'open-new') {
+            recordServiceHit(sid);
+            window.open(url, '_blank');
+          } else if (act === 'copy-url') {
+            copyTextFallback(url);
+          } else if (act === 'copy-ip') {
+            try {
+              const u = new URL(url);
+              copyTextFallback(u.host);
+            } catch (err) {
+              copyTextFallback(url);
+            }
+          } else if (act === 'edit') {
+            openEditModal(sid);
+          } else if (act === 'hide') {
+            if (card) {
+              card.style.display = 'none';
+              toast(`已临时隐藏「${s.name}」`, 'info');
+            }
+          }
+        });
+      });
+    }
+
+    // ─── 功能8: 便签待办 ───
+    async function loadNotes() {
+      try {
+        const res = await fetch('/api/notes');
+        const d = await res.json();
+        GS.notes = d.items || [];
+        renderNotes();
+      } catch (e) {}
+    }
+
+    function renderNotes() {
+      const list = document.getElementById('notesList');
+      const badge = document.getElementById('notesBadge');
+      if (!list) return;
+
+      const uncompleted = GS.notes.filter(n => !n.done).length;
+      if (badge) {
+        if (uncompleted > 0) {
+          badge.textContent = uncompleted;
+          badge.style.display = 'flex';
+        } else {
+          badge.style.display = 'none';
+        }
+      }
+
+      if (GS.notes.length === 0) {
+        list.innerHTML = `<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:30px 10px">暂无便签，写点待办吧 📝</div>`;
+        return;
+      }
+
+      list.innerHTML = GS.notes.map(n => {
+        return `
+          <div class="note-item ${n.done ? 'done' : ''}" data-nid="${escapeHtml(n.id)}">
+            <input type="checkbox" class="note-cb" ${n.done ? 'checked' : ''}>
+            <div class="note-text">${escapeHtml(n.content)}</div>
+            <button class="note-del" title="删除">✕</button>
+          </div>
+        `;
+      }).join('');
+
+      list.querySelectorAll('.note-cb').forEach(cb => {
+        cb.onchange = async (e) => {
+          const item = e.target.closest('.note-item');
+          const nid = item.getAttribute('data-nid');
+          const done = e.target.checked;
+          try {
+            await fetch(`/api/notes/${encodeURIComponent(nid)}`, {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({ done })
+            });
+            const n = GS.notes.find(x => x.id === nid);
+            if (n) n.done = done ? 1 : 0;
+            renderNotes();
+          } catch (err) {}
+        };
+      });
+
+      list.querySelectorAll('.note-del').forEach(btn => {
+        btn.onclick = async (e) => {
+          const item = e.target.closest('.note-item');
+          const nid = item.getAttribute('data-nid');
+          try {
+            await fetch(`/api/notes/${encodeURIComponent(nid)}`, { method: 'DELETE' });
+            GS.notes = GS.notes.filter(x => x.id !== nid);
+            renderNotes();
+            toast('便签已删除', 'info');
+          } catch (err) {}
+        };
+      });
+    }
+
+    function setupNotesDrawer() {
+      const fab = document.getElementById('notesFab');
+      const drawer = document.getElementById('notesDrawer');
+      const close = document.getElementById('notesClose');
+      const addBtn = document.getElementById('noteAddBtn');
+      const input = document.getElementById('noteInput');
+
+      if (!fab || !drawer) return;
+
+      fab.onclick = () => {
+        drawer.classList.toggle('open');
+        if (drawer.classList.contains('open') && input) input.focus();
+      };
+
+      if (close) close.onclick = () => drawer.classList.remove('open');
+
+      const submitNote = async () => {
+        const text = input.value.trim();
+        if (!text) return;
+        try {
+          const res = await fetch('/api/notes', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ content: text })
+          });
+          const d = await res.json();
+          if (d.ok) {
+            input.value = '';
+            GS.notes.unshift({ id: d.id, content: text, done: 0, created_at: Date.now() });
+            renderNotes();
+          }
+        } catch (err) {
+          toast('添加便签失败: ' + err.message, 'error');
+        }
+      };
+
+      if (addBtn) addBtn.onclick = submitNote;
+      if (input) {
+        input.addEventListener('keydown', e => {
+          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            submitNote();
+          }
+        });
+      }
+    }
+
     // ─── 渲染服务卡片列表 ───
     function renderServices(filter = '') {
       const grid = document.getElementById('servicesGrid');
       const term = filter.toLowerCase().trim();
-      const filtered = allServices.filter(s => {
+      let filtered = allServices.filter(s => {
         if (!s.visible) return false;
+        if (!isServiceInCurPage(s)) return false;
         if (!term) return true;
         return (s.name && s.name.toLowerCase().includes(term)) ||
                (s.description && s.description.toLowerCase().includes(term)) ||
+               (s.category && s.category.toLowerCase().includes(term)) ||
                (s.port && s.port.toString().includes(term));
       });
+
+      filtered = sortServicesList(filtered);
 
       if (filtered.length === 0) {
         grid.innerHTML = '';
@@ -5794,13 +6656,16 @@
           }
         }
 
+        const statBadgeHtml = buildCardStat(s);
+
         return `
-          <a class="service-card" id="${cardId}" ${href} ${clickAttr} data-has-color="true" style="--card-rgb: ${cardRgb}; position:relative">
+          <a class="service-card" id="${cardId}" data-sid="${escapeHtml(s.id || '')}" ${href} ${clickAttr} data-has-color="true" style="--card-rgb: ${cardRgb}; position:relative" onmousedown="recordServiceHit('${escapeHtml(s.id || '')}')">
             ${extBadge}
             <div class="card-top">${iconHtml}</div>
             <div class="card-info">
               <div class="card-name">${escapeHtml(s.name)}</div>
               <div class="card-desc">${escapeHtml(s.description || '')}</div>
+              ${statBadgeHtml}
             </div>
           </a>
         `;
@@ -5932,6 +6797,7 @@
       const res = await fetch('/api/services?action=list');
       const d = await res.json();
       allServices = d.items || [];
+      renderPageTabs();
       renderServices();
 
       const listEl = document.getElementById('adminServicesList');
@@ -6082,6 +6948,8 @@
         document.getElementById('editWanUrl').value = s.wan_url || '';
         document.getElementById('editProtocol').value = s.protocol || 'http';
         document.getElementById('editDesc').value = s.description || '';
+        document.getElementById('editCategory').value = s.category || '';
+        document.getElementById('editStatSource').value = s.stat_source || '';
         if (s.favicon) {
           fp.src = s.favicon;
           fp.style.display = 'block';
@@ -6170,6 +7038,8 @@
         document.getElementById('editWanUrl').value = '';
         document.getElementById('editProtocol').value = 'http';
         document.getElementById('editDesc').value = '';
+        document.getElementById('editCategory').value = '';
+        document.getElementById('editStatSource').value = '';
         fp.style.display = 'none';
         const luckyHint = document.getElementById('luckyModalHint');
         if (luckyHint) luckyHint.style.display = 'none';
@@ -6316,6 +7186,8 @@
         port,
         protocol,
         desc: document.getElementById('editDesc').value.trim(),
+        category: document.getElementById('editCategory').value.trim(),
+        stat_source: document.getElementById('editStatSource').value,
       };
       const action = editingServiceId ? 'update' : 'add';
       try {
@@ -7391,9 +8263,57 @@
       initMusicPlayer();
       refreshStats();
       setInterval(refreshStats, 5000);
+
+      // v2.6.0 扩展功能初始化
+      tickClock();
+      setInterval(tickClock, 1000);
+      loadWeather();
+      setInterval(loadWeather, 600000); // 10分钟刷新一次天气
+      loadHost();
+      setInterval(loadHost, 10000); // 10秒刷新硬件小卡
+      loadNotes();
+      setupNotesDrawer();
+      setupSearchShortcuts();
+      setupContextMenu();
+
+      // PWA 桌面支持
+      if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      }
     }
 
     init();
   </script>
+  <!-- 右键快捷菜单 (功能7) -->
+  <div class="ctx-menu" id="ctxMenu" style="display:none">
+    <div class="ctx-item" data-act="open-new">🔗 在新标签页打开</div>
+    <div class="ctx-item" data-act="copy-url">📋 复制访问地址</div>
+    <div class="ctx-item" data-act="copy-ip">🌐 复制 IP:端口</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item" data-act="edit">✏️ 编辑服务信息</div>
+    <div class="ctx-item" data-act="hide">👁️ 从当前视图隐藏</div>
+  </div>
+
+  <!-- 便签待办悬浮按钮与滑出抽屉 (功能8) -->
+  <button class="notes-fab" id="notesFab" title="待办便签">
+    📝
+    <span class="notes-badge" id="notesBadge" style="display:none">0</span>
+  </button>
+  <div class="notes-drawer" id="notesDrawer">
+    <div class="notes-header">
+      <div class="notes-title">📝 便签与待办</div>
+      <button class="notes-close" id="notesClose">✕</button>
+    </div>
+    <div class="notes-body">
+      <div class="notes-form">
+        <textarea id="noteInput" placeholder="写点待办事项或备忘... (Ctrl+Enter 快速添加)" rows="2"></textarea>
+        <button id="noteAddBtn">添加便签</button>
+      </div>
+      <div class="notes-list" id="notesList">
+        <div style="text-align:center;color:var(--text-muted);font-size:12px;padding:20px">暂无便签</div>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
