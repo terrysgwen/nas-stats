@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NAS 服务导航 v2.6.4</title>
+  <title>NAS 服务导航 v2.6.5</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
   <link rel="manifest" href="/manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -4144,7 +4144,7 @@
       <div class="modal-field">
         <label>实时状态数据源 (功能1角标)</label>
         <select id="editStatSource">
-          <option value="">自动检测 (根据名称/URL智能匹配)</option>
+          <option value="">🚫 未选定数据源 (不显示卡片角标)</option>
           <option value="none">不显示角标</option>
           <optgroup label="🌐 路由与网络监控">
             <option value="ikuai">爱快路由器 (实时下行/上行网速)</option>
@@ -6553,38 +6553,29 @@
     // ─── 功能1: 状态角标与就地更新防闪烁 ───
     function buildCardStat(s) {
       if (!s || !GS.stats || (GS.ui && GS.ui.show_card_stats === false)) return '';
-      let src = s.stat_source;
-      const nm = (s.name || '').toLowerCase();
-      const u = (s.url || '').toLowerCase();
-      const desc = (s.description || '').toLowerCase();
 
-      if (!src) {
-        // 自动智能识别数据源 (覆盖中英文名称、常见别名与协议端口)
-        if (nm.includes('ikuai') || nm.includes('爱快') || u.includes('ikuai')) {
-          src = 'ikuai';
-        } else if (nm.includes('istoreos') || nm.includes('istore') || nm.includes('openwrt') || nm.includes('软路由') || u.includes('istore') || u.includes('openwrt')) {
-          src = 'istoreos';
-        } else if (nm.includes('qbittorrent') || nm.includes('qb') || nm.includes('种子') || (nm.includes('bt') && !nm.includes('btpanel') && !nm.includes('宝塔')) || u.includes(':8080') || u.includes('qb')) {
-          src = 'qbittorrent';
-        } else if (nm.includes('transmission') || nm.includes('tr下载') || nm.includes('/transmission') || u.includes(':9091') || u.includes('transmission')) {
-          src = 'transmission';
-        } else if (nm.includes('pve') || nm.includes('proxmox') || u.includes(':8006') || u.includes('proxmox')) {
-          src = 'pve';
-        } else if (nm.includes('easynvr') || nm.includes('nvr') || nm.includes('摄像头') || nm.includes('监控') || u.includes(':10800') || u.includes('easynvr')) {
-          src = 'easynvr';
-        } else if (nm.includes('home assistant') || nm.includes('homeassistant') || nm.includes('智能家居') || nm.includes('hass') || u.includes(':8123')) {
-          src = 'homeassistant';
-        } else if (nm.includes('moviepilot') || nm.includes('mp下载') || u.includes(':3000') || u.includes('moviepilot')) {
-          src = 'moviepilot';
-        } else if (nm.includes('emby') || u.includes(':8096') || u.includes('emby')) {
-          src = 'emby';
-        } else if (nm.includes('jellyfin') || u.includes('jellyfin')) {
-          src = 'jellyfin';
-        } else if (nm.includes('plex') || u.includes(':32400') || u.includes('plex')) {
-          src = 'plex';
+      // 核心规则：仅当明确选定了服务快捷方式联动时才显示角标，未选定的一律不显示！
+      let src = '';
+
+      // 1. 优先检查：监控服务设置中是否明确选定了当前快捷方式卡片 (linked_service_id === s.id)
+      for (const [mid, st] of Object.entries(GS.stats)) {
+        if (mid === 'timestamp') continue;
+        if (st && st.enabled && st.linked_service_id && String(st.linked_service_id) === String(s.id)) {
+          src = mid;
+          break;
         }
       }
-      if (!src || src === 'none') return '';
+
+      // 2. 检查：服务快捷方式本身是否明确选定了对应的监控数据源 (s.stat_source === mid)
+      if (!src && s.stat_source && s.stat_source !== 'none') {
+        const st = GS.stats[s.stat_source];
+        if (st && st.enabled) {
+          src = s.stat_source;
+        }
+      }
+
+      // 3. 严格判定：未选定服务快捷方式的，绝对不显示快捷方式卡片角标！
+      if (!src) return '';
 
       const st = GS.stats[src];
       if (!st || !st.enabled) return '';
@@ -7395,19 +7386,34 @@
 
     // ─── 管理后台: 监控模块设置卡片 ───
     async function loadMonitorsAdmin() {
+      if (!allServices || allServices.length === 0) {
+        try {
+          const sRes = await fetch('/api/services');
+          allServices = await sRes.json();
+        } catch (e) {}
+      }
+
       const res = await fetch('/api/monitors');
       const data = await res.json();
       const container = document.getElementById('monitorsContainer');
 
       container.innerHTML = data.items.map(m => {
         const cfg = m.config || {};
-        const fieldsHtml = Object.entries(cfg).map(([k, v]) => `
+        const fieldsHtml = Object.entries(cfg)
+          .filter(([k]) => k !== 'linked_service_id')
+          .map(([k, v]) => `
           <div class="monitor-field ${k === 'url' ? 'full' : ''}">
             <label>${escapeHtml(k)}</label>
             <input type="${k.includes('pass') || k.includes('token') || k.includes('key') ? 'password' : 'text'}"
                    data-mid="${escapeHtml(m.id)}" data-key="${escapeHtml(k)}" value="${escapeHtml(v || '')}">
           </div>
         `).join('');
+
+        const currentLinked = String(cfg.linked_service_id || '');
+        const svcOptionsHtml = (allServices || []).map(s => {
+          const isSel = (currentLinked === String(s.id) || (!currentLinked && String(s.stat_source || '') === String(m.id))) ? 'selected' : '';
+          return `<option value="${escapeHtml(s.id)}" ${isSel}>${escapeHtml(s.name)} (${escapeHtml(s.url || '未设URL')})</option>`;
+        }).join('');
 
         return `
           <div class="monitor-card">
@@ -7423,7 +7429,21 @@
                 </label>
               </div>
             </div>
-            <div class="monitor-fields">${fieldsHtml}</div>
+            <div class="monitor-fields">
+              ${fieldsHtml}
+              <div class="monitor-field full" style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)">
+                <label style="color:var(--accent-blue);font-weight:600;display:flex;align-items:center;gap:6px">
+                  <span>🔗 关联服务快捷方式 (卡片角标联动)</span>
+                </label>
+                <select id="linked_service_${m.id}" data-mid="${m.id}" style="width:100%;padding:7px 10px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:12.5px;outline:none">
+                  <option value="">🚫 未选定快捷方式 (不显示卡片角标)</option>
+                  ${svcOptionsHtml}
+                </select>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
+                  选定对应服务快捷方式后，该卡片右上角将显示本监控实时状态角标；未选定时卡片一律不显示角标。
+                </div>
+              </div>
+            </div>
             <div class="monitor-actions">
               <button class="admin-btn admin-btn-secondary" onclick="testMonitor('${m.id}')">测试连接</button>
               <button class="admin-btn admin-btn-primary" onclick="saveMonitor('${m.id}')">保存配置</button>
@@ -7437,6 +7457,10 @@
       const inputs = document.querySelectorAll(`input[data-mid="${mid}"]`);
       const cfg = {};
       inputs.forEach(i => cfg[i.dataset.key] = i.value);
+      const linkedSel = document.getElementById(`linked_service_${mid}`);
+      if (linkedSel) {
+        cfg['linked_service_id'] = linkedSel.value || '';
+      }
       const enabled = document.getElementById(`enable_${mid}`).checked;
       const show_in_banner = document.getElementById(`banner_${mid}`).checked;
 
@@ -7447,6 +7471,7 @@
           body: JSON.stringify({ enabled, show_in_banner, config: cfg })
         });
         toast('监控配置已保存', 'success');
+        await loadServicesAdmin();
         refreshStats();
       } catch (e) {
         toast('保存失败', 'error');

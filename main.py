@@ -4,7 +4,7 @@ All configuration and services are persisted in SQLite (database.py).
 Monitors are dynamically discovered and instantiated from monitors package.
 """
 
-__version__ = "2.6.4"
+__version__ = "2.6.5"
 
 import asyncio
 import base64
@@ -402,17 +402,21 @@ async def get_stats():
     # Keep backward compatibility and attach show_in_banner metadata
     final_output = {}
     for mid, m_info in db_monitors.items():
+        m_cfg = m_info.get("config") or {}
+        linked_svc_id = str(m_cfg.get("linked_service_id") or "").strip()
         if m_info["enabled"] and mid in results:
             data = dict(results[mid])
             data["show_in_banner"] = m_info["show_in_banner"]
             data["display_name"] = m_info["display_name"]
+            data["linked_service_id"] = linked_svc_id
             final_output[mid] = data
         else:
             final_output[mid] = {
                 "enabled": False,
                 "status": "disabled",
                 "show_in_banner": m_info["show_in_banner"],
-                "display_name": m_info["display_name"]
+                "display_name": m_info["display_name"],
+                "linked_service_id": linked_svc_id,
             }
 
     final_output["timestamp"] = int(now)
@@ -526,6 +530,18 @@ async def update_monitor_endpoint(monitor_id: str, request: Request, _auth: dict
             if new_cfg.get(secret_key) in ("********", "", None) and current_cfg.get(secret_key):
                 new_cfg[secret_key] = current_cfg[secret_key]
         updates["config"] = new_cfg
+
+        # 联动更新服务快捷方式的 stat_source 字段
+        if "linked_service_id" in new_cfg:
+            new_target_id = str(new_cfg.get("linked_service_id") or "").strip()
+            all_services = db.get_all_services()
+            # 将旧的关联该 monitor 的服务解绑
+            for s in all_services:
+                if s.get("stat_source") == monitor_id and s.get("id") != new_target_id:
+                    db.update_service(s["id"], stat_source="")
+            # 如果指定了新的快捷方式卡片，则将其 stat_source 绑定为当前 monitor_id
+            if new_target_id:
+                db.update_service(new_target_id, stat_source=monitor_id)
 
     db.update_monitor(monitor_id, **updates)
     reload_monitors()
