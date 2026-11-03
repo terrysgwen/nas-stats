@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NAS 服务导航 v2.6.3</title>
+  <title>NAS 服务导航 v2.6.4</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
   <link rel="manifest" href="/manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -4144,14 +4144,29 @@
       <div class="modal-field">
         <label>实时状态数据源 (功能1角标)</label>
         <select id="editStatSource">
-          <option value="">自动检测 (根据名称/URL匹配)</option>
+          <option value="">自动检测 (根据名称/URL智能匹配)</option>
           <option value="none">不显示角标</option>
-          <option value="qbittorrent">qBittorrent (下载/做种)</option>
-          <option value="transmission">Transmission (下载/做种)</option>
-          <option value="pve">Proxmox VE (运行VM数)</option>
-          <option value="easynvr">EasyNVR (在线通道数)</option>
-          <option value="homeassistant">Home Assistant (实体数)</option>
-          <option value="moviepilot">MoviePilot (运行状态)</option>
+          <optgroup label="🌐 路由与网络监控">
+            <option value="ikuai">爱快路由器 (实时下行/上行网速)</option>
+            <option value="istoreos">iStoreOS / OpenWrt (软路由系统内存/负载)</option>
+          </optgroup>
+          <optgroup label="⬇️ 下载与传输">
+            <option value="qbittorrent">qBittorrent (实时下载/做种)</option>
+            <option value="transmission">Transmission (实时下载/做种)</option>
+          </optgroup>
+          <optgroup label="🖥️ 虚拟化与系统监控">
+            <option value="pve">Proxmox VE (运行中虚拟机数)</option>
+          </optgroup>
+          <optgroup label="📹 视频与智能家居">
+            <option value="easynvr">EasyNVR (在线监控通道)</option>
+            <option value="homeassistant">Home Assistant (实体总数/亮灯数)</option>
+          </optgroup>
+          <optgroup label="🎬 媒体与影视">
+            <option value="moviepilot">MoviePilot (下载与运行状态)</option>
+            <option value="emby">Emby (活跃播放数)</option>
+            <option value="jellyfin">Jellyfin (活跃播放数)</option>
+            <option value="plex">Plex (活跃播放数)</option>
+          </optgroup>
         </select>
       </div>
       <div class="modal-actions">
@@ -4415,16 +4430,24 @@
     }
 
     function formatSize(bytes) {
-      if (!bytes || isNaN(bytes)) return '0 B';
+      if (!bytes || bytes <= 0 || isNaN(bytes)) return '0 B';
       const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
-      const i = Math.floor(Math.log(bytes) / Math.log(1024));
+      const i = Math.min(units.length - 1, Math.max(0, Math.floor(Math.log(bytes) / Math.log(1024))));
       return (bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
     }
 
     function formatSpeed(bytesPerSec) {
-      if (!bytesPerSec || bytesPerSec === 0) return '0 B/s';
+      if (!bytesPerSec || bytesPerSec === 0 || bytesPerSec === '0') return '0 B/s';
+      if (typeof bytesPerSec === 'string') {
+        const trimmed = bytesPerSec.trim();
+        if (/[kKmMgGtT]b\/s/i.test(trimmed) || /bps/i.test(trimmed)) return trimmed;
+        if (/^[0-9\.]+\s*[kKmMgGtT]b?$/i.test(trimmed)) return trimmed + '/s';
+        const num = parseFloat(trimmed);
+        if (isNaN(num) || num <= 0) return '0 B/s';
+        bytesPerSec = num;
+      }
       const units = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
-      const i = Math.floor(Math.log(bytesPerSec) / Math.log(1024));
+      const i = Math.min(units.length - 1, Math.max(0, Math.floor(Math.log(bytesPerSec) / Math.log(1024))));
       return (bytesPerSec / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
     }
 
@@ -6533,43 +6556,105 @@
       let src = s.stat_source;
       const nm = (s.name || '').toLowerCase();
       const u = (s.url || '').toLowerCase();
+      const desc = (s.description || '').toLowerCase();
+
       if (!src) {
-        if (nm.includes('qbittorrent') || u.includes(':8080') || u.includes('qb')) src = 'qbittorrent';
-        else if (nm.includes('transmission') || u.includes(':9091')) src = 'transmission';
-        else if (nm.includes('pve') || nm.includes('proxmox') || u.includes(':8006')) src = 'pve';
-        else if (nm.includes('easynvr') || nm.includes('nvr') || u.includes(':10800')) src = 'easynvr';
-        else if (nm.includes('home assistant') || nm.includes('homeassistant') || u.includes(':8123')) src = 'homeassistant';
-        else if (nm.includes('moviepilot') || u.includes(':3000')) src = 'moviepilot';
+        // 自动智能识别数据源 (覆盖中英文名称、常见别名与协议端口)
+        if (nm.includes('ikuai') || nm.includes('爱快') || u.includes('ikuai')) {
+          src = 'ikuai';
+        } else if (nm.includes('istoreos') || nm.includes('istore') || nm.includes('openwrt') || nm.includes('软路由') || u.includes('istore') || u.includes('openwrt')) {
+          src = 'istoreos';
+        } else if (nm.includes('qbittorrent') || nm.includes('qb') || nm.includes('种子') || (nm.includes('bt') && !nm.includes('btpanel') && !nm.includes('宝塔')) || u.includes(':8080') || u.includes('qb')) {
+          src = 'qbittorrent';
+        } else if (nm.includes('transmission') || nm.includes('tr下载') || nm.includes('/transmission') || u.includes(':9091') || u.includes('transmission')) {
+          src = 'transmission';
+        } else if (nm.includes('pve') || nm.includes('proxmox') || u.includes(':8006') || u.includes('proxmox')) {
+          src = 'pve';
+        } else if (nm.includes('easynvr') || nm.includes('nvr') || nm.includes('摄像头') || nm.includes('监控') || u.includes(':10800') || u.includes('easynvr')) {
+          src = 'easynvr';
+        } else if (nm.includes('home assistant') || nm.includes('homeassistant') || nm.includes('智能家居') || nm.includes('hass') || u.includes(':8123')) {
+          src = 'homeassistant';
+        } else if (nm.includes('moviepilot') || nm.includes('mp下载') || u.includes(':3000') || u.includes('moviepilot')) {
+          src = 'moviepilot';
+        } else if (nm.includes('emby') || u.includes(':8096') || u.includes('emby')) {
+          src = 'emby';
+        } else if (nm.includes('jellyfin') || u.includes('jellyfin')) {
+          src = 'jellyfin';
+        } else if (nm.includes('plex') || u.includes(':32400') || u.includes('plex')) {
+          src = 'plex';
+        }
       }
       if (!src || src === 'none') return '';
 
       const st = GS.stats[src];
       if (!st || !st.enabled) return '';
 
+      // 异常或离线状态统一告警展示
+      if (st.status && st.status !== 'ok') {
+        const errTip = st.error || (st.status === 'auth_failed' ? '认证失败，请检查账号密码' : '连接失败/服务离线');
+        const badgeLabel = st.status === 'auth_failed' ? '认证失败' : '离线';
+        return `<span class="card-stat card-stat-warn" title="${escapeHtml(errTip)}"><span class="cs-dot" style="background:#f59e0b;box-shadow:0 0 6px #f59e0b"></span><span class="cs-val" style="color:#fbbf24">${badgeLabel}</span></span>`;
+      }
+
+      // 1. 爱快路由器 (实时下行/上行网络流量)
+      if (src === 'ikuai') {
+        const dl = formatSpeed(st.dl_speed || 0);
+        const up = formatSpeed(st.up_speed || 0);
+        const connTip = st.connect_num ? ` | 连接数: ${st.connect_num}` : '';
+        const cpuTip = st.cpu ? ` | CPU: ${st.cpu}%` : '';
+        return `<span class="card-stat active" title="爱快实时网络: 下行 ${escapeHtml(dl)} / 上行 ${escapeHtml(up)}${connTip}${cpuTip}"><span class="cs-dot"></span><span class="cs-val cs-dl">↓ ${escapeHtml(dl)}</span><span class="cs-sep"></span><span class="cs-val cs-up">↑ ${escapeHtml(up)}</span></span>`;
+      }
+
+      // 2. iStoreOS / OpenWrt (软路由系统内存与负载)
+      if (src === 'istoreos') {
+        const memTxt = (st.mem_pct !== undefined && st.mem_pct > 0) ? `内存 ${st.mem_pct}%` : (st.load_avg ? `负载 ${st.load_avg}` : '在线');
+        const loadTip = st.load_avg !== undefined ? ` | 负载: ${st.load_avg}` : '';
+        const memTip = st.mem_pct ? ` | 内存: ${st.mem_pct}%` : '';
+        return `<span class="card-stat active" title="iStoreOS/OpenWrt 状态: ${memTxt}${loadTip}${memTip}"><span class="cs-dot"></span><span class="cs-val">${memTxt}</span></span>`;
+      }
+
+      // 3. 下载器 (qBittorrent / Transmission)
       if (src === 'qbittorrent' || src === 'transmission') {
-        const rawDl = src === 'qbittorrent' ? st.dl_speed : st.download_speed;
-        const rawUp = src === 'qbittorrent' ? st.up_speed : st.upload_speed;
+        const rawDl = st.dl_speed !== undefined ? st.dl_speed : (st.download_speed || 0);
+        const rawUp = st.up_speed !== undefined ? st.up_speed : (st.upload_speed || 0);
         const dl = formatSpeed(rawDl);
         const up = formatSpeed(rawUp);
-        return `<span class="card-stat active" title="实时速度: 下行 ${escapeHtml(dl)} / 上行 ${escapeHtml(up)}"><span class="cs-dot"></span><span class="cs-val cs-dl">↓ ${escapeHtml(dl)}</span><span class="cs-sep"></span><span class="cs-val cs-up">↑ ${escapeHtml(up)}</span></span>`;
+        const countTip = st.downloading !== undefined ? ` | 下载中: ${st.downloading}` : (st.active !== undefined ? ` | 活跃: ${st.active}` : '');
+        return `<span class="card-stat active" title="实时速度: 下行 ${escapeHtml(dl)} / 上行 ${escapeHtml(up)}${countTip}"><span class="cs-dot"></span><span class="cs-val cs-dl">↓ ${escapeHtml(dl)}</span><span class="cs-sep"></span><span class="cs-val cs-up">↑ ${escapeHtml(up)}</span></span>`;
       }
+
+      // 4. Proxmox VE (运行中虚拟机数)
       if (src === 'pve') {
         const running = st.vms_running !== undefined ? st.vms_running : (st.vms ? st.vms.filter(v=>v.status==='running').length : 0);
         const total = st.vms_total !== undefined ? st.vms_total : (st.vms ? st.vms.length : 0);
-        return `<span class="card-stat active" title="PVE 虚拟机运行数"><span class="cs-dot"></span><span class="cs-val">VM ${running}/${total}</span></span>`;
+        return `<span class="card-stat active" title="PVE 虚拟机: ${running} 运行 / ${total} 总数"><span class="cs-dot"></span><span class="cs-val">VM ${running}/${total}</span></span>`;
       }
+
+      // 5. EasyNVR (在线摄像头通道)
       if (src === 'easynvr') {
         const onl = st.online_channels || 0;
         const tot = st.total_channels || 0;
-        return `<span class="card-stat active" title="EasyNVR 在线通道"><span class="cs-dot"></span><span class="cs-val">在线 ${onl}/${tot}</span></span>`;
+        return `<span class="card-stat active" title="EasyNVR 在线监控通道: ${onl} / ${tot}"><span class="cs-dot"></span><span class="cs-val">在线 ${onl}/${tot}</span></span>`;
       }
+
+      // 6. Home Assistant (实体总数 / 点亮灯泡数)
       if (src === 'homeassistant') {
-        const ent = st.entities_count || (st.entities ? st.entities.length : 0);
-        return `<span class="card-stat active" title="HomeAssistant 实体数"><span class="cs-dot"></span><span class="cs-val">实体 ${ent}</span></span>`;
+        const ent = st.entities_count || st.total_entities || (st.entities ? st.entities.length : 0);
+        const txt = st.lights_on !== undefined && st.lights_on > 0 ? `亮灯 ${st.lights_on}` : `实体 ${ent}`;
+        return `<span class="card-stat active" title="HomeAssistant: 亮灯 ${st.lights_on || 0} / 实体 ${ent}"><span class="cs-dot"></span><span class="cs-val">${txt}</span></span>`;
       }
+
+      // 7. MoviePilot (下载中 / 运行状态)
       if (src === 'moviepilot') {
-        const dl = formatSpeed(st.download_speed);
-        return `<span class="card-stat active" title="MoviePilot 状态"><span class="cs-dot"></span><span class="cs-val cs-dl">↓ ${escapeHtml(dl)}</span></span>`;
+        const rawDl = (st.downloader && st.downloader.dl_speed) ? st.downloader.dl_speed : (st.download_speed || 0);
+        const dl = formatSpeed(rawDl);
+        return `<span class="card-stat active" title="MoviePilot 下载运行状态"><span class="cs-dot"></span><span class="cs-val cs-dl">↓ ${escapeHtml(dl)}</span></span>`;
+      }
+
+      // 8. 影音播放会话 (Emby / Jellyfin / Plex)
+      if (src === 'emby' || src === 'jellyfin' || src === 'plex') {
+        const active = st.active_streams || 0;
+        return `<span class="card-stat active" title="${escapeHtml(st.display_name || src)}: ${active} 活跃播放会话"><span class="cs-dot"></span><span class="cs-val">播放 ${active}</span></span>`;
       }
 
       return '';
@@ -7390,6 +7475,7 @@
       allServices = d.items || [];
       renderPageTabs();
       renderServices();
+      if (GS.stats) onStatsUpdated(GS.stats);
 
       const listEl = document.getElementById('adminServicesList');
       listEl.innerHTML = allServices.map(s => {
