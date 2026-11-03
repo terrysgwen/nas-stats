@@ -405,6 +405,7 @@ NEW_MONITOR_DEFS = [
     ("jellyfin", "Jellyfin", {"url": "", "api_key": ""}),
     ("homeassistant", "Home Assistant", {"url": "", "token": ""}),
     ("easynvr", "EasyNVR", {"url": "", "username": "admin", "password": "admin"}),
+    ("host", "本机 (CPU/内存/温度)", {}),
 ]
 
 

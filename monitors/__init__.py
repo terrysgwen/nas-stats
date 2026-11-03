@@ -16,6 +16,7 @@ from .plex import PlexMonitor
 from .jellyfin import JellyfinMonitor
 from .homeassistant import HomeAssistantMonitor
 from .easynvr import EasyNVRMonitor
+from .host import HostMonitor
 
 MONITOR_REGISTRY: dict[str, type[BaseMonitor]] = {
     "qbittorrent": QBittorrentMonitor,
@@ -29,6 +30,7 @@ MONITOR_REGISTRY: dict[str, type[BaseMonitor]] = {
     "jellyfin": JellyfinMonitor,
     "homeassistant": HomeAssistantMonitor,
     "easynvr": EasyNVRMonitor,
+    "host": HostMonitor,
 }
 
 __all__ = [
@@ -45,4 +47,5 @@ __all__ = [
     "JellyfinMonitor",
     "HomeAssistantMonitor",
     "EasyNVRMonitor",
+    "HostMonitor",
 ]
