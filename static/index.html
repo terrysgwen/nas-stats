@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NAS 服务导航 v2.6.6</title>
+  <title>NAS 服务导航 v2.6.7</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
   <link rel="manifest" href="/manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -3459,6 +3459,18 @@
             </label>
           </div>
 
+          <div class="setting-item setting-row-item" id="sortModeSettingRow">
+            <div class="setting-item-header">
+              <div class="setting-label">📊 卡片排序规则</div>
+              <div class="setting-desc">控制首页卡片排列顺序（默认常用点击热度优先）</div>
+            </div>
+            <select id="settingSortMode" style="padding:6px 10px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:12.5px;outline:none">
+              <option value="frequent">⚡ 按点击次数排序 (常用卡片优先)</option>
+              <option value="recent">🕒 按最近访问时间排序 (最新访问靠前)</option>
+              <option value="manual">📌 按手动自定义排序 (管理后台拖拽顺序)</option>
+            </select>
+          </div>
+
           <div class="setting-item setting-row-item">
             <div class="setting-item-header">
               <div class="setting-label">🌐 顶部实时监控横条</div>
@@ -4538,6 +4550,9 @@
       const enableClickStats = ui.enable_click_stats !== false;
       const elSetClickStats = document.getElementById('settingEnableClickStats');
       if (elSetClickStats) elSetClickStats.checked = enableClickStats;
+      const curSortMode = ui.sort_mode || (enableClickStats ? 'frequent' : 'manual');
+      const elSetSortMode = document.getElementById('settingSortMode');
+      if (elSetSortMode) elSetSortMode.value = curSortMode;
 
       // 9. 顶部实时监控横条
       const showLiveBanner = ui.show_live_banner !== false;
@@ -6731,18 +6746,49 @@
         tabs.push({ key: c, label: c, cats: [c.toLowerCase()] });
       });
 
+      const curMode = getEffectiveSortMode();
+      const sortMeta = {
+        frequent: { label: '⚡ 点击热度', next: 'recent', tip: '当前: 按点击次数从高到低排序 (点击切换为最近访问)' },
+        recent: { label: '🕒 最近访问', next: 'manual', tip: '当前: 按最近访问时间排序 (点击切换为自定义排序)' },
+        manual: { label: '📌 自定义排序', next: 'frequent', tip: '当前: 按后台拖拽顺序 (点击切换为点击热度排序)' }
+      };
+      const curMeta = sortMeta[curMode] || sortMeta.frequent;
+      const sortBtnHtml = `<div class="page-tab page-tab-sort" id="btnQuickSortToggle" title="${curMeta.tip}" style="margin-left:auto;cursor:pointer;opacity:0.88;border:1px dashed var(--border);background:var(--bg-card)">${curMeta.label} ▾</div>`;
+
       container.innerHTML = tabs.map(tab => {
         const activeCls = (GS.curPage === tab.key) ? 'active' : '';
         return `<div class="page-tab ${activeCls}" data-key="${escapeHtml(tab.key)}">${escapeHtml(tab.label)}</div>`;
-      }).join('');
+      }).join('') + sortBtnHtml;
 
-      container.querySelectorAll('.page-tab').forEach(tab => {
+      container.querySelectorAll('.page-tab:not(#btnQuickSortToggle)').forEach(tab => {
         tab.onclick = () => {
           GS.curPage = tab.getAttribute('data-key');
           renderPageTabs();
           renderServices(document.getElementById('searchInput')?.value || '');
         };
       });
+
+      const sortBtn = container.querySelector('#btnQuickSortToggle');
+      if (sortBtn) {
+        sortBtn.onclick = async (e) => {
+          e.stopPropagation();
+          const nextMode = curMeta.next;
+          if (!GS.ui) GS.ui = {};
+          GS.ui.sort_mode = nextMode;
+          const elSelect = document.getElementById('settingSortMode');
+          if (elSelect) elSelect.value = nextMode;
+          toast(`已切换排序: ${sortMeta[nextMode].label}`, 'info');
+          renderPageTabs();
+          renderServices(document.getElementById('searchInput')?.value || '');
+          try {
+            await fetch('/api/config', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({ ui: GS.ui })
+            });
+          } catch (err) {}
+        };
+      }
     }
 
     function isServiceInCurPage(s) {
@@ -6757,27 +6803,47 @@
     }
 
     // ─── 功能3: 排序与点击防刷统计 ───
-    function sortServicesList(list) {
-      const mode = (GS.ui && GS.ui.sort_mode) || 'manual';
-      if (mode === 'frequent') {
-        return [...list].sort((a, b) => (b.click_count || 0) - (a.click_count || 0));
-      } else if (mode === 'recent') {
-        return [...list].sort((a, b) => (b.last_access || 0) - (a.last_access || 0));
-      }
-      return list;
+    function getEffectiveSortMode() {
+      if (GS.ui && GS.ui.sort_mode) return GS.ui.sort_mode;
+      const enableClickStats = !GS.ui || GS.ui.enable_click_stats !== false;
+      return enableClickStats ? 'frequent' : 'manual';
     }
 
+    function sortServicesList(list) {
+      const mode = getEffectiveSortMode();
+      if (mode === 'frequent') {
+        return [...list].sort((a, b) => {
+          const diff = (Number(b.click_count) || 0) - (Number(a.click_count) || 0);
+          if (diff !== 0) return diff;
+          return (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0);
+        });
+      } else if (mode === 'recent') {
+        return [...list].sort((a, b) => {
+          const diff = (Number(b.last_access) || 0) - (Number(a.last_access) || 0);
+          if (diff !== 0) return diff;
+          return (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0);
+        });
+      }
+      return [...list].sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0));
+    }
+
+    let _lastHitTimestamps = {};
     function recordServiceHit(sid) {
       if (!sid || (GS.ui && GS.ui.enable_click_stats === false)) return;
+      const now = Date.now();
+      if (now - (_lastHitTimestamps[sid] || 0) < 800) return;
+      _lastHitTimestamps[sid] = now;
+
       const s = allServices.find(x => x.id === sid);
       if (s) {
-        s.click_count = (s.click_count || 0) + 1;
-        s.last_access = Date.now();
+        s.click_count = (Number(s.click_count) || 0) + 1;
+        s.last_access = Math.floor(now / 1000);
       }
+      const url = `/api/services/${encodeURIComponent(sid)}/hit`;
       if (navigator.sendBeacon) {
-        navigator.sendBeacon(`/api/services/${encodeURIComponent(sid)}/hit`, '');
+        navigator.sendBeacon(url, '');
       } else {
-        fetch(`/api/services/${encodeURIComponent(sid)}/hit`, { method: 'POST', keepalive: true }).catch(() => {});
+        fetch(url, { method: 'POST', keepalive: true }).catch(() => {});
       }
     }
 
@@ -7349,17 +7415,18 @@
 
         if (isFnosMusic) {
           href = 'href="javascript:void(0)"';
-          clickAttr = `onclick="openMusicCardModal(true)"`;
+          clickAttr = `onclick="recordServiceHit('${escapeHtml(s.id || '')}'); openMusicCardModal(true)"`;
           const musicWebUrl = validUrl || sanitizeUrl(getServiceCardUrl(s, rawFnosMusicUrl || `http://${location.hostname}:5888/music/`));
           if (musicWebUrl) {
-            extBadge = `<a href="${escapeHtml(musicWebUrl)}" target="_blank" onclick="event.stopPropagation()" class="card-external-badge" title="在新窗口打开飞牛音乐 Web 版">↗</a>`;
+            extBadge = `<a href="${escapeHtml(musicWebUrl)}" target="_blank" onclick="event.stopPropagation(); recordServiceHit('${escapeHtml(s.id || '')}')" class="card-external-badge" title="在新窗口打开飞牛音乐 Web 版">↗</a>`;
           }
         }
 
         const statBadgeHtml = buildCardStat(s);
+        const cardTitleTip = (Number(s.click_count) > 0) ? ` · 累计访问: ${s.click_count}次` : '';
 
         return `
-          <a class="service-card" id="${cardId}" data-sid="${escapeHtml(s.id || '')}" ${href} ${clickAttr} data-has-color="true" style="--card-rgb: ${cardRgb}; position:relative" onmousedown="recordServiceHit('${escapeHtml(s.id || '')}')">
+          <a class="service-card" id="${cardId}" data-sid="${escapeHtml(s.id || '')}" ${href} ${clickAttr} data-has-color="true" style="--card-rgb: ${cardRgb}; position:relative" title="${escapeHtml(s.name)}${cardTitleTip}" onmousedown="recordServiceHit('${escapeHtml(s.id || '')}')" onclick="recordServiceHit('${escapeHtml(s.id || '')}')">
             ${extBadge}
             ${statBadgeHtml}
             <div class="card-top">${iconHtml}</div>
@@ -7551,6 +7618,7 @@
             ${iconHtml}
             <span class="admin-row-name" title="${escapeHtml(s.name)}">${escapeHtml(s.name)}</span>
             ${wanBadge}
+            <span style="font-size:11px;color:var(--text-muted);margin-left:auto;margin-right:8px;font-family:monospace" title="累计点击量: ${s.click_count || 0}次">⚡ ${s.click_count || 0}</span>
             <label class="toggle-switch">
               <input type="checkbox" ${s.visible ? 'checked' : ''} onchange="toggleService('${escapeHtml(s.id)}', this.checked)">
               <span class="toggle-slider"></span>
@@ -8857,6 +8925,7 @@
         show_notes: document.getElementById('settingShowNotes')?.checked !== false,
         show_context_menu: document.getElementById('settingShowContextMenu')?.checked !== false,
         enable_click_stats: document.getElementById('settingEnableClickStats')?.checked !== false,
+        sort_mode: document.getElementById('settingSortMode')?.value || 'frequent',
         show_live_banner: document.getElementById('settingShowLiveBanner')?.checked !== false,
         enable_wan_replace: document.getElementById('settingEnableWanReplace')?.checked !== false,
         wan_domain: document.getElementById('settingWanDomain')?.value.trim() || '',

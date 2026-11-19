@@ -85,6 +85,8 @@ def init_db():
                 conn.execute("ALTER TABLE services ADD COLUMN click_count INTEGER DEFAULT 0")
             if "last_access" not in cols:
                 conn.execute("ALTER TABLE services ADD COLUMN last_access INTEGER DEFAULT 0")
+            conn.execute("UPDATE services SET click_count = 0 WHERE click_count IS NULL")
+            conn.execute("UPDATE services SET last_access = 0 WHERE last_access IS NULL")
     except Exception:
         pass
     conn.commit()
@@ -212,14 +214,25 @@ def get_all_services() -> list[dict]:
     rows = get_conn().execute(
         "SELECT * FROM services ORDER BY sort_order"
     ).fetchall()
-    return [dict(r) for r in rows]
+    items = []
+    for r in rows:
+        d = dict(r)
+        d["click_count"] = int(d.get("click_count") or 0)
+        d["last_access"] = int(d.get("last_access") or 0)
+        items.append(d)
+    return items
 
 
 def get_service(service_id: str) -> dict | None:
     row = get_conn().execute(
         "SELECT * FROM services WHERE id = ?", (str(service_id),)
     ).fetchone()
-    return dict(row) if row else None
+    if not row:
+        return None
+    d = dict(row)
+    d["click_count"] = int(d.get("click_count") or 0)
+    d["last_access"] = int(d.get("last_access") or 0)
+    return d
 
 
 def add_service(svc: dict):
@@ -254,7 +267,8 @@ def update_service(service_id: str, **kwargs):
     conn = get_conn()
     allowed_cols = {
         "name", "icon", "description", "url", "wan_url", "port", "protocol",
-        "favicon", "visible", "sort_order", "category", "stat_source"
+        "favicon", "visible", "sort_order", "category", "stat_source",
+        "click_count", "last_access"
     }
     sets, vals = [], []
     for k, v in kwargs.items():

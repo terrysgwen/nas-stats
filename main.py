@@ -4,7 +4,7 @@ All configuration and services are persisted in SQLite (database.py).
 Monitors are dynamically discovered and instantiated from monitors package.
 """
 
-__version__ = "2.6.6"
+__version__ = "2.6.7"
 
 import asyncio
 import base64
@@ -1756,7 +1756,7 @@ async def get_lucky_mappings_endpoint():
 
 # ── Services Management (CRUD) ──────────────────────────────────────
 
-# 功能 3: 服务点击上报 (5秒防刷限制)
+# 功能 3: 服务点击上报 (1秒防刷保护)
 _hit_guard = {}
 
 @app.post("/api/services/{sid}/hit")
@@ -1764,11 +1764,12 @@ async def service_hit_endpoint(sid: str, request: Request):
     ip = request.client.host if request.client else ""
     k = f"{ip}|{sid}"
     now = time.time()
-    if now - _hit_guard.get(k, 0) < 5:
+    if now - _hit_guard.get(k, 0) < 1.0:
         return {"ok": True, "skipped": True}
     _hit_guard[k] = now
     db.record_service_hit(sid)
-    return {"ok": True}
+    svc = db.get_service(sid)
+    return {"ok": True, "click_count": (svc.get("click_count") or 0) if svc else 0}
 
 
 # O3: Favicon Binary Endpoint (7-day strong cache + immutable)
